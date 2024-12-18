@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fundo estático -->
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="16dp" />
+            <solid android:color="#D3D3D3" />
+        </shape>
+    </item>
+    <!-- Barra de progresso animada -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="16dp" />
+                <gradient
+                    android:startColor="#FF5722"
+                    android:endColor="#FFC107"
+                    android:angle="90" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

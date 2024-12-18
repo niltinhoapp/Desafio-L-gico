@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="DialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/slide_in</item>
+        <item name="android:windowExitAnimation">@anim/slide_out</item>
+    </style>
+
+
+<!-- Tema Principal -->
+<style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+    <item name="colorPrimary">@color/colorPrimary</item>
+    <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+    <item name="colorAccent">@color/colorAccent</item>
+</style>
+
+<!-- Estilo para Botões -->
+<style name="ButtonStyle">
+    <item name="android:layout_width">0dp</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:backgroundTint">@color/colorPrimary</item>
+    <item name="android:textColor">@android:color/white</item>
+    <item name="android:textSize">22sp</item>
+</style>
+
+<!-- Estilo para TextViews -->
+<style name="TextViewStyle">
+    <item name="android:textColor">@android:color/white</item>
+    <item name="android:textSize">22sp</item>
+</style>
+</resources>

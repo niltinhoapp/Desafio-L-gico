@@ -1,0 +1,67 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/button_default">
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/lottieAnimationView"
+        android:layout_width="350dp"
+        android:layout_height="150dp"
+        android:layout_centerInParent="true"
+        android:scaleType="fitCenter"
+        app:lottie_rawRes="@raw/airplane_explosion1"
+
+        app:lottie_loop="true"/>
+
+    <LinearLayout
+        android:id="@+id/mainContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center"
+        android:visibility="gone"> <!-- Inicialmente invisível -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/beginnerButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/iniciante"
+            android:textSize="26sp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/intermediateButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/intermedi_rio"
+            android:textSize="26sp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@color/white"
+            android:drawableStart="@drawable/ic_lock" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/advancedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/avan_ado"
+            android:textSize="26sp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@color/white"
+            android:drawableStart="@drawable/ic_lock" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exitButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sair"
+            android:textSize="20sp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@color/white" />
+    </LinearLayout>
+</RelativeLayout>

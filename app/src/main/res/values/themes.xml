@@ -1,0 +1,18 @@
+<resources>
+    <!-- Tema Base -->
+    <style name="Base.Theme.DesafioLógico" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/your_primary_variant_color</item>
+        <item name="colorOnPrimary">@color/your_on_primary_color</item>
+        <item name="colorSecondary">@color/your_secondary_color</item>
+        <item name="colorSecondaryVariant">@color/your_secondary_variant_color</item>
+        <item name="colorOnSecondary">@color/your_on_secondary_color</item>
+        <item name="colorSurface">@color/your_surface_color</item>
+        <item name="colorOnSurface">@color/your_on_surface_color</item>
+
+        <item name="colorOnBackground">@color/your_on_background_color</item>
+    </style>
+
+    <!-- Tema da Aplicação -->
+    <style name="Theme.DesafioLógico" parent="Base.Theme.DesafioLógico" />
+</resources>

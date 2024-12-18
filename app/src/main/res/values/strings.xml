@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Formatos -->
+    <string name="n_vel_format">Nível: %s</string>
+    <string name="nivel_format">Nível: %1$s</string>
+    <string name="pontos_format">Pontos: %d</string>
+    <string name="points">Pontos: %1$d</string>
+
+    <!-- Mensagens de Desempenho -->
+    <string name="good_performance">Muito bom! Você pode melhorar.</string>
+    <string name="try_again">Não desista! Tente novamente!</string>
+    <string name="well_done">Muito bem! Continue assim e você vai melhorar ainda mais!</string>
+
+    <!-- Textos de Estatísticas -->
+    <string name="stats_text" formatted="false">🕒 Tempo médio por pergunta: %.2f segundos\n📊 Desempenho: %.2f%%</string>
+    <string name="score_text" formatted="false">Você conquistou %d pontos de %d perguntas.</string>
+
+    <!-- Textos de Login e Registro -->
+    <string name="login_with_google">Entrar com Google</string>
+    <string name="register">Registrar</string>
+    <string name="already_have_account">Já tem uma conta? Faça login</string>
+    <string name="n_o_tem_uma_conta_inscreva_se">Não tem uma conta? Inscreva-se!</string>
+    <string name="n_o_tem_uma_conta_crie_uma_aqui">Não tem uma conta? Crie uma aqui!</string>
+
+    <!-- Textos de Onboarding -->
+    <string name="onboarding_image">onboarding_image36</string>
+    <string name="previous">Anterior</string>
+    <string name="skip">Voltar</string>
+    <string name="next">Próximo</string>
+    <string name="onboarding_title">Título do Onboarding</string>
+    <string name="onboarding_description">....</string>
+
+    <string name="game_over_message">Game Over</string>
+    <string name="result_message">Resultado</string>
+    <string name="score">Pontuação: %1$d</string>
+    <string name="wrong_answers">Erros: %1$d</string>
+
+
+    <!-- Ícones e Descrições -->
+    <string name="medal_description_">Descrição da Medalha</string>
+
+    <string name="Reiniciar">Reiniciar</string>
+    <string name="dialog_icon">Ícone de Troféu</string>
+    <string name="medal_description">Medalha de Troféu</string>
+
+    <string name="game_over_icon_description">desc</string>
+    <string name="animation_description">animation_description</string>
+    <string name="level_beginner">Iniciante</string>
+    <string name="level_intermediate">Intermediário</string>
+    <string name="level_advanced">Avançado</string>
+
+
+    <!-- Textos de Níveis -->
+    <string name="iniciante">Iniciante</string>
+    <string name="intermedi_rio">Intermediário</string>
+    <string name="avan_ado">Avançado</string>
+    <string name="n_vel_iniciante">Nível: Iniciante</string>
+    <string name="n_vel_iniciante_">Nível: Iniciante</string>
+    <string name="n_vel">Nível: %1$s</string>
+    <string name="fase_conclu_da">Fase concluída!</string>
+    <string name="nenhuma_pergunta_dispon_vel_para_este_n_vel">Nenhuma pergunta disponível para este nível.</string>
+
+    <!-- Textos de Feedback -->
+    <string name="voc_perdeu_tente_novamente">Você perdeu, tente novamente!</string>
+    <string name="voc_perdeu_fique_atento_nas_perguntas_mais_dif_ceis">Você perdeu! Fique atento nas perguntas mais difíceis!</string>
+    <string name="tempo_m_dio_por_pergunta_0_00_segundos">Tempo médio por pergunta: 0.00 segundos</string>
+    <string name="tentar_novamente__">Tentar Novamente</string>
+    <string name="tentar_novamente">Tentar Novamente</string>
+    <string name="you_lost">Você perdeu! Fique atento nas perguntas mais difíceis!</string>
+    <string name="almost_there">Quase lá! Estude mais nas questões questionadas!</string>
+    <string name="great_performance">Ótimo desempenho! Continue assim!</string>
+    <string name="incredible_all_correct">Incrível! Você acertou tudo!</string>
+    <string name="bem_vindo_usuario">Bem-vindo, %1$s!</string>
+
+    <!-- Textos de Navegação -->
+    <string name="abc_toolbar_collapse_description">Collapse</string>
+    <string name="call_notification_screening_text">Chamada de tela</string>
+    <string name="status_bar_notification_info_overflow">+99</string>
+    <string name="app_name">Desafio Lógico</string>
+    <string name="sair">Sair</string>
+    <string name="continuar">Continuar</string>
+    <string name="pular">Pular</string>
+    <string name="pr_ximo">Próximo</string>
+
+    <!-- Textos de Botões -->
+    <string name="retry_button">retry\n</string>
+    <string name="tentar_novamente_">Tentar Novamente</string>
+    <string name="sair_">Sair</string>
+    <string name="exit_message">Você tem certeza que deseja sair?</string>
+    <string name="exit_confirm">Sim</string>
+    <string name="exit_cancel">Não</string>
+
+    <!-- Textos de Jogo -->
+    <string name="qual_a_capital_da_fran_a">Qual é a capital da França?</string>
+    <string name="op_o_1">Opção 1</string>
+    <string name="op_o_2">Opção 2</string>
+    <string name="op_o_3">Opção 3</string>
+    <string name="op_o_4">Opção 4</string>
+    <string name="pontua_o_0">Pontuação: 0</string>
+    <string name="moedas_0">Moedas: 0</string>
+    <string name="perguntas_restantes_44">Perguntas restantes: 44</string>
+    <string name="pontos_0">Pontos: 0</string>
+    <string name="bem_vindo_jogador">Bem-vindo, Jogador!</string>
+
+    <!-- Textos de Áudio -->
+    <string name="enable_audio">enabled_audio\n</string>
+    <string name="play_audio">play</string>
+
+    <!-- Textos de Feedback -->
+    <string name="game_over_message_placeholder">game_over_message_placeholder</string>
+    <string name="score_placeholder">score\n</string>
+    <string name="medal_image">melhada</string>
+    <string name="feedback_message_placeholder">feed</string>
+    <string name="stats_placeholder">statics</string>
+
+    <!-- Textos de AdMob -->
+    <string name="admob_app_id">ca-app-pub-4958622518589705~1887040194</string>
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+
+
+    <!-- Outros Textos -->
+    <string name="app_logo">Logo do Aplicativo</string>
+    <string name="username">Nome de Usuário</string>
+    <string name="email">Email</string>
+    <string name="password">Senha</string>
+    <string name="login">Entrar</string>
+        <!-- Outras strings -->
+        <string name="continua">Continuar</string>
+
+
+
+
+
+
+    <string name="create_account">Criar Conta</string>
+    <string name="pontuacao_total">pontuacao_total: %d</string>
+    <string name="tempo_m_dio_por_pergunta">tempo_m_dio_por_pergunta</string>
+    <string name="default_feedback_message">default_feedback_message</string>
+    <string name="ganhar_moedas">Ganhar Moedas</string>
+    <string name="voltar">Voltar</string>
+    <string name="update_username" />
+    <string name="enter_username" />
+    <string name="update_username_description" />
+    <string name="mensagem_adicional">Mensagem adicional</string>
+    <string name="edit_username_description" />
+</resources>

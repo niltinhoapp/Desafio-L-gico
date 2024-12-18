@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+
+        <color name="background_dynamic">#FFEB3B</color> <!-- Cor de fundo dinâmica -->
+        <color name="button_default">#3F51B5</color> <!-- Cor padrão dos botões -->
+        <color name="button_selected">#FF4081</color> <!-- Cor dos botões quando selecionados -->
+
+
+        <color name="background_color">#F5F5F5</color>
+        <color name="button_skip_color">#FF5722</color>
+        <color name="button_next_color">#4CAF50</color>
+
+
+        <!-- Cor de início do gradiente -->
+        <color name="colorStart">#FF6F00</color> <!-- Laranja vibrante -->
+
+        <!-- Cor de fim do gradiente -->
+        <color name="colorEnd">#FF9100</color> <!-- Laranja mais suave -->
+
+
+
+
+    <color name="white">#FFFFFFFF</color>
+    <color name="lime_green">#32CD32</color>
+    <!-- Cores do progresso -->
+    <color name="progress_start">#2DF418</color> <!-- Azul Profundo -->
+    <color name="progress_middle">#D7CE16</color>
+    <color name="progress_end">#F00606</color> <!-- Cinza Claro -->
+    <!-- Definindo uma cor sólida para a barra de progresso -->
+    <color name="progress_color">#FF9800</color> <!-- Exemplo: cor laranja -->
+    <color name="colorAccent">#FF4081</color>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorSecondary">#03DAC5</color>
+    <!-- Cores do Feedback -->
+    <color name="correct_answer">#32CD32</color> <!-- Verde claro -->
+    <color name="wrong_answer">#F44336</color>  <!-- Vermelho -->
+    <!-- Cores para o feedback textual -->
+    <color name="green">#32CD32</color> <!-- Verde claro -->
+    <color name="red">#F44336</color>   <!-- Vermelho -->
+    <color name="defaultButtonColor">#3F51B5</color> <!-- Azul padrão -->
+    <color name="correctAnswerColor">#4CAF50</color> <!-- Verde -->
+    <color name="wrongAnswerColor">#F44336</color> <!-- Vermelho -->
+    <color name="primary_color">#6200EE</color>
+    <color name="your_primary_variant_color">#3700B3</color>
+    <color name="your_on_primary_color">#FFFFFF</color>
+    <color name="your_secondary_color">#03DAC6</color>
+    <color name="your_secondary_variant_color">#018786</color>
+    <color name="your_on_secondary_color">#000000</color>
+    <color name="your_surface_color">#FFFFFF</color>
+    <color name="your_on_surface_color">#000000</color>
+
+        <color name="colorPrimaryDark">#3700B3</color>
+        <color name="colorOnPrimary">#FFFFFF</color>
+
+    <color name="your_on_background_color">#000000</color>
+</resources>

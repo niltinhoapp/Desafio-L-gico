@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".main.TestActivity">
+
+
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/lottieAnimationView"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_centerInParent="true"
+        android:scaleType="centerCrop" />
+
+    <!-- Outros elementos do layout, como perguntas e opções -->
+    <LinearLayout
+        android:id="@+id/gameElements"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <!-- Exibição do nível -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/levelTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:paddingBottom="16dp"
+            android:text="@string/n_vel_iniciante_"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <!-- Texto da pergunta -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/questionTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="16dp"
+            android:text="@string/qual_a_capital_da_fran_a"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Botões de opções -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/option1Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/defaultButtonColor"
+            android:text="@string/op_o_1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/option2Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/defaultButtonColor"
+            android:text="@string/op_o_2" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/option3Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/defaultButtonColor"
+            android:text="@string/op_o_3" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/option4Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/defaultButtonColor"
+            android:text="@string/op_o_4" />
+
+        <!-- Barra de Progresso de Tempo -->
+        <ProgressBar
+            android:id="@+id/timerProgressBar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/progress_green" />
+
+        <!-- Pontuação -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/scoreTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:gravity="center"
+            android:text="@string/pontua_o_0"
+            android:textColor="#388E3C"
+            android:textSize="24sp" />
+
+        <!-- Moedas -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/coinsTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/moedas_0"
+            android:textSize="18sp"
+            android:textColor="#DB3806" />
+
+        <!-- Anúncio -->
+        <com.google.android.gms.ads.AdView
+            android:id="@+id/adView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:adSize="BANNER"
+            app:adUnitId="ca-app-pub-4958622518589705/3051012274" />
+
+        <!-- Perguntas restantes -->
+        <TextView
+            android:id="@+id/questionsRemainingTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/perguntas_restantes_44"
+            android:textColor="@color/primary_color"
+            android:textSize="18sp"
+            android:gravity="center" />
+
+
+    </LinearLayout>
+</RelativeLayout>

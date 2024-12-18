@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "476676650911",
+    "project_id": "desafio-logico",
+    "storage_bucket": "desafio-logico.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476676650911:android:353f28732aa334f2a8afaa",
+        "android_client_info": {
+          "package_name": "com.desafiolgico"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "476676650911-tl1sb2h2gs1a0sp68gvdnbphckn27h64.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.desafiolgico",
+            "certificate_hash": "c2c80f7f80494ca2a0631d0e4f11cb14e33ef33a"
+          }
+        },
+        {
+          "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVq3_Bp3dI1eseTwfg6eCMMM9-WiTio7E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
