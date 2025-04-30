@@ -1,19 +1,52 @@
-<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/button_default"
     tools:context=".main.TestActivity">
 
+    <!-- Imagem do Avatar -->
 
+    <!-- Nome do Usuário -->
+
+    <ImageView
+        android:id="@+id/logoImageView"
+        android:layout_width="70dp"
+        android:layout_height="80dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="45dp"
+        android:contentDescription="Imagem ou Avatar do Usuário" />
+
+    <!-- Lottie Animation View -->
+    <TextView
+        android:id="@+id/welcomeUsername"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/logoImageView"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="10dp"
+        android:text="Nome do Usuário"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_centerInParent="true"
-        android:scaleType="centerCrop" />
+        android:layout_width="230dp"
+        android:layout_height="172dp"
+        android:layout_below="@id/welcomeUsername"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="86dp"
+        android:layout_marginTop="83dp"
+        android:layout_marginEnd="95dp"
+        android:background="@color/button_default"
+        android:scaleType="centerCrop"
+        app:lottie_rawRes="@raw/airplane_explosion1" />
 
     <!-- Outros elementos do layout, como perguntas e opções -->
     <LinearLayout
@@ -22,7 +55,9 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:padding="16dp"
-        android:visibility="gone">
+        android:visibility="gone"
+        android:layout_below="@id/lottieAnimationView"
+        android:layout_marginTop="16dp">
 
         <!-- Exibição do nível -->
         <com.google.android.material.textview.MaterialTextView
@@ -77,7 +112,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:backgroundTint="@color/defaultButtonColor"
-            android:text="@string/op_o_4" />
+            android:text="@string/op_o_4"
+            android:padding="16dp"/>
 
         <!-- Barra de Progresso de Tempo -->
         <ProgressBar
@@ -99,8 +135,20 @@
             android:layout_margin="8dp"
             android:gravity="center"
             android:text="@string/pontua_o_0"
-            android:textColor="#388E3C"
+            android:textColor="#0B0F0B"
             android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/streakTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/scoreTextView"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="16dp"
+            android:text="Streak: 0"
+            android:textSize="16sp"
+            android:textColor="@android:color/black"
+            android:gravity="center" />
 
         <!-- Moedas -->
         <com.google.android.material.textview.MaterialTextView
@@ -129,7 +177,5 @@
             android:textColor="@color/primary_color"
             android:textSize="18sp"
             android:gravity="center" />
-
-
     </LinearLayout>
 </RelativeLayout>

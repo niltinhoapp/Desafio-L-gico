@@ -20,6 +20,8 @@ class NextPhaseActivity : AppCompatActivity() {
         binding.curiosityTextView.text = getCuriosityForPhase(phase, level)
 
         binding.continueButton.setOnClickListener {
+            it.alpha = 0.7f
+            it.animate().alpha(1f).setDuration(300).start()
             setResult(RESULT_OK)
             finish() // Voltar para a tela anterior
         }
@@ -41,7 +43,8 @@ class NextPhaseActivity : AppCompatActivity() {
             4 -> "❤️ O espaço muda a forma do coração humano!"
             5 -> "✨ Raios cósmicos causam visões de luzes nos astronautas."
             6 -> "🌌 A alma pode viajar pelo cosmos após a morte, segundo filosofias antigas."
-            else -> "🔍 Continue jogando para descobrir mais curiosidades!"
+            else ->  "🌟 Continue jogando para desbloquear mais fatos incríveis!"
+
         }
     }
 

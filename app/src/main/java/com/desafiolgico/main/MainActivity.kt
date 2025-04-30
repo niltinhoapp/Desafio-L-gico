@@ -48,6 +48,8 @@ class MainActivity : AppCompatActivity() {
         // Inicializar views
         lottieAnimationView = findViewById(R.id.lottieAnimationView)
 
+
+
         // Solicitar permissão para notificações (Android 13 ou superior)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermission()
@@ -74,8 +76,23 @@ class MainActivity : AppCompatActivity() {
         // Configurar o ActivityResultLauncher para a atividade de teste
         setupActivityResultLauncher()
 
+        // Configurar o LevelUnlockManager
+        val unlockedLevels = sharedPreferences.getStringSet(UNLOCKED_LEVEL_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (unlockedLevels.isEmpty()) {
+            unlockedLevels.add(LEVEL_INTERMEDIATE)
+            sharedPreferences.edit().putStringSet(UNLOCKED_LEVEL_KEY, unlockedLevels).apply()
+        }
+
+
 
     }
+
+    private fun openLevel(nivel: String) {
+        val intent = Intent(this, TestActivity::class.java)
+        intent.putExtra("level", nivel)
+        startForResult.launch(intent)
+    }
+
 
     private fun setupActivityResultLauncher() {
         startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -160,10 +177,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
+        val levelManager = LevelUnlockManager(this)
+        val unlockedLevels = levelManager.getUnlockedLevelsList()
+
         val beginnerButton = findViewById<MaterialButton>(R.id.beginnerButton)
         val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
         val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
         val exitButton = findViewById<MaterialButton>(R.id.exitButton)
+
+        // Configurar os botões
+
+        beginnerButton.visibility = View.VISIBLE
+        intermediateButton.visibility = if ("Intermediário" in unlockedLevels) View.VISIBLE else View.GONE
+        advancedButton.visibility = if ("Avançado" in unlockedLevels) View.VISIBLE else View.GONE
 
         beginnerButton.setOnClickListener {
             handleButtonClick(beginnerButton, getString(R.string.level_beginner))
@@ -190,23 +216,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateButtonStates() {
-        updateButtonState(R.id.intermediateButton, LEVEL_INTERMEDIATE)
-        updateButtonState(R.id.advancedButton, LEVEL_ADVANCED)
-    }
 
-    private fun updateButtonState(buttonId: Int, level: String) {
-        findViewById<MaterialButton>(buttonId).apply {
-            isEnabled = isLevelUnlocked(level)
-            setBackgroundResource(if (isEnabled) R.color.wrongAnswerColor else R.color.button_default)
-            setCompoundDrawablesWithIntrinsicBounds(
-                if (isEnabled) 0 else R.drawable.ic_lock,
-                0,
-                0,
-                0
-            )
+
+    private fun updateButtonStates() {
+        val unlockedLevels = sharedPreferences.getStringSet(UNLOCKED_LEVEL_KEY, emptySet()) ?: emptySet()
+
+        val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
+        val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
+
+        if (unlockedLevels.contains(LEVEL_INTERMEDIATE)) {
+            intermediateButton.isEnabled = true
+            intermediateButton.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+        } else {
+            intermediateButton.isEnabled = false
+        }
+
+        if (unlockedLevels.contains(LEVEL_ADVANCED)) {
+            advancedButton.isEnabled = true
+            advancedButton.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
+        } else {
+            advancedButton.isEnabled = false
         }
     }
+
 
     private fun initBackgroundMusic() {
         mediaPlayer = MediaPlayer.create(this, R.raw.background_music).apply {
@@ -277,7 +309,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun navigateToTestActivity(level: String) {
         val intent = Intent(this, TestActivity::class.java).apply {
-            intent.putExtra("level", level)
+            putExtra("level", level)
         }
         startForResult.launch(intent)
     }

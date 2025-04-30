@@ -11,13 +11,13 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import android.view.View
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.airbnb.lottie.LottieAnimationView
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityTestBinding
 import com.desafiolgico.model.Question
@@ -26,7 +26,6 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.MobileAds
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -49,13 +48,12 @@ class TestActivity : AppCompatActivity() {
     private var remainingTimeInMillis: Long = 0 // Armazena o tempo médio gasto
     private var correctAnswersCount: Int = 0
     private val totalQuestions = 48
-    private var currentPhase = 1
     private var isTimerPaused = false
-    private lateinit var lottieAnimationView: LottieAnimationView
-    private lateinit var gameElements: View
-    private val streakBonusMultiplier = 2 // Exemplo de multiplicador para streak
-    private val penaltyPoints = 20         // Pontos a serem deduzidos para resposta errada
-    val newPointsValue = 10 // Defina o valor dos novos pontos aqui
+    private lateinit var scoreManager: ScoreManager
+    private val newPointsValue = 10 // Defina o valor dos novos pontos aqui
+    private lateinit var levelUnlockManager: LevelUnlockManager
+    private var animationSound: MediaPlayer? = null
+    private lateinit var questionManager: QuestionManager
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,31 +62,82 @@ class TestActivity : AppCompatActivity() {
         setContentView(binding.root)
 
 
-        lottieAnimationView = findViewById(R.id.lottieAnimationView)
-        gameElements = findViewById(R.id.gameElements)
 
-        // Configurar a animação Lottie
-        lottieAnimationView.setAnimation(R.raw.ic_animationcerebro)
-        lottieAnimationView.repeatCount = 1
-        lottieAnimationView.playAnimation()
 
-        // Listener para quando a animação terminar
-        lottieAnimationView.addAnimatorListener(object : Animator.AnimatorListener {
-            override fun onAnimationStart(animation: Animator) {}
-            override fun onAnimationEnd(animation: Animator) {
-                lottieAnimationView.visibility = View.GONE
-                gameElements.visibility = View.VISIBLE
-            }
+        questionManager = QuestionManager() // Inicialize aqui
+        val selectedLevel = intent.getStringExtra("level") ?: "Iniciante"
+        Log.d("TestActivity", "Nível selecionado: $selectedLevel")
 
-            override fun onAnimationCancel(animation: Animator) {}
-            override fun onAnimationRepeat(animation: Animator) {}
-        })
+        questions = questionManager.getQuestionsByLevel(selectedLevel)
 
-        val savedLevel = intent.getStringExtra("level")
+
+
+        mostrarAnimacaoDeIntroducao()
+        configurarUsuario()
+        configurarPontuacao()
+        configurarAudio()
+        configurarPerguntas()
+        configurarAnuncio()
+        configurarNivel()
+
+
+        // Inicializa o gerenciador de desbloqueio ANTES de usá-lo
+        levelUnlockManager = LevelUnlockManager(this)
+
+// Recupera dados da Intent
         val savedPoints = intent.getIntExtra("points", 0)
 
-        updatePlayerProgress(savedPoints, savedLevel.toString())
+// Atualiza o progresso com os pontos recebidos
+        updatePlayerProgress(savedPoints)
 
+// Exemplo: adicionar pontos extras depois de uma resposta certa (se quiser)
+        val pontosGanhos = 100
+        levelUnlockManager.addPoints(pontosGanhos)
+
+
+        // Exemplo: depois de terminar o teste, checar se desbloqueou novos níveis
+        verificarDesbloqueio()
+
+
+// Inicializar ScoreManager
+        scoreManager = ScoreManager(this)
+        observeScoreManager()
+
+// Observando alterações na pontuação
+        scoreManager.currentPoints.observe(this) { points ->
+            binding.scoreTextView.text = getString(R.string.pontuacao_format, points)
+            binding.scoreTextView.text = "Pontuação: $points"
+        }
+
+// Observando alterações no streak
+        scoreManager.currentStreakLive.observe(this) { streak ->
+            binding.streakTextView.text = "Streak: $streak"
+            Log.d("TestActivity", "Sequência atual: $streak")
+        }
+        // Outros códigos...
+
+
+        // Inicializar Views
+        val avatarImageView = findViewById<ImageView>(R.id.logoImageView) // ID do ImageView
+        val usernameTextView = findViewById<TextView>(R.id.welcomeUsername) // ID do TextView
+
+        // Receber dados do Intent
+        val username = intent.getStringExtra("username") ?: "Jogador"
+        val avatarId = intent.getIntExtra("avatar", R.drawable.ic_email_foreground)
+
+        // Atualizar interface com os dados recebidos
+        avatarImageView.setImageResource(avatarId) // Exibir avatar ou foto
+        usernameTextView.text = username // Exibir nome do usuário
+
+        // Log para depuração
+        Log.d("TestActivity", "Nome recebido: $username")
+        Log.d("TestActivity", "Avatar recebido: $avatarId")
+
+
+        binding.coinsTextView.text = buildString {
+            append("Moedas: ")
+            append(coins)
+        }
 
         // Inicializar o campo de perguntas restantes
         updateQuestionsRemaining()
@@ -112,7 +161,7 @@ class TestActivity : AppCompatActivity() {
         wrongSound = MediaPlayer.create(this, R.raw.wrong_sound)
 
         val questionManager = QuestionManager()
-        questions = questionManager.getQuestions(level)
+        questions = questionManager.getQuestionsByLevel(level)
 
         if (questions.isEmpty()) {
             binding.questionTextView.text =
@@ -148,16 +197,113 @@ class TestActivity : AppCompatActivity() {
         displayQuestion()
     }
 
+    private fun mostrarAnimacaoDeIntroducao() {
+        binding.gameElements.visibility = View.GONE
 
-    private fun calculatePoints(isCorrect: Boolean, streak: Int): Int {
-        val basePoints = when (intent.getStringExtra("level")) {
-            "Intermediário" -> 60
-            "Avançado" -> 90
-            else -> 30
+        // Libera qualquer som anterior
+        animationSound?.release()
+        animationSound = MediaPlayer.create(this, R.raw.background_music)
+
+        binding.lottieAnimationView.apply {
+            setAnimation(R.raw.airplane_explosion1)
+            repeatCount = 4
+            visibility = View.VISIBLE
+            playAnimation()
+
+            // Inicia o som junto com a animação
+            animationSound?.start()
+
+            addAnimatorListener(object : Animator.AnimatorListener {
+                override fun onAnimationStart(animation: Animator) {
+                    // Nada extra aqui
+                }
+
+                override fun onAnimationEnd(animation: Animator) {
+                    animationSound?.stop()
+                    animationSound?.release()
+                    animationSound = null
+
+                    visibility = View.GONE
+                    binding.gameElements.visibility = View.VISIBLE
+                }
+
+                override fun onAnimationCancel(animation: Animator) {
+                    animationSound?.stop()
+                    animationSound?.release()
+                    animationSound = null
+                }
+
+                override fun onAnimationRepeat(animation: Animator) {
+
+                }
+            })
         }
-        val streakBonus = streak * streakBonusMultiplier
-        return if (isCorrect) basePoints + streakBonus else -penaltyPoints
     }
+
+
+    private fun configurarUsuario() {
+        val username = intent.getStringExtra("username") ?: "Jogador"
+        val avatarId = intent.getIntExtra("avatar", R.drawable.ic_email_foreground)
+
+        binding.logoImageView.setImageResource(avatarId)
+        binding.welcomeUsername.text = username
+        Log.d("TestActivity", "Nome recebido: $username")
+        Log.d("TestActivity", "Avatar recebido: $avatarId")
+    }
+
+    private fun configurarPontuacao() {
+        scoreManager = ScoreManager(this)
+        observeScoreManager()
+
+        val pontosGanhos = 100
+        levelUnlockManager = LevelUnlockManager(this)
+        levelUnlockManager.addPoints(pontosGanhos)
+        verificarDesbloqueio()
+
+        binding.coinsTextView.text = "Moedas: $coins"
+        updateQuestionsRemaining()
+        loadCoinsFromPreferences()
+    }
+
+    private fun configurarAudio() {
+        correctSound = MediaPlayer.create(this, R.raw.correct_sound)
+        wrongSound = MediaPlayer.create(this, R.raw.wrong_sound)
+
+    }
+
+    private fun configurarPerguntas() {
+        val level = intent.getStringExtra("level") ?: "Iniciante"
+        binding.levelTextView.text = getString(R.string.n_vel, level)
+
+        val questionManager = QuestionManager()
+        questions = questionManager.getQuestionsByLevel(level)
+
+        if (questions.isEmpty()) {
+            binding.questionTextView.text =
+                getString(R.string.nenhuma_pergunta_dispon_vel_para_este_n_vel)
+            disableAnswerButtons()
+        } else {
+            setupAnswerButtons()
+            displayQuestion()
+        }
+    }
+
+    private fun configurarAnuncio() {
+        MobileAds.initialize(this) {
+            val adRequest = AdRequest.Builder().build()
+            binding.adView.loadAd(adRequest)
+        }
+    }
+
+    private fun configurarNivel() {
+        val level = intent.getStringExtra("level") ?: "Iniciante"
+        maxWrongAnswers = when (level) {
+            "Intermediário" -> 3
+            "Avançado" -> 1
+            else -> 5
+        }
+    }
+
 
     private fun setupAnswerButtons() {
         vibrate()
@@ -263,12 +409,18 @@ class TestActivity : AppCompatActivity() {
         countDownTimer.start()
     }
 
+    /**
+     * Tratamento quando o tempo da pergunta acaba sem resposta.
+     */
     private fun handleAnswerTimeout() {
+        vibrateOnWrongAnswer()
+        wrongAnswersCount++
         totalTime += timeLeftInMillis
         questionsAnswered++
         currentQuestionIndex++
-        if (currentQuestionIndex >= questions.size) {
-            navigateToResultActivity("RESULT")
+
+        if (currentQuestionIndex >= questions.size || wrongAnswersCount >= maxWrongAnswers) {
+            navigateToResultActivity("TEMPO ESGOTADO")
         } else {
             displayQuestion()
         }
@@ -312,6 +464,47 @@ class TestActivity : AppCompatActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     private fun checkAnswer(selectedOptionIndex: Int) {
         val question = questions[currentQuestionIndex]
+        val isCorrect = selectedOptionIndex == question.correctAnswerIndex
+        updateScoreAndUI(isCorrect)
+
+        updateButtonStyles(selectedOptionIndex, isCorrect)
+
+        // Atualiza a pontuação e a UI usando ScoreManager
+        if (isCorrect) {
+            scoreManager.onCorrectAnswer()
+            handleCorrectAnswer()
+        } else {
+            scoreManager.onWrongAnswer()
+            handleWrongAnswer()
+        }
+
+        disableAnswerButtons() // Desativa os botões para evitar cliques adicionais
+
+        // Avança para a próxima pergunta após um pequeno atraso
+        advanceToNextQuestionWithDelay()
+    }
+
+    /**
+     * Avalia se a resposta selecionada está correta.
+     */
+    private fun evaluateAnswer(selectedOptionIndex: Int, correctAnswerIndex: Int): Boolean {
+        return selectedOptionIndex == correctAnswerIndex
+    }
+
+    private fun observeScoreManager() {
+        scoreManager.currentPoints.observe(this) { points ->
+            binding.scoreTextView.text = getString(R.string.pontuacao_format, points)
+        }
+
+        scoreManager.currentStreakLive.observe(this) { streak ->
+            binding.streakTextView.text = "Streak: $streak"
+        }
+    }
+
+    /**
+     * Atualiza o estilo dos botões baseado na resposta.
+     */
+    private fun updateButtonStyles(selectedOptionIndex: Int, isCorrect: Boolean) {
         val buttons = listOf(
             binding.option1Button,
             binding.option2Button,
@@ -319,119 +512,118 @@ class TestActivity : AppCompatActivity() {
             binding.option4Button
         )
 
-        val isCorrect = selectedOptionIndex == question.correctAnswerIndex
+        val colorResId = if (isCorrect) R.color.correctAnswerColor else R.color.wrongAnswerColor
+        buttons[selectedOptionIndex].setBackgroundColor(ContextCompat.getColor(this, colorResId))
+    }
 
-        // Calcular pontos com base na resposta correta e na streak
-        val pointsEarned = calculatePoints(isCorrect, correctAnswersCount)
+    /**
+     * Atualiza pontuação e interface do usuário.
+     */
+    private fun updateScoreAndUI(isCorrect: Boolean) {
+        val streak = scoreManager.currentStreakLive.value ?: 0 // Obtendo o streak atual
+        val level = intent.getStringExtra("level") ?: "Iniciante" // Obtendo o nível
 
+        // Passando os parâmetros corretos para calculatePoints
+        val pointsEarned = scoreManager.calculatePoints(isCorrect, streak, level)
+        score += pointsEarned
 
-        // Atualizar pontos do usuário
+        binding.scoreTextView.text = getString(R.string.pontuacao_format, score)
 
+        if (isCorrect) correctAnswersCount++ else wrongAnswersCount++
+    }
 
-        if (isCorrect) {
-            buttons[selectedOptionIndex].setBackgroundColor(
-                ContextCompat.getColor(this, R.color.correctAnswerColor)
-            )
-            correctSound.start()
-            score += pointsEarned // Adiciona os pontos calculados
-            binding.scoreTextView.text = buildString {
-                append("Pontuação: ")
-                append(score)
-            }
-            correctAnswersCount++
-            showMotivationalMessage(correctAnswersCount)
+    /**
+     * Lida com uma resposta correta.
+     */
+    private fun handleCorrectAnswer() {
+        correctSound.start()
+        showMotivationalMessage(correctAnswersCount)
 
-            // Verifica se é necessário mudar de fase
-            if (correctAnswersCount % 10 == 0) {
-                pauseTimer()
-                showNextPhaseScreen()
-                return
-            }
-        } else {
-            buttons[selectedOptionIndex].setBackgroundColor(
-                ContextCompat.getColor(this, R.color.wrongAnswerColor)
-            )
-            wrongSound.start()
-            score += pointsEarned // Deduz os pontos de penalidade
-            binding.scoreTextView.text = buildString {
-                append("Pontuação: ")
-                append(score)
-            }
-            wrongAnswersCount++
-            vibrateOnWrongAnswer()
+        // Avança para a próxima fase a cada 10 acertos
+        if (correctAnswersCount % 10 == 0) {
+            pauseTimer()
 
-            if (wrongAnswersCount >= maxWrongAnswers) {
-                showEndOfGameDialog()
-                return
-            }
         }
-// Desativa os botoes e avança para a proxima pergunta apos um atraso
-        buttons.forEach { it.isEnabled = false }
+    }
 
-        GlobalScope.launch(Dispatchers.Main) {
-            delay(1000)
+    /**
+     * Lida com uma resposta incorreta.
+     */
+    private fun handleWrongAnswer() {
+        wrongSound.start()
+        vibrateOnWrongAnswer()
+
+        if (wrongAnswersCount >= maxWrongAnswers) {
+            showEndOfGameDialog()
+        }
+    }
+
+    /**
+     * Desativa os botões de resposta.
+     */
+
+
+    /**
+     * Avança para a próxima pergunta após um atraso.
+     */
+    private fun advanceToNextQuestionWithDelay() {
+        lifecycleScope.launch { // Usa lifecycleScope para evitar vazamentos
+            delay(1000) // Aguarda 1 segundo antes de avançar
             totalTime += timeLeftInMillis - remainingTimeInMillis
             questionsAnswered++
             currentQuestionIndex++
-            updateQuestionsRemaining() // Atualizar o campo de perguntas restantes
+            updateQuestionsRemaining() // Atualiza perguntas restantes
+
             if (currentQuestionIndex >= questions.size) {
-                navigateToResultActivity("RESULT")
+                navigateToResultActivity("RESULT") // Navega para os resultados se acabou
             } else {
-                displayQuestion()
-                resumeTimer()
+                displayQuestion() // Exibe a próxima pergunta
+                resumeTimer() // Retoma o temporizador
             }
         }
     }
 
+    private fun verificarDesbloqueio() {
+        val niveisDesbloqueados = levelUnlockManager.getUnlockedLevelsList()
+        for (nivel in niveisDesbloqueados) {
+            Log.d("GameActivity", "Nível desbloqueado: $nivel")
+        }
 
-    private fun showNextPhaseScreen() {
-        val intent = Intent(this, NextPhaseActivity::class.java)
-        val nextPhaseDialog = AlertDialog.Builder(this)
-            .setTitle("Parabéns!")
-            .setMessage("Você avançou para a próxima fase.")
-            .setPositiveButton("Continuar") { _, _ ->
-                intent.putExtra("PHASE", currentPhase)
-                intent.putExtra("level", intent.getStringExtra("level"))
-                startActivity(intent)
-                currentPhase++
-                resumeTimer()
-            }
-            .setCancelable(false)
-            .create()
-        nextPhaseDialog.show()
+        // Se quiser também salvar o último nível desbloqueado:
+        val ultimoNivel = niveisDesbloqueados.lastOrNull() ?: "Iniciante"
+        levelUnlockManager.unlockLevel(ultimoNivel)
+
+
+        println("Último nível desbloqueado salvo: ${levelUnlockManager.getUnlockedLevel()}")
     }
 
-    private fun updatePlayerProgress(points: Int, level: String) {
-        Log.d("UpdatePlayerProgress", "Pontos: $points, Nível: $level")
 
-        // Atualiza a UI
+    private fun updatePlayerProgress(points: Int) {
+        Log.d("UpdatePlayerProgress", "Adicionando $points pontos")
+
+        val nivelAntes = levelUnlockManager.getUnlockedLevel()
+
+        levelUnlockManager.addPoints(points) // já atualiza totalPoints e unlockedLevel se necessário
+
+        val nivelDepois = levelUnlockManager.getUnlockedLevel()
+
+        if (nivelDepois != nivelAntes) {
+            Toast.makeText(this, "Você desbloqueou o nível: $nivelDepois", Toast.LENGTH_SHORT)
+                .show()
+        }
+
         try {
             lifecycleScope.launch(Dispatchers.Main) {
-                val pointsTextView = findViewById<TextView>(R.id.pointsTextView)
-                val levelTextView = findViewById<TextView>(R.id.levelText)
-
-                pointsTextView?.text = getString(R.string.pontos_format, points)
-                levelTextView?.text = getString(R.string.n_vel_format, level)
+                val totalPoints = levelUnlockManager.getTotalPoints()
+                binding.scoreTextView.text = getString(R.string.pontos_format, totalPoints)
             }
         } catch (e: Exception) {
             Log.e("UpdatePlayerProgress", "Erro ao atualizar a UI", e)
         }
 
-        // SharedPreferences
-        val sharedPreferences = getSharedPreferences("game_prefs", MODE_PRIVATE)
-        val totalPoints = sharedPreferences.getInt("totalPoints", 0)
-        val newTotalPoints = totalPoints + points
-
-        sharedPreferences.edit().apply {
-            putInt("playerPoints", points)
-            putInt("totalPoints", newTotalPoints)
-            putString("unlockedLevel", level)
-            apply()
-        }
     }
 
 
-    @Deprecated("Use newFunction() instead", ReplaceWith("newFunction()"))
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == NEXT_PHASE_REQUEST_CODE && resultCode == RESULT_OK) {
@@ -441,13 +633,14 @@ class TestActivity : AppCompatActivity() {
     }
 
     private fun showMotivationalMessage(correctAnswers: Int) {
-        val messages = listOf(
-            "Ótimo trabalho! Continue assim!",
-            "Você está arrasando!",
-            "Mais um pouco e você será um mestre!"
-        )
-        if (correctAnswers > 0 && correctAnswers % 5 == 0) {
-            Toast.makeText(this, messages.random(), Toast.LENGTH_SHORT).show()
+        val message = when (correctAnswers) {
+            5 -> "Você desbloqueou uma nova habilidade!"
+            10 -> "Incrível!"
+            15 -> "Você é imparável!"
+            else -> null
+        }
+        message?.let {
+            Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -518,28 +711,64 @@ class TestActivity : AppCompatActivity() {
 
 
     private fun restartGame() {
-        finish()
-        startActivity(intent)
+        // Resetar estados do ScoreManager e variáveis relacionadas ao progresso
+
+        currentQuestionIndex = 0
+        wrongAnswersCount = 0
+        questionsAnswered = 0
+        score = 0
+
+        // Reiniciar o jogo com as configurações iniciais
+
+
+        // Finalizar a atividade atual e reiniciá-la
+        val intent = intent // Salva a intenção atual
+        finish() // Finaliza a atividade
+        startActivity(intent) // Reinicia a atividade com a intenção salva
     }
 
     private fun navigateToResultActivity(screenType: String) {
-        val intent = Intent(this, ResultOrGameOverActivity::class.java)
-        intent.putExtra("SCREEN_TYPE", screenType)
-        intent.putExtra("SCORE", score)
-        intent.putExtra("AVERAGE_TIME", calculateAverageTime())
-        intent.putExtra("WRONG_ANSWERS", wrongAnswersCount)
-        intent.putExtra("MAX_WRONG_ANSWERS", maxWrongAnswers)
-        intent.putExtra("TOTAL_QUESTIONS", totalQuestions)
+        // Limpa o estado do ScoreManager
+
+        val intent = Intent(this, ResultOrGameOverActivity::class.java).apply {
+            putExtra("SCREEN_TYPE", screenType)
+            putExtra("SCORE", score)
+            putExtra("AVERAGE_TIME", calculateAverageTime())
+            putExtra("WRONG_ANSWERS", wrongAnswersCount)
+            putExtra("MAX_WRONG_ANSWERS", maxWrongAnswers)
+            putExtra("TOTAL_QUESTIONS", totalQuestions)
+        }
+
         startActivity(intent)
         finish()
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Pausar o temporizador se a atividade for pausada
+        animationSound?.stop()
+        animationSound?.release()
+        animationSound = null
+    }
+
     override fun onDestroy() {
-        super.onDestroy()
+        super.onDestroy() // Executa lógica padrão de onDestroy
+
+        // Resetar estados do ScoreManager para evitar problemas de lógica
+        scoreManager.reset()
+
+        // Liberar recursos de áudio para prevenir vazamentos
         correctSound.release()
         wrongSound.release()
+
+        // Cancelar o temporizador se estiver inicializado
         if (::countDownTimer.isInitialized) {
             countDownTimer.cancel()
         }
+        // Liberar recursos de animação
+        animationSound?.stop()
+        animationSound?.release()
+        animationSound = null
+
     }
 }

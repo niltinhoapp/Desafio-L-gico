@@ -1,5 +1,6 @@
 [versions]
 agp = "8.7.3"
+coreKtxVersion = "1.16.0"
 glide = "4.16.0"
 konfetti = "1.3.2"
 kotlin = "1.9.10"
@@ -33,6 +34,7 @@ firebaseAuth = "23.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-ktx-v1160 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
 compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }

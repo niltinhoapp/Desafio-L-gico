@@ -20,8 +20,6 @@ class OnboardingActivity : AppCompatActivity() {
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        findViewById<TabLayout>(R.id.tabLayout)
-        findViewById<ViewPager2>(R.id.viewPager)
 
         // Recuperar o nível do Intent
         val level = intent.getStringExtra("LEVEL") ?: "Iniciante"
@@ -74,7 +72,7 @@ class OnboardingActivity : AppCompatActivity() {
                 """.trimIndent()
             ),
             OnboardingItem(
-                R.drawable.onboarding_image2,
+                R.drawable.capajogo,
                 "Funcionalidades Principais",
                 """
                 🔹 **Início do Jogo:**
@@ -164,9 +162,13 @@ class OnboardingActivity : AppCompatActivity() {
 
     // Navegar para a UserProfileActivity
     private fun navigateToMainActivity() {
-        Intent(this, UserProfileActivity::class.java).apply {
-            startActivity(this)
-            finish()
-        }
+        // Salvar o estado de que o onboarding foi concluído
+        getSharedPreferences("AppPrefs", MODE_PRIVATE)
+            .edit()
+            .putBoolean("onboarding_completed", true)
+            .apply()
+        startActivity(Intent(this, UserProfileActivity::class.java))
+        finish()
     }
+
 }

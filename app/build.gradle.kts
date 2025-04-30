@@ -60,6 +60,8 @@ dependencies {
     // implementation(libs.androidx.constraintlayout) // Layouts de tela mais avançados
     implementation(libs.androidx.activity)        // API para gerenciar Activities
     implementation(libs.androidx.recyclerview)    // Versão mais recente disponível
+    implementation (libs.androidx.core.ktx.v1160) // Extensões Kotlin para Android
+
     // Ou a versão mais recente
     implementation(libs.material.v1110)
 

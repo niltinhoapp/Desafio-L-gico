@@ -1,213 +1,114 @@
 package com.desafiolgico.main
 
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
-import android.widget.EditText
+import android.view.View
+import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.desafiolgico.R
+import com.desafiolgico.adapters.AvatarAdapter
+import com.desafiolgico.main.MainActivity.Companion.GAME_PREFS
 import com.google.android.material.button.MaterialButton
 
 class UserProfileActivity : AppCompatActivity() {
 
-    // Constants para chaves de SharedPreferences
     companion object {
-        const val POINTS_KEY = "points"
         const val USERNAME_KEY = "username"
-        const val USER_LEVEL_KEY = "user_level"
-        const val TOTAL_SCORE_KEY = "totalScore"
+        const val AVATAR_KEY = "avatar"
+     //   const val USER_LEVEL_KEY = "user_level"
+       // const val TOTAL_SCORE_KEY = "totalScore"
     }
 
     private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var pointsTextView: TextView
     private lateinit var welcomeText: TextView
-    private lateinit var levelTextView: TextView
-    private lateinit var totalScoreTextView: TextView
+    private lateinit var welcomeUsername: TextView
+
     private lateinit var continueButton: MaterialButton
-    private lateinit var editUsernameEditText: EditText
-    private lateinit var updateUsernameButton: MaterialButton
+    private lateinit var avatarImageView: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_profile)
 
         // Inicializa SharedPreferences
-        sharedPreferences = getSharedPreferences("Game_Prefs", MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences(GAME_PREFS, MODE_PRIVATE)
 
-        // Inicializa as Views
-        welcomeText = findViewById(R.id.welcomeText)
-        pointsTextView = findViewById(R.id.pointsTextView)
-        levelTextView = findViewById(R.id.levelText)
-        totalScoreTextView = findViewById(R.id.totalScoreTextView)
+        // Inicializa Views
+        welcomeText = findViewById(R.id.welcomeTextPrefix)
+        welcomeUsername = findViewById(R.id.welcomeUsername)
         continueButton = findViewById(R.id.continueButton)
-        editUsernameEditText = findViewById(R.id.editUsernameEditText)
-        updateUsernameButton = findViewById(R.id.updateUsernameButton)
+        avatarImageView = findViewById(R.id.logoImageView)
 
-        // Atualiza os textos da interface
+        // Configura RecyclerView para avatares
+        val avatarRecyclerView = findViewById<RecyclerView>(R.id.avatarRecyclerView)
+        val avatars = listOf(
+            R.drawable.avatar1,
+            R.drawable.avatar2,
+            R.drawable.avatar3,
+            R.drawable.avatar4,
+            R.drawable.avatar5
+        )
+        avatarRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        avatarRecyclerView.adapter = AvatarAdapter(avatars) { selectedAvatar ->
+            saveAvatar(selectedAvatar, "Avatar Selecionado")
+        }
+
+        // Recupera nome ou avatar
+        val usernameOrAvatar = sharedPreferences.getString(USERNAME_KEY, "Jogador") ?: "Jogador"
+        val avatarId = sharedPreferences.getInt(AVATAR_KEY, R.drawable.avatar1)
+
+        // Exibe nome ou avatar na interface
+        if (usernameOrAvatar.startsWith("Avatar")) {
+            avatarImageView.setImageResource(avatarId)
+            avatarImageView.visibility = View.VISIBLE
+            welcomeUsername.visibility = View.GONE
+        } else {
+            welcomeUsername.text = usernameOrAvatar
+            avatarImageView.visibility = View.VISIBLE // Caso queira manter o logo padrão
+        }
+
+        // Atualiza Texto de Boas-Vindas e Dados
         updateWelcomeText()
-        loadUserProgress()
 
-        // Ação do botão de continuar
+
+        // Botão de continuar
         continueButton.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-        }
+            // Recupera nome e avatar
+            val usernameOrAvatar = sharedPreferences.getString(USERNAME_KEY, "Jogador") ?: "Jogador"
+            val avatarId = sharedPreferences.getInt(AVATAR_KEY, R.drawable.ic_email_foreground)
 
-        // Ação do botão de atualizar nome de usuário
-        updateUsernameButton.setOnClickListener {
-            val newUsername = editUsernameEditText.text.toString()
-            if (newUsername.isNotEmpty()) {
-                saveUsername(newUsername)
-                updateWelcomeText()
-            }
-        }
-    }
+            // Envia dados para TestActivity
+            val intent = Intent(this, TestActivity::class.java)
+            intent.putExtra("username", usernameOrAvatar)
+            intent.putExtra("avatar", avatarId)
 
-    private fun checkLevelUp(points: Int) {
-        val currentLevel = sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante") ?: "Iniciante"
-        var newLevel = currentLevel
-
-        if (points >= 4000 && currentLevel == "Iniciante") {
-            newLevel = "Intermediário"
-        } else if (points >= 3000 && currentLevel == "Intermediário") {
-            newLevel = "Avançado"
-        }
-
-        if (newLevel != currentLevel) {
-            saveUserProgress(points, newLevel, sharedPreferences.getInt(TOTAL_SCORE_KEY, 0))
-            loadUserProgress()  // Atualiza a interface com o novo nível
+            // Inicia TestActivity
+            startActivity(intent)
+            finish() // Finaliza a UserProfileActivity
         }
     }
 
-    // Função para atualizar os pontos do usuário
-    class TestActivity : AppCompatActivity() {
-        companion object {
-            private const val POINTS_KEY = "points_key"
-            private const val USER_LEVEL_KEY = "user_level_key"
-        }
-
-        private lateinit var sharedPreferences: SharedPreferences
-        private lateinit var pointsTextView: TextView
-        private lateinit var levelTextView: TextView
-
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            setContentView(R.layout.activity_test)
-
-            // Inicializar SharedPreferences
-            sharedPreferences = getSharedPreferences("prefs", MODE_PRIVATE)
-
-            // Inicializar views
-            pointsTextView = findViewById(R.id.pointsTextView)
-            levelTextView = findViewById(R.id.levelTextView)
-        }
-
-        // Função para atualizar os pontos do usuário
-        fun updateUserPoints(newPoints: Int) {
-            val currentPoints = sharedPreferences.getInt(POINTS_KEY, 0)
-            val updatedPoints = currentPoints + newPoints
-
-            // Atualizar os pontos no SharedPreferences
-            sharedPreferences.edit().putInt(POINTS_KEY, updatedPoints).apply()
-
-            // Verificar se o nível deve ser atualizado
-            checkLevelUp(updatedPoints)
-
-            // Atualizar a interface com os novos pontos e nível
-            pointsTextView.text = getString(R.string.pontos_format, updatedPoints)
-            levelTextView.text = getString(
-                R.string.nivel_format,
-                sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante")
-            )
-
-            Log.d(
-                "UpdateUserPoints",
-                "Pontos atualizados: $updatedPoints, Nível: ${sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante")}"
-            )
-        }
-
-        // Função para verificar e atualizar o nível do usuário
-        private fun checkLevelUp(updatedPoints: Int) {
-            val newLevel = when {
-                updatedPoints >= 500 -> "Expert"
-                updatedPoints >= 300 -> "Avançado"
-                updatedPoints >= 100 -> "Intermediário"
-                else -> "Iniciante"
-            }
-
-            val currentLevel = sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante")
-
-            if (newLevel != currentLevel) {
-                sharedPreferences.edit().putString(USER_LEVEL_KEY, newLevel).apply()
-                Log.d("CheckLevelUp", "Nível atualizado para: $newLevel")
-            }
-        }
-    }
-
-
-    // Atualiza o texto de boas-vindas
     private fun updateWelcomeText() {
-        val username = sharedPreferences.getString(USERNAME_KEY, "Jogador")
-        welcomeText.text = getString(R.string.bem_vindo_usuario, username)
+        val usernameOrAvatar = sharedPreferences.getString(USERNAME_KEY, "Jogador") ?: "Jogador"
+        welcomeText.text = "Bem-vindo,"
+        welcomeUsername.text = usernameOrAvatar
+        Log.d("WelcomeText", "Nome ou Avatar exibido: $usernameOrAvatar")
     }
 
-    // Carrega e exibe o progresso do usuário
-    private fun loadUserProgress() {
-        val points = sharedPreferences.getInt(POINTS_KEY, 0)
-        val level = sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante") ?: "Iniciante"
-        val totalScore = sharedPreferences.getInt(TOTAL_SCORE_KEY, 0)
-
-        Log.d("LoadUserProgress", "Dados carregados: Pontos: $points, Nível: $level, Pontuação Total: $totalScore")
-
-        pointsTextView.text = getString(R.string.pontos_format, points)
-        levelTextView.text = getString(R.string.nivel_format, level)
-        totalScoreTextView.text = getString(R.string.pontuacao_total, totalScore)
-    }
-
-    // Salva o nome de usuário
-    private fun saveUsername(username: String) {
+    private fun saveAvatar(avatarResId: Int, avatarName: String) {
         sharedPreferences.edit().apply {
-            putString(USERNAME_KEY, username)
+            putInt(AVATAR_KEY, avatarResId) // Salva o ID do avatar
             apply()
         }
-        Log.d("SaveUsername", "Nome de usuário salvo: $username")
+        avatarImageView.setImageResource(avatarResId) // Atualiza o avatar no ImageView
+        Toast.makeText(this, "Avatar atualizado: $avatarName", Toast.LENGTH_SHORT).show()
     }
 
-    // Salva o progresso do usuário (pontos, nível e totalScore)
-    private fun saveUserProgress(points: Int, level: String, totalScore: Int) {
-        Log.d("SaveUserProgress", "Salvando dados: Pontos: $points, Nível: $level, Pontuação Total: $totalScore")
 
-        sharedPreferences.edit().apply {
-            putInt(POINTS_KEY, points)
-            putString(USER_LEVEL_KEY, level)
-            putInt(TOTAL_SCORE_KEY, totalScore)
-            apply()
-        }
-
-        Log.d("SaveUserProgress", "Dados salvos com sucesso!")
-    }
-
-    override fun onPause() {
-        super.onPause()
-        val points = sharedPreferences.getInt(POINTS_KEY, 0)
-        val level = sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante") ?: "Iniciante"
-        val totalScore = sharedPreferences.getInt(TOTAL_SCORE_KEY, 0)
-        saveUserProgress(points, level, totalScore)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        val points = sharedPreferences.getInt(POINTS_KEY, 0)
-        val level = sharedPreferences.getString(USER_LEVEL_KEY, "Iniciante") ?: "Iniciante"
-        val totalScore = sharedPreferences.getInt(TOTAL_SCORE_KEY, 0)
-        saveUserProgress(points, level, totalScore)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadUserProgress()
-    }
 }

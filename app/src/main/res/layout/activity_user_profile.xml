@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/progress_bar_color"
-    android:padding="36dp"
+    android:padding="24dp"
     tools:context=".main.UserProfileActivity">
 
-    <!-- Logo da Aplicação -->
+    <!-- Logo ou Avatar Selecionado -->
     <ImageView
         android:id="@+id/logoImageView"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:layout_marginBottom="40dp"
-        android:contentDescription="@string/app_logo"
+        android:layout_marginBottom="32dp"
+        android:contentDescription="Imagem ou Avatar do Usuário"
         android:src="@drawable/ic_email_foreground"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,112 +22,54 @@
 
     <!-- Texto de Boas-Vindas -->
     <TextView
-        android:id="@+id/welcomeText"
+        android:id="@+id/welcomeTextPrefix"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="@string/bem_vindo_jogador"
+        android:layout_marginTop="16dp"
+        android:text="Bem-vindo,"
         android:textColor="@android:color/white"
-        android:textSize="22sp"
+        android:textSize="28sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/logoImageView" />
 
-    <!-- Texto de Pontos -->
     <TextView
-        android:id="@+id/pointsTextView"
+        android:id="@+id/welcomeUsername"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="@string/pontos_0"
-        android:textColor="@android:color/white"
-        android:textSize="22sp"
+        android:layout_marginTop="4dp"
+        android:text="Nilton Vicente"
+        android:textColor="@color/colorAccent"
+        android:textSize="32sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/welcomeText" />
+        app:layout_constraintTop_toBottomOf="@id/welcomeTextPrefix" />
 
-    <!-- Texto de Pontuação Total -->
-    <TextView
-        android:id="@+id/totalScoreTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="@string/pontuacao_total"
-        android:textColor="@android:color/white"
-        android:textSize="22sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/pointsTextView" />
-
-    <!-- Entrada de Nome de Usuário -->
-    <EditText
-        android:id="@+id/editUsernameEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:autofillHints="name"
-        android:contentDescription="@string/edit_username_description"
-        android:hint="@string/enter_username"
-        android:importantForAccessibility="yes"
-        android:inputType="textPersonName"
-        android:padding="12dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/totalScoreTextView" />
-
-    <!-- Botão para Atualizar Usuário -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/updateUsernameButton"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+    <!-- RecyclerView para Seleção de Avatares -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/avatarRecyclerView"
+        android:layout_width="365dp"
+        android:layout_height="144dp"
         android:layout_marginTop="16dp"
-        android:backgroundTint="@color/colorPrimary"
-        android:contentDescription="@string/update_username_description"
-        android:text="@string/update_username"
-        android:textColor="@android:color/white"
-        android:textSize="22sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/editUsernameEditText" />
+        app:layout_constraintTop_toBottomOf="@id/welcomeUsername" />
 
-    <!-- Texto de Nível -->
-    <TextView
-        android:id="@+id/levelText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:text="@string/n_vel_iniciante"
-        android:textColor="@android:color/white"
-        android:textSize="22sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/updateUsernameButton" />
+    <!-- Texto de Pontuação -->
 
-    <!-- Mensagem Adicional -->
-    <TextView
-        android:id="@+id/message1TextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:backgroundTint="@color/colorPrimary"
-        android:text="@string/mensagem_adicional"
-        android:textColor="@android:color/white"
-        android:textSize="22sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/levelText" />
-
-    <!-- Botão de Continuar -->
+    <!-- Botão Continuar -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/continueButton"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="56dp"
         android:backgroundTint="@color/colorPrimary"
-        android:text="@string/continuar"
+        android:text="Continuar"
         android:textColor="@android:color/white"
-        android:textSize="20sp"
+        app:cornerRadius="16dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/message1TextView" />
+        app:layout_constraintTop_toBottomOf="@+id/avatarRecyclerView" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

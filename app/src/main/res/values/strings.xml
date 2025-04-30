@@ -96,7 +96,6 @@
     <string name="op_o_2">Opção 2</string>
     <string name="op_o_3">Opção 3</string>
     <string name="op_o_4">Opção 4</string>
-    <string name="pontua_o_0">Pontuação: 0</string>
     <string name="moedas_0">Moedas: 0</string>
     <string name="perguntas_restantes_44">Perguntas restantes: 44</string>
     <string name="pontos_0">Pontos: 0</string>
@@ -126,12 +125,6 @@
     <string name="login">Entrar</string>
         <!-- Outras strings -->
         <string name="continua">Continuar</string>
-
-
-
-
-
-
     <string name="create_account">Criar Conta</string>
     <string name="pontuacao_total">pontuacao_total: %d</string>
     <string name="tempo_m_dio_por_pergunta">tempo_m_dio_por_pergunta</string>
@@ -143,4 +136,6 @@
     <string name="update_username_description" />
     <string name="mensagem_adicional">Mensagem adicional</string>
     <string name="edit_username_description" />
+    <string name="pontuacao_format">Pontos: %d</string>
+    <string name="pontua_o_0">pontuacao</string>
 </resources>

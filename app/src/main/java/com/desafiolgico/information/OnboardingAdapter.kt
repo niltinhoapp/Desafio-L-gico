@@ -8,7 +8,11 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.desafiolgico.databinding.ItemOnboardingPageBinding
 
-data class OnboardingItem(val imageResId: Int, val title: String, val description: String)
+data class OnboardingItem(
+    val imageResId: Int,
+    val title: String,
+    val description: String
+)
 
 @Suppress("unused")
 class OnboardingAdapter(private var onboardingItems: List<OnboardingItem>) :
@@ -33,6 +37,16 @@ class OnboardingAdapter(private var onboardingItems: List<OnboardingItem>) :
             binding.imageView.setImageResource(onboardingItem.imageResId)
             binding.textViewTitle.text = onboardingItem.title
             binding.textViewDescription.text = onboardingItem.description
+
+            // Configuração adicional, se necessário
+            binding.root.alpha = 0f
+            binding.root.translationY = 50f // Mover para baixo inicialmente
+            binding.root.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+                .setDuration(500)
+                .start()
         }
     }
 

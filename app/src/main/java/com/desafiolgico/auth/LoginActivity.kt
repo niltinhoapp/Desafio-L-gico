@@ -14,8 +14,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.SignInButton
 import com.google.android.gms.common.api.ApiException
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -37,48 +35,35 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        // Shared Preferences
+        // Inicializa SharedPreferences
         sharedPreferences = getSharedPreferences(GAME_PREFS, MODE_PRIVATE)
 
-        // Firebase Authentication
+        // Inicializa FirebaseAuth
         auth = FirebaseAuth.getInstance()
 
-        // Configuração do Google Sign-In
+        // Configura Google Sign-In
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        // Corrigir o tipo do botão para SignInButton
+        // Botão de Login com Google
         findViewById<SignInButton>(R.id.signInButton).setOnClickListener {
             signInWithGoogle()
         }
 
-        // Botão de Login com Email e Senha
-        findViewById<MaterialButton>(R.id.loginButton).setOnClickListener {
-            val email = findViewById<TextInputEditText>(R.id.emailEditText).text.toString()
-            val password = findViewById<TextInputEditText>(R.id.passwordEditText).text.toString()
-            if (email.isNotEmpty() && password.isNotEmpty()) {
-                signInWithEmail(email, password)
-            } else {
-                showError("Por favor, preencha todos os campos")
-            }
-        }
-
-        // Navegação para criação de conta
+        // Botão para registro
         findViewById<TextView>(R.id.createAccountTextView).setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
     }
 
-    // Função para login com Google
     private fun signInWithGoogle() {
         val signInIntent = googleSignInClient.signInIntent
         startActivityForResult(signInIntent, RC_SIGN_IN)
     }
 
-    // Recebe o resultado da atividade de login
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == RC_SIGN_IN) {
@@ -87,18 +72,19 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    // Processa o resultado do Google Sign-In
     private fun handleSignInResult(task: com.google.android.gms.tasks.Task<GoogleSignInAccount>) {
         try {
-            val account = task.getResult(ApiException::class.java)!!
-            firebaseAuthWithGoogle(account.idToken!!)
+            val account = task.getResult(ApiException::class.java)
+            if (account != null) {
+                Log.d(TAG, "Google Sign-In bem-sucedido, autenticando no Firebase...")
+                firebaseAuthWithGoogle(account.idToken!!)
+            }
         } catch (e: ApiException) {
             Log.w(TAG, "Erro no Google Sign-In: ${e.statusCode}")
-            showError("Erro no login com Google: ${e.localizedMessage}")
+            showError("Erro ao fazer login: ${e.localizedMessage}")
         }
     }
 
-    // Autentica no Firebase com Google
     private fun firebaseAuthWithGoogle(idToken: String) {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         auth.signInWithCredential(credential)
@@ -107,53 +93,37 @@ class LoginActivity : AppCompatActivity() {
                     val user = auth.currentUser
                     updateUI(user)
                 } else {
-                    Log.w(TAG, "Erro na autenticação com Google", task.exception)
+                    Log.w(TAG, "Erro na autenticação com Firebase.", task.exception)
                     showError("Autenticação falhou: ${task.exception?.localizedMessage}")
                     updateUI(null)
                 }
             }
     }
 
-    // Login com Email e Senha
-    private fun signInWithEmail(email: String, password: String) {
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    val user = auth.currentUser
-                    updateUI(user)
-                } else {
-                    Log.w(TAG, "Erro na autenticação com Email", task.exception)
-                    showError("Falha no login: ${task.exception?.localizedMessage}")
-                    updateUI(null)
-                }
-            }
-    }
-
-    // Atualiza a interface do usuário após login
     private fun updateUI(user: FirebaseUser?) {
         if (user != null) {
-            // Salva o nome de usuário (opcional)
+            // Obtém nome ou email
             val username = user.displayName ?: user.email ?: "Usuário"
+
+            // Salva no SharedPreferences
             saveUsername(username)
 
-            // Navega para a próxima atividade
+            // Log para depuração
+            Log.d(TAG, "Usuário logado: $username")
+
+            // Navega para a próxima tela
             startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
         } else {
-            showError("Erro na autenticação. Tente novamente.")
+            showError("Erro na autenticação. Por favor, tente novamente.")
         }
     }
 
-    // Salva o nome de usuário
     private fun saveUsername(username: String) {
-        sharedPreferences.edit().apply {
-            putString("username", username)
-            apply()
-        }
-        Log.d("SaveUsername", "Nome de usuário salvo: $username")
+        sharedPreferences.edit().putString("username", username).apply()
+        Log.d(TAG, "Nome salvo: ${sharedPreferences.getString("username", "N/A")}")
     }
 
-    // Método separado para exibir mensagens de erro
     private fun showError(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }

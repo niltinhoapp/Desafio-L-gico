@@ -1,6 +1,20 @@
 package com.desafiolgico.model
 
 class QuestionManager {
+
+
+    fun getQuestionsByLevel(selectedLevel: String): List<Question> {
+        return when (selectedLevel) {
+            "Iniciante" -> beginnerQuestions
+            "Intermediário" -> intermediateQuestions
+            "Avançado" -> advancedQuestions
+            // "Especialista" -> expertQuestions
+            else -> emptyList()
+        }
+
+    }
+
+
     //lista de perguntas para nivel iniciante
     private val beginnerQuestions = listOf(
 
@@ -896,10 +910,86 @@ class QuestionManager {
         ),
 
 
+        // Novas perguntas intermediárias adicionais:
+
+        Question(
+            questionText = "Qual organela celular é responsável pela produção de energia na forma de ATP?",
+            options = listOf("Mitocôndria", "Lisossomo", "Retículo endoplasmático", "Complexo de Golgi"),
+            correctAnswerIndex = 0
+        ),
+
+        Question(
+            questionText = "Qual é a maior cordilheira do mundo?",
+            options = listOf("Himalaia", "Andes", "Alpes", "Rockies"),
+            correctAnswerIndex = 1
+        ),
+
+        Question(
+            questionText = "Em computação, o que significa a sigla HTTP?",
+            options = listOf(
+                "HyperText Transfer Protocol",
+                "High Throughput Transmission Protocol",
+                "Hyperlink Text Transfer Pattern",
+                "Host Transfer Text Protocol"
+            ),
+            correctAnswerIndex = 0
+        ),
+
+        Question(
+            questionText = "Na economia, como se define inflação?",
+            options = listOf(
+                "Aumento geral de preços",
+                "Queda do PIB",
+                "Alta taxa de desemprego",
+                "Crescimento da taxa de juros"
+            ),
+            correctAnswerIndex = 0
+        ),
+
+        Question(
+            questionText = "Qual é a maior língua em número de falantes nativos?",
+            options = listOf("Inglês", "Mandarim", "Espanhol", "Hindi"),
+            correctAnswerIndex = 1
+        ),
+
+        Question(
+            questionText = "Quem pintou o mural 'Guernica'?",
+            options = listOf("Pablo Picasso", "Salvador Dalí", "Henri Matisse", "Joan Miró"),
+            correctAnswerIndex = 0
+        ),
+
+        Question(
+            questionText = "Qual é o maior órgão do corpo humano?",
+            options = listOf("Fígado", "Pele", "Coração", "Pulmão"),
+            correctAnswerIndex = 1
+        ),
+
+        Question(
+            questionText = "Qual time conquistou mais Copas do Mundo de Futebol?",
+            options = listOf("Argentina", "Alemanha", "Brasil", "Itália"),
+            correctAnswerIndex = 2
+        ),
+
+        Question(
+            questionText = "Que rocha ígnea se forma a partir do resfriamento rápido de lava na superfície?",
+            options = listOf("Granito", "Basalto", "Mármore", "Quartzito"),
+            correctAnswerIndex = 1
+        ),
+
+        Question(
+            questionText = "Qual compositor escreveu a 'Quinta Sinfonia' em C menor?",
+            options = listOf(
+                "Ludwig van Beethoven",
+                "Johann Sebastian Bach",
+                "Wolfgang Amadeus Mozart",
+                "Franz Schubert"
+            ),
+            correctAnswerIndex = 0
         )
+    )
 
 
-    //nivel avançado
+                //nivel avançado
     private val advancedQuestions = listOf(
 
         Question(
@@ -1301,13 +1391,7 @@ class QuestionManager {
     )
 
 
-    fun getQuestions(level: String): List<Question> {
-        return when (level) {
-            "Iniciante" -> beginnerQuestions
-            "Intermediário" -> intermediateQuestions
-            "Avançado" -> advancedQuestions
-            else -> listOf()
-        }
-    }
+
+
 
 }
