@@ -1,4 +1,4 @@
-package com.desafiolgico.main
+/* package com.desafiolgico.main
 
 import android.content.Intent
 import android.content.SharedPreferences
@@ -112,3 +112,4 @@ class UserProfileActivity : AppCompatActivity() {
 
 
 }
+*/

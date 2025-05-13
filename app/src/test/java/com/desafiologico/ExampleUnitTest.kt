@@ -1,4 +1,4 @@
-package com.desafiolgico
+package com.desafiologico
 
 import org.junit.Test
 

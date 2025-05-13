@@ -1,9 +1,9 @@
-package com.desafiolgico.main
+package com.desafiologico.main
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.desafiolgico.R
-import com.desafiolgico.databinding.ActivityNextPhaseBinding
+import com.desafiologico.R
+import com.desafiologico.databinding.ActivityNextPhaseBinding
 
 class NextPhaseActivity : AppCompatActivity() {
     private lateinit var binding: ActivityNextPhaseBinding

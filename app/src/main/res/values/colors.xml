@@ -21,6 +21,9 @@
 
 
 
+    <color name="gold_color">#FFD700</color>
+    <color name="silver_color">#C0C0C0</color>
+    <color name="ripple_glow">#80FFFFFF</color>
     <color name="white">#FFFFFFFF</color>
     <color name="lime_green">#32CD32</color>
     <!-- Cores do progresso -->

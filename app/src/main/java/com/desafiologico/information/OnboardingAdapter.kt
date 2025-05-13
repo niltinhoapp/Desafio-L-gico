@@ -1,12 +1,12 @@
 @file:Suppress("unused")
 
-package com.desafiolgico.information
+package com.desafiologico.information
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.desafiolgico.databinding.ItemOnboardingPageBinding
+import com.desafiologico.databinding.ItemOnboardingPageBinding
 
 data class OnboardingItem(
     val imageResId: Int,

@@ -6,11 +6,12 @@
     android:gravity="center"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/coins_textview"
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/coinsTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Moedas: 0"
+        android:text="@string/moedas"
         android:textSize="18sp"
         android:layout_marginBottom="20dp"/>
 

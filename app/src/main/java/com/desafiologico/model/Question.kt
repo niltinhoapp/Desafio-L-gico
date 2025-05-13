@@ -1,4 +1,4 @@
-package com.desafiolgico.model
+package com.desafiologico.model
 
 class Question (
     val questionText: String,

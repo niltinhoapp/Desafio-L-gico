@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.desafiolgico"
+    namespace = "com.desafiologico"
     compileSdk = 35
 
     defaultConfig {
@@ -60,13 +60,15 @@ dependencies {
     // implementation(libs.androidx.constraintlayout) // Layouts de tela mais avançados
     implementation(libs.androidx.activity)        // API para gerenciar Activities
     implementation(libs.androidx.recyclerview)    // Versão mais recente disponível
-    implementation (libs.androidx.core.ktx.v1160) // Extensões Kotlin para Android
+    implementation(libs.androidx.core.ktx.v1160) // Extensões Kotlin para Android
 
     // Ou a versão mais recente
     implementation(libs.material.v1110)
 
+
     implementation(libs.glide)
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.database.ktx)
     annotationProcessor(libs.compiler)
     implementation(libs.firebase.auth)
     implementation(libs.play.services.auth)
@@ -78,12 +80,13 @@ dependencies {
     //implementation(libs.material)                 // Material Design 2
     implementation(libs.androidx.material3.android) // Material Design 3 (Descomente caso necessário)
     // Bibliotecas Firebase e serviços
-    implementation(libs.firebase.inappmessaging)  // Mensagens no aplicativo do Firebase
-    implementation (libs.play.services.ads) // Google Play Services para Ads
+    //  implementation(libs.firebase.inappmessaging)  // Mensagens no aplicativo do Firebase
+    implementation(libs.play.services.ads) // Google Play Services para Ads
     // Gerenciamento de ciclo de vida e corrotinas
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.kotlinx.coroutines.android)
+
 
     // Networking e serialização
     implementation(libs.retrofit)                 // Retrofit para chamadas de API

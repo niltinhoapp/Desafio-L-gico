@@ -21,9 +21,13 @@ kotlinxCoroutines = "1.9.0"
 
 
 materialVersion = "1.11.0"
+multiwaveheader = "1.0.0"
+multiwaveheaderVersion = "1.0.1"
 playServicesAds = "23.6.0"
+playServicesAdsVersion = "24.2.0"
 playServicesAuth = "21.3.0"
 recyclerview = "1.3.2"
+repo = "Tag"
 retrofit = "2.11.0"
 converterGson = "2.11.0"
 room = "2.6.1"
@@ -31,6 +35,8 @@ firebaseInappmessaging = "21.0.1"
 googleGmsGoogleServices = "4.4.2"
 firebaseAnalytics = "22.1.2"
 firebaseAuth = "23.1.0"
+scwangMultiwaveheader = "1.0.0-andx"
+firebaseDatabaseKtx = "21.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,8 +61,13 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 
 material-v1110 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
+multiwaveheader = { module = "com.scwang.wave:MultiWaveHeader", version.ref = "multiwaveheader" }
+multiwaveheader-v100andx = { module = "com.scwang.wave:MultiWaveHeader", version.ref = "scwangMultiwaveheader" }
+multiwaveheader-v101 = { module = "com.scwang.wave:MultiWaveHeader", version.ref = "multiwaveheaderVersion" }
 play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
+play-services-ads-v2420 = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAdsVersion" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+repo = { module = "com.github.User:Repo", version.ref = "repo" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "converterGson" }
 coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
@@ -65,6 +76,7 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 firebase-inappmessaging = { group = "com.google.firebase", name = "firebase-inappmessaging", version.ref = "firebaseInappmessaging" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics", version.ref = "firebaseAnalytics" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+firebase-database-ktx = { group = "com.google.firebase", name = "firebase-database-ktx", version.ref = "firebaseDatabaseKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

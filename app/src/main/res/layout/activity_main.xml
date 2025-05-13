@@ -1,26 +1,29 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@color/button_default">
 
+    <!-- Animação Lottie - ficará visível primeiro -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
-        android:layout_width="350dp"
-        android:layout_height="150dp"
+        android:layout_width="323dp"
+        android:layout_height="134dp"
         android:layout_centerInParent="true"
         android:scaleType="fitCenter"
-        app:lottie_rawRes="@raw/airplane_explosion1"
-        app:lottie_loop="true"/>
+        app:lottie_loop="false"
+        app:lottie_rawRes="@raw/airplane_explosion1" />
 
+    <!-- Conteúdo principal (botões), inicialmente escondido -->
     <LinearLayout
         android:id="@+id/mainContent"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
         android:orientation="vertical"
         android:padding="16dp"
         android:gravity="center"
-        android:visibility="gone"> <!-- Inicialmente invisível -->
+        android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/beginnerButton"
@@ -41,7 +44,7 @@
             android:textSize="26sp"
             android:backgroundTint="@color/button_default"
             android:textColor="@color/white"
-            android:drawableStart="@drawable/ic_lock" />
+             />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/advancedButton"
@@ -52,7 +55,7 @@
             android:textSize="26sp"
             android:backgroundTint="@color/button_default"
             android:textColor="@color/white"
-            android:drawableStart="@drawable/ic_lock" />
+             />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/exitButton"
@@ -63,4 +66,5 @@
             android:backgroundTint="@color/button_default"
             android:textColor="@color/white" />
     </LinearLayout>
+
 </RelativeLayout>

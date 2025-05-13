@@ -3,7 +3,6 @@
     <!-- Formatos -->
     <string name="n_vel_format">Nível: %s</string>
     <string name="nivel_format">Nível: %1$s</string>
-    <string name="pontos_format">Pontos: %d</string>
     <string name="points">Pontos: %1$d</string>
 
     <!-- Mensagens de Desempenho -->
@@ -20,7 +19,6 @@
     <string name="register">Registrar</string>
     <string name="already_have_account">Já tem uma conta? Faça login</string>
     <string name="n_o_tem_uma_conta_inscreva_se">Não tem uma conta? Inscreva-se!</string>
-    <string name="n_o_tem_uma_conta_crie_uma_aqui">Não tem uma conta? Crie uma aqui!</string>
 
     <!-- Textos de Onboarding -->
     <string name="onboarding_image">onboarding_image36</string>
@@ -115,6 +113,8 @@
     <!-- Textos de AdMob -->
     <string name="admob_app_id">ca-app-pub-4958622518589705~1887040194</string>
     <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+    <string name="banner_ad_unit_id">ca-app-pub-ca-app-pub-4958622518589705~1887040194</string>
+    <string name="interstitial_ad_unit_id">ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx</string>
 
 
     <!-- Outros Textos -->
@@ -126,7 +126,7 @@
         <!-- Outras strings -->
         <string name="continua">Continuar</string>
     <string name="create_account">Criar Conta</string>
-    <string name="pontuacao_total">pontuacao_total: %d</string>
+    <string name="pontuacao_total">pontuacao total: " %d "</string>
     <string name="tempo_m_dio_por_pergunta">tempo_m_dio_por_pergunta</string>
     <string name="default_feedback_message">default_feedback_message</string>
     <string name="ganhar_moedas">Ganhar Moedas</string>
@@ -138,4 +138,51 @@
     <string name="edit_username_description" />
     <string name="pontuacao_format">Pontos: %d</string>
     <string name="pontua_o_0">pontuacao</string>
+    <string name="moedas">Moedas: 0</string>
+    <string name="perguntas_restantes_format">perguntas restantes: %d</string>
+    <string name="sequ_ncia_format">sequencia: %d</string>
+    <string name="novo_n_vel_desbloqueado_format">novo nivel desbloqueado: %d</string>
+    <string name="moedas_format">Você tem %d moedas</string>
+    <string name="mensagem_habilidade_desbloqueada">mensagem_habilidade_desbloqueada\n</string>
+    <string name="mensagem_incr_vel">mensagem_incr_vel</string>
+    <string name="mensagem_impar_vel">mensagem_impar_vel</string>
+    <string name="game_over_title">game_over_title</string>
+    <string name="reiniciar_jogo">reiniciar_jogo</string>
+    <string name="ver_resultados">ver_resultados</string>
+    <string name="reiniciando_em">reiniciando_em</string>
+    <string name="segundos">segundos</string>
+    <string name="novo_n_vel_desbloqueado_2_format">novo nivel desbloqueado 2: %d</string>
+
+
+
+
+
+
+    <string name="novo_n_vel_desbloqueado_format_string">Novo nível desbloqueado: %s</string>
+        <string name="novo_n_vel_desbloqueado_format_int">Novo nível desbloqueado! Total de Pontos: %d</string>
+        <string name="pontos_format">Pontos: %d</string>
+    <string name="coins_format_string">coins_moedas: %d</string>
+
+    <string name="score_format_string">Score: %d</string>
+    <string name="streak_format_string">Streak: %d</string>
+
+    <string name="coins_format">Moedas: %d</string>
+    <string name="streak_format">Sequência: %d</string>
+    <string name="politica_de_privacidade1">politica de Privacidade</string>
+
+
+
+        <string name="slogan_app_login">Desafie a sua mente, divirta-se aprendendo!</string>
+        <string name="junte_se_a_nos_e_aproveite">Ao entrar, você poderá:</string>
+
+        <string name="beneficio_1_login">Salvar o seu progresso e pontuações 🚀</string>
+        <string name="beneficio_2_login">Desbloquear novos níveis e desafios 🧠</string>
+        <string name="beneficio_3_login">Competir com amigos e subir no ranking (em breve!) 🏆</string>
+        <string name="beneficio_4_login">Personalizar o seu avatar e perfil ✨</string> <string name="termos_de_servico">Termos de Serviço</string>
+        <string name="politica_de_privacidade">Política de Privacidade</string>
+
+        <string name="n_o_tem_uma_conta_crie_uma_aqui">Não tem uma conta? Crie uma aqui!</string>
+
+
+
 </resources>

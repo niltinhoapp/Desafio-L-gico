@@ -1,13 +1,12 @@
-package com.desafiolgico.information
+package com.desafiologico.information
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
-import com.desafiolgico.R
-import com.desafiolgico.databinding.ActivityOnboardingBinding
-import com.desafiolgico.main.UserProfileActivity
-import com.google.android.material.tabs.TabLayout
+import com.desafiologico.R
+import com.desafiologico.databinding.ActivityOnboardingBinding
+import com.desafiologico.main.BoasVindasActivity
 import com.google.android.material.tabs.TabLayoutMediator
 
 class OnboardingActivity : AppCompatActivity() {
@@ -167,7 +166,7 @@ class OnboardingActivity : AppCompatActivity() {
             .edit()
             .putBoolean("onboarding_completed", true)
             .apply()
-        startActivity(Intent(this, UserProfileActivity::class.java))
+        startActivity(Intent(this, BoasVindasActivity::class.java))
         finish()
     }
 

@@ -1,4 +1,4 @@
-package com.desafiolgico.model
+package com.desafiologico.model
 
 class QuestionManager {
 
