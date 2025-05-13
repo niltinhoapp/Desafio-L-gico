@@ -1,11 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:padding="24dp"
+    android:background="@color/white">
 
-    <!-- Imagem para o slide -->
+    <!-- 🖼️ Imagem principal -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="0dp"
@@ -14,10 +16,10 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.4"
-        android:contentDescription="@string/onboarding_image" />
+        app:layout_constraintHeight_percent="0.45"
+        android:contentDescription="@string/onboarding_description" />
 
-    <!-- Área rolável para título e descrição -->
+    <!-- 📜 Área rolável com título e descrição -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -25,31 +27,45 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        android:fillViewport="true"
         android:layout_marginTop="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="16dp">
+            android:paddingBottom="24dp"
+            android:gravity="center_horizontal">
 
-            <!-- Título -->
+            <!-- 🏷️ Título -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textViewTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
+                android:textAlignment="center"
+                android:textColor="#000000"
                 android:layout_marginBottom="8dp"
+                android:shadowColor="#22000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="2"
                 android:text="@string/onboarding_title" />
 
-            <!-- Descrição -->
+            <!-- 📝 Descrição -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textViewDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
+                android:textStyle="bold"
+                android:textAlignment="center"
+                android:lineSpacingExtra="4dp"
+                android:textColor="#000000"
+                android:letterSpacing="0.01"
                 android:text="@string/onboarding_description" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

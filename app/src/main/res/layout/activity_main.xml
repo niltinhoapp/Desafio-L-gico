@@ -1,33 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@color/button_default">
+    android:background="@drawable/bg_onboarding_gradient">
 
+    <!-- Animação Lottie - intro -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
-        android:layout_width="350dp"
-        android:layout_height="150dp"
+        android:layout_width="323dp"
+        android:layout_height="134dp"
         android:layout_centerInParent="true"
         android:scaleType="fitCenter"
-        app:lottie_rawRes="@raw/airplane_explosion1"
-        app:lottie_loop="true"/>
+        app:lottie_loop="false"
+        app:lottie_rawRes="@raw/airplane_explosion1" />
 
+    <!-- Conteúdo principal (botões), inicialmente escondido -->
     <LinearLayout
         android:id="@+id/mainContent"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
         android:orientation="vertical"
         android:padding="16dp"
         android:gravity="center"
-        android:visibility="gone"> <!-- Inicialmente invisível -->
+        android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/beginnerButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:text="@string/iniciante"
+            android:text="@string/level_beginner"
             android:textSize="26sp"
             android:backgroundTint="@color/button_default"
             android:textColor="@color/white" />
@@ -37,22 +41,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:text="@string/intermedi_rio"
+            android:text="@string/level_intermediate"
             android:textSize="26sp"
             android:backgroundTint="@color/button_default"
-            android:textColor="@color/white"
-            android:drawableStart="@drawable/ic_lock" />
+            android:textColor="@color/white" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/advancedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:text="@string/avan_ado"
+            android:text="@string/level_advanced"
             android:textSize="26sp"
             android:backgroundTint="@color/button_default"
-            android:textColor="@color/white"
-            android:drawableStart="@drawable/ic_lock" />
+            android:textColor="@color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/expertButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/level_expert"
+            android:textSize="26sp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@color/white" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/exitButton"
@@ -63,4 +75,37 @@
             android:backgroundTint="@color/button_default"
             android:textColor="@color/white" />
     </LinearLayout>
+
+    <!-- ✅ LOTTIE DO DESAFIO DIÁRIO (o "botão") - fora do mainContent -->
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/btnDailyChallenge"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="14dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        app:lottie_rawRes="@raw/ic_animationcerebro"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true" />
+
+    <!-- ✅ TEXTO ABAIXO DA LOTTIE -->
+    <TextView
+        android:id="@+id/txtDailyLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnDailyChallenge"
+        android:layout_alignEnd="@id/btnDailyChallenge"
+        android:layout_marginTop="6dp"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="8dp"
+        android:text="Desafio diário"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:alpha="0.92"
+        android:visibility="gone"
+        android:background="#66000000" />
+
 </RelativeLayout>

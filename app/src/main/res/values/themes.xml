@@ -1,18 +1,28 @@
-<resources>
-    <!-- Tema Base -->
-    <style name="Base.Theme.DesafioLógico" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary_color</item>
-        <item name="colorPrimaryVariant">@color/your_primary_variant_color</item>
-        <item name="colorOnPrimary">@color/your_on_primary_color</item>
-        <item name="colorSecondary">@color/your_secondary_color</item>
-        <item name="colorSecondaryVariant">@color/your_secondary_variant_color</item>
-        <item name="colorOnSecondary">@color/your_on_secondary_color</item>
-        <item name="colorSurface">@color/your_surface_color</item>
-        <item name="colorOnSurface">@color/your_on_surface_color</item>
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-        <item name="colorOnBackground">@color/your_on_background_color</item>
+    <style name="Base.Theme.DesafioLógico" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorSecondary">@color/colorSecondary</item>
+        <item name="colorSurface">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
     </style>
 
-    <!-- Tema da Aplicação -->
+    <style name="TransparentDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <style name="Theme.DesafioLógico" parent="Base.Theme.DesafioLógico" />
+
 </resources>

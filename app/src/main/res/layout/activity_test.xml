@@ -1,181 +1,273 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayoutTest"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/button_default"
+    android:background="@drawable/bg_test_gradient"
     tools:context=".main.TestActivity">
 
-    <!-- Imagem do Avatar -->
-
-    <!-- Nome do Usuário -->
-
+    <!-- 👤 Avatar do Usuário -->
     <ImageView
         android:id="@+id/logoImageView"
-        android:layout_width="70dp"
-        android:layout_height="80dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="45dp"
-        android:contentDescription="Imagem ou Avatar do Usuário" />
+        android:layout_width="60dp"
+        android:layout_height="70dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="@string/avatar_do_jogador"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:srcCompat="@tools:sample/avatars" />
 
-    <!-- Lottie Animation View -->
+    <!-- 🧠 Nome do Jogador -->
     <TextView
         android:id="@+id/welcomeUsername"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="@string/username"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:fontFamily="@font/roboto_mediu"
+        android:shadowColor="#80000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="3"
+        app:layout_constraintTop_toTopOf="@id/logoImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/logoImageView"
+        app:layout_constraintBottom_toTopOf="@id/levelTextViewWrapper" />
+
+    <!-- 🏅 Nível -->
+    <FrameLayout
+        android:id="@+id/levelTextViewWrapper"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/logoImageView"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="30dp"
-        android:layout_marginEnd="10dp"
-        android:text="Nome do Usuário"
-        android:textColor="@android:color/black"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/logoImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/lottieAnimationView"
-        android:layout_width="230dp"
-        android:layout_height="172dp"
-        android:layout_below="@id/welcomeUsername"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginStart="86dp"
-        android:layout_marginTop="83dp"
-        android:layout_marginEnd="95dp"
-        android:background="@color/button_default"
-        android:scaleType="centerCrop"
-        app:lottie_rawRes="@raw/airplane_explosion1" />
-
-    <!-- Outros elementos do layout, como perguntas e opções -->
-    <LinearLayout
-        android:id="@+id/gameElements"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="gone"
-        android:layout_below="@id/lottieAnimationView"
-        android:layout_marginTop="16dp">
-
-        <!-- Exibição do nível -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/levelTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:paddingBottom="16dp"
-            android:text="@string/n_vel_iniciante_"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
-        <!-- Texto da pergunta -->
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/questionTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:padding="16dp"
-            android:text="@string/qual_a_capital_da_fran_a"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="8dp"
+            android:background="@drawable/bg_level_badge"
+            android:text="@string/level_beginner"
+            android:textColor="@android:color/white"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/roboto_mediu"
+            android:shadowColor="#88000000"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="4" />
+    </FrameLayout>
 
-        <!-- Botões de opções -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/option1Button"
+    <!-- ✅ CONTAINER do conteúdo (Scroll + Lottie sobreposto) -->
+    <FrameLayout
+        android:id="@+id/contentContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintTop_toBottomOf="@id/levelTextViewWrapper"
+        app:layout_constraintBottom_toTopOf="@id/statusIndicatorsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 📜 Área de Perguntas -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/gameElementsScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false">
+
+            <LinearLayout
+                android:id="@+id/gameElements"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="8dp">
+
+                <!-- 🧩 Pergunta -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/questionCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:translationZ="3dp"
+                    app:cardBackgroundColor="@color/button_default"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="8dp"
+                    app:strokeColor="#33FFFFFF"
+                    app:strokeWidth="1dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/questionTextView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:minHeight="100dp"
+                        android:padding="20dp"
+                        android:text="@string/qual_a_capital_da_fran_a"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:fontFamily="@font/roboto_mediu"
+                        android:shadowColor="#99000000"
+                        android:shadowDx="2"
+                        android:shadowDy="2"
+                        android:shadowRadius="4" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ✅ Os botões de resposta entram aqui via inflateOptionButtons() -->
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- ✈️ Lottie Intro (fica por cima do Scroll quando visível) -->
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/lottieAnimationView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="false"
+            app:lottie_rawRes="@raw/airplane_explosion1" />
+    </FrameLayout>
+
+    <!-- 🧭 Indicadores -->
+    <LinearLayout
+        android:id="@+id/statusIndicatorsLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#202A44"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toTopOf="@id/adView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- ✅ Texto do tempo (FALTAVA NO SEU XML) -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/timerTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/defaultButtonColor"
-            android:text="@string/op_o_1" />
+            android:gravity="end"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:fontFamily="@font/roboto_mediu"
+            tools:text="00:30" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/option2Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/defaultButtonColor"
-            android:text="@string/op_o_2" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/option3Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/defaultButtonColor"
-            android:text="@string/op_o_3" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/option4Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/defaultButtonColor"
-            android:text="@string/op_o_4"
-            android:padding="16dp"/>
-
-        <!-- Barra de Progresso de Tempo -->
+        <!-- Barra de tempo -->
         <ProgressBar
             android:id="@+id/timerProgressBar"
-            style="@android:style/Widget.ProgressBar.Horizontal"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:indeterminate="false"
+            android:layout_height="6dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp"
             android:max="100"
-            android:progress="0"
+            android:progress="100"
             android:progressDrawable="@drawable/progress_green" />
 
-        <!-- Pontuação -->
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/scoreTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:gravity="center"
-            android:text="@string/pontua_o_0"
-            android:textColor="#0B0F0B"
-            android:textSize="24sp" />
-
-        <TextView
-            android:id="@+id/streakTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/scoreTextView"
-            android:layout_marginTop="10dp"
-            android:layout_marginStart="16dp"
-            android:text="Streak: 0"
-            android:textSize="16sp"
-            android:textColor="@android:color/black"
-            android:gravity="center" />
-
-        <!-- Moedas -->
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/coinsTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/moedas_0"
-            android:textSize="18sp"
-            android:textColor="#DB3806" />
-
-        <!-- Anúncio -->
-        <com.google.android.gms.ads.AdView
-            android:id="@+id/adView"
+        <!-- Pontuação e Streak -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:adSize="BANNER"
-            app:adUnitId="ca-app-pub-4958622518589705/3051012274" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <!-- Perguntas restantes -->
-        <TextView
-            android:id="@+id/questionsRemainingTextView"
-            android:layout_width="wrap_content"
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/scoreTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:drawableStart="@drawable/ic_star_points"
+                android:drawablePadding="6dp"
+                android:text="@string/pontos_format"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:fontFamily="@font/roboto_mediu"
+                app:drawableTintMode="screen"
+                app:drawableTint="@color/progress_green" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/streakTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="🔥 Streak: 0"
+                android:textColor="@color/yellow_streak"
+                android:textSize="16sp"
+                android:fontFamily="@font/roboto_mediu"
+                android:shadowColor="#99000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="3" />
+        </LinearLayout>
+
+        <!-- Moedas e Perguntas Restantes -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/perguntas_restantes_44"
-            android:textColor="@color/primary_color"
-            android:textSize="18sp"
-            android:gravity="center" />
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/coinsTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:drawableStart="@drawable/ic_coin_small"
+                android:drawablePadding="4dp"
+                android:text="@string/moedas_0"
+                android:textColor="@color/gold_color"
+                android:textSize="16sp"
+                android:fontFamily="@font/roboto_mediu"
+                app:drawableTintMode="screen"
+                app:drawableTint="@color/gold_color" />
+
+            <TextView
+                android:id="@+id/questionsRemainingTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/perguntas_restantes_format"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:fontFamily="@font/roboto_mediu" />
+        </LinearLayout>
     </LinearLayout>
-</RelativeLayout>
+
+    <!-- 📺 Banner Ad -->
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:adSize="BANNER"
+        app:adUnitId="ca-app-pub-4958622518589705/1734854735"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 🎉 Efeito Konfetti (overlay) -->
+    <nl.dionsegijn.konfetti.xml.KonfettiView
+        android:id="@+id/konfettiView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

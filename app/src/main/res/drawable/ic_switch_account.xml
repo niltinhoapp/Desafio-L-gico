@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- setas “trocar/alternar” -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7,7h9l-2,-2 1.41,-1.41L20.83,9l-5.42,5.41L14,13l2,-2H7V7z" />
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17,17H8l2,2 -1.41,1.41L3.17,15l5.42,-5.41L10,11l-2,2h9v4z" />
+</vector>

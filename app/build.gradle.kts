@@ -1,11 +1,11 @@
-import org.gradle.kotlin.dsl.android
 import org.gradle.kotlin.dsl.libs
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("com.google.devtools.ksp") version "1.9.10-1.0.13"
-    alias(libs.plugins.google.gms.google.services) // Plugin KSP
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    alias(libs.plugins.google.gms.google.services)
+    id("com.google.firebase.crashlytics") // ✅ Crashlytics ativo
 }
 
 android {
@@ -16,88 +16,117 @@ android {
         applicationId = "com.desafiolgico"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-
+        versionCode = 3
+        versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        // 🔹 Versão de TESTE (sem R8)
         release {
+            // ❌ Desativa R8 e shrink nesta versão
             isMinifyEnabled = false
+            isShrinkResources = false
+
+            // Mantém regras (sem ofuscar)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+
+        debug {
+            isMinifyEnabled = false
+        }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildToolsVersion = "34.0.0"
 
     buildFeatures {
         viewBinding = true
+        dataBinding = true
+        buildConfig = true
     }
-    sourceSets {
-        getByName("main") {
-            assets {
-                srcDirs("src\\main\\assets", "src\\main\\assets")
-            }
+
+    packaging {
+        resources.excludes += setOf(
+            "META-INF/LICENSE.txt",
+            "META-INF/NOTICE.txt",
+            "META-INF/*.kotlin_module"
+        )
+    }
+
+    // 🔧 Corrige possíveis conflitos de libs
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains:annotations:23.0.0")
+            force("androidx.room:room-runtime:2.6.1")
+            force("androidx.room:room-common:2.6.1")
+            force("androidx.sqlite:sqlite:2.4.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
         }
     }
 }
 
-
 dependencies {
-    // Bibliotecas essenciais do Android
-    implementation(libs.androidx.core.ktx)         // Extensões Kotlin para Android
-    implementation(libs.androidx.appcompat)       // Compatibilidade de recursos Android
-    // implementation(libs.androidx.constraintlayout) // Layouts de tela mais avançados
-    implementation(libs.androidx.activity)        // API para gerenciar Activities
-    implementation(libs.androidx.recyclerview)    // Versão mais recente disponível
-    implementation (libs.androidx.core.ktx.v1160) // Extensões Kotlin para Android
-
-    // Ou a versão mais recente
-    implementation(libs.material.v1110)
-
-    implementation(libs.glide)
-    implementation(libs.firebase.analytics)
-    annotationProcessor(libs.compiler)
-    implementation(libs.firebase.auth)
-    implementation(libs.play.services.auth)
-    implementation(libs.lottie)
-    implementation(libs.konfetti)
+    // Base Android
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.material.v1130)
+    implementation(libs.androidx.material3.android)
 
-    // Material Design (Escolha uma versão - Material 2 ou Material 3)
-    //implementation(libs.material)                 // Material Design 2
-    implementation(libs.androidx.material3.android) // Material Design 3 (Descomente caso necessário)
-    // Bibliotecas Firebase e serviços
-    implementation(libs.firebase.inappmessaging)  // Mensagens no aplicativo do Firebase
-    implementation (libs.play.services.ads) // Google Play Services para Ads
-    // Gerenciamento de ciclo de vida e corrotinas
+    // 🔥 Firebase (BOM + módulos)
+    implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-crashlytics") // 🔹 coleta de falhas automática
+
+    // Login Google + Credential Manager
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+
+    // UI e animações
+    implementation(libs.lottie)
+    implementation(libs.konfetti.xml.v204)
+    implementation(libs.glide)
+
+    // Arquitetura
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation(libs.kotlinx.coroutines.android)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Networking e serialização
-    implementation(libs.retrofit)                 // Retrofit para chamadas de API
-    implementation(libs.converter.gson)           // Conversor Gson para Retrofit
-    // Manipulação de imagens e banco de dados
-    implementation(libs.coil)                     // Carregamento de imagens leve e eficiente
-    implementation(libs.androidx.room.runtime)    // Biblioteca Room para persistência de dados
-    ksp(libs.androidx.room.compiler)              // Compilador Room com KSP (verifique a necessidade)
-    // Testes unitários e instrumentados
-    testImplementation(libs.junit)                // Testes unitários
-    androidTestImplementation(libs.androidx.junit)  // Testes instrumentados JUnit
-    androidTestImplementation(libs.androidx.espresso.core) // Testes de UI com Espresso
+    // HTTP e JSON
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
 
-//        implementation(libs.leonidslib)
+    // Google Play Services
+    implementation(libs.play.services.ads)
+    implementation(libs.play.services.auth)
 
+    // Banco de dados local (Room)
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+
+    // Navegação e Browser
+    implementation("androidx.browser:browser:1.6.0")
+
+    // Imagens
+    implementation(libs.coil)
+
+    // Testes
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }
-

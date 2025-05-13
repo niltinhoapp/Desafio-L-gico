@@ -1,31 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayoutRewards"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="16dp">
+    android:background="@drawable/bg_rewards_gradient"
+    tools:context=".main.RewardsActivity">
 
-    <TextView
-        android:id="@+id/coins_textview"
+    <!-- 🪙 Título e saldo -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/coinsCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Moedas: 0"
+        android:layout_marginTop="40dp"
+        android:padding="24dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="6dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/coinsTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_coin_small"
+            android:drawablePadding="8dp"
+            android:text="@string/moedas_0"
+            android:textColor="@android:color/white"
+            android:textSize="22sp"
+            android:fontFamily="@font/roboto_medium"
+            app:drawableTint="@color/gold_color" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 🎁 Botão principal de recompensa -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/earnCoinsButton"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:paddingVertical="16dp"
+        android:text="@string/assistir_e_ganhar_moedas"
         android:textSize="18sp"
-        android:layout_marginBottom="20dp"/>
+        android:textAllCaps="false"
+        android:fontFamily="@font/roboto_medium"
+        app:cornerRadius="30dp"
+        app:icon="@drawable/ic_play_circle"
+        app:iconTint="@android:color/white"
+        app:backgroundTint="@color/button_default"
+        app:layout_constraintTop_toBottomOf="@id/coinsCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5" />
 
-    <Button
-        android:id="@+id/earn_coins_button"
+    <!-- 🔙 Botão voltar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/backButton"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/ganhar_moedas"
-        android:layout_marginBottom="20dp"/>
-
-    <Button
-        android:id="@+id/back_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:text="@string/voltar"
-        android:layout_marginTop="20dp"/>
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:fontFamily="@font/roboto_medium"
+        app:icon="@drawable/ic_arrow_back"
+        app:iconTint="@android:color/white"
+        app:layout_constraintTop_toBottomOf="@id/earnCoinsButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-</LinearLayout>
+    <!-- 🎉 Efeito Konfetti -->
+    <nl.dionsegijn.konfetti.xml.KonfettiView
+        android:id="@+id/konfettiView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

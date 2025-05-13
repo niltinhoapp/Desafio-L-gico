@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Sombra/Profundidade (bem sutil) -->
+    <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp" />
+            <solid android:color="#22000000" />
+        </shape>
+    </item>
+
+    <!-- Card (vidro escuro) -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp" />
+
+            <!-- Fundo tipo glass -->
+            <gradient
+                android:angle="270"
+                android:startColor="#2AFFFFFF"
+                android:centerColor="#14FFFFFF"
+                android:endColor="#0AFFFFFF" />
+
+            <!-- Borda clara -->
+            <stroke
+                android:width="1dp"
+                android:color="#33FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Brilho lateral (faixa) -->
+    <item
+        android:insetLeft="10dp"
+        android:insetTop="10dp"
+        android:insetBottom="10dp"
+        android:insetRight="22dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <gradient
+                android:angle="0"
+                android:startColor="#22FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+
+</layer-list>

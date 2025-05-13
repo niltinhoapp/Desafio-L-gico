@@ -1,50 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayoutNextPhase"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorSecondary"
-    android:padding="16dp">
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="@drawable/bg_next_phase_gradient"
+    tools:context=".main.NextPhaseActivity">
 
-    <!-- Texto da fase concluída -->
-
-    <!-- Texto da curiosidade -->
+    <!-- 🎉 Título da fase concluída -->
     <TextView
         android:id="@+id/phaseTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
-        android:text="Fase concluída!"
-        android:textColor="@color/colorAccent"
-        android:textSize="24sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:text="Fase Concluída!"
+        android:textColor="@color/progress_green"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/roboto_mediu"
+        android:shadowColor="#55000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="4"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         tools:ignore="HardcodedText" />
 
+    <!-- 💡 Texto da curiosidade -->
     <TextView
         android:id="@+id/curiosityTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="22sp"
-        android:textColor="@color/progress_end"
+        android:layout_marginTop="24dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:gravity="center"
+        android:text="Sabia que o cérebro humano consome mais energia que qualquer outro órgão?"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        android:fontFamily="@font/roboto_mediu"
+        android:shadowColor="#80000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="3"
         app:layout_constraintTop_toBottomOf="@id/phaseTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp" />
+        app:layout_constraintHorizontal_bias="0.5"
+        tools:ignore="HardcodedText" />
 
-    <!-- Botão para continuar -->
-    <Button
+    <!-- 🚀 Botão para continuar -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/continueButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:text="@string/continuar"
-        android:textColor="@color/white"
+        android:textAllCaps="false"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:fontFamily="@font/roboto_mediu"
+        android:paddingHorizontal="32dp"
+        android:paddingVertical="12dp"
+        android:elevation="6dp"
+        app:cornerRadius="100dp"
         android:backgroundTint="@color/colorPrimary"
         app:layout_constraintTop_toBottomOf="@id/curiosityTextView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="32dp" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

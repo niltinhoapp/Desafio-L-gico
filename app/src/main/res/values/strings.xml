@@ -1,141 +1,240 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Formatos -->
-    <string name="n_vel_format">Nível: %s</string>
-    <string name="nivel_format">Nível: %1$s</string>
-    <string name="pontos_format">Pontos: %d</string>
-    <string name="points">Pontos: %1$d</string>
+    <string name="app_name">Desafio Lógico</string>
+    <string name="slogan_app_login">Desafie a sua mente, divirta-se aprendendo!</string>
+    <string name="app_logo">Logo do Aplicativo</string>
 
-    <!-- Mensagens de Desempenho -->
-    <string name="good_performance">Muito bom! Você pode melhorar.</string>
-    <string name="try_again">Não desista! Tente novamente!</string>
-    <string name="well_done">Muito bem! Continue assim e você vai melhorar ainda mais!</string>
+    <string name="continuar">Continuar</string>
+    <string name="sair">Sair</string>
+    <string name="voltar">Voltar</string>
+    <string name="pular">Pular</string>
+    <string name="proximo">Próximo</string>
+    <string name="reiniciar">Reiniciar</string>
+    <string name="tentar_novamente">Tentar Novamente</string>
+    <string name="trocar_conta">Trocar Conta</string>
+    <string name="novo_jogo">Novo Jogo</string>
+    <string name="ver_resultados">Ver Resultados</string>
+    <string name="ganhar_moedas">Ganhar Moedas</string>
+    <string name="assistir_e_ganhar_moedas">🎁 Assistir e ganhar moedas</string>
+    <string name="abc_toolbar_collapse_description">Colapsar Barra de Ferramentas</string>
+    <string name="status_bar_notification_info_overflow" translatable="false">+99</string>
 
-    <!-- Textos de Estatísticas -->
-    <string name="stats_text" formatted="false">🕒 Tempo médio por pergunta: %.2f segundos\n📊 Desempenho: %.2f%%</string>
-    <string name="score_text" formatted="false">Você conquistou %d pontos de %d perguntas.</string>
-
-    <!-- Textos de Login e Registro -->
-    <string name="login_with_google">Entrar com Google</string>
+    <string name="login">Entrar</string>
     <string name="register">Registrar</string>
-    <string name="already_have_account">Já tem uma conta? Faça login</string>
-    <string name="n_o_tem_uma_conta_inscreva_se">Não tem uma conta? Inscreva-se!</string>
+    <string name="create_account">Criar Conta</string>
+    <string name="login_with_google">Entrar com Google</string>
+    <string name="username">Nome de Usuário</string>
+    <string name="email">Email</string>
+    <string name="password">Senha</string>
+    <string name="already_have_account">Já tem uma conta? Faça login!</string>
     <string name="n_o_tem_uma_conta_crie_uma_aqui">Não tem uma conta? Crie uma aqui!</string>
+    <string name="junte_se_a_nos_e_aproveite">Ao entrar, você poderá:</string>
+    <string name="beneficio_1_login">Salvar o seu progresso e pontuações 🚀</string>
+    <string name="beneficio_2_login">Desbloquear novos níveis e desafios 🧠</string>
+    <string name="beneficio_3_login">Competir com amigos e subir no ranking (em breve!) 🏆</string>
+    <string name="beneficio_4_login">Personalizar o seu avatar e perfil ✨</string>
+    <string name="bem_vindo_usuario">Bem-vindo(a), %1$s!</string>
+    <string name="ol_jogador">Olá, Jogador!</string>
+    <string name="continuar_jogo">Continuar Jogo</string>
+    <string name="update_username">Atualizar Nome de Usuário</string>
+    <string name="enter_username">Insira seu Nome de Usuário</string>
+    <string name="entrar_como_convidado" translatable="false">Entrar como Convidado</string>
+    <string name="use_o_bot_o_acima_para_entrar_com_sua_conta_google" translatable="false">Use o botão acima para entrar com sua conta Google</string>
+    <string name="junte_se_a_n_s_e_aproveite" translatable="false">Junte-se a nós e aproveite:</string>
 
-    <!-- Textos de Onboarding -->
-    <string name="onboarding_image">onboarding_image36</string>
-    <string name="previous">Anterior</string>
-    <string name="skip">Voltar</string>
-    <string name="next">Próximo</string>
     <string name="onboarding_title">Título do Onboarding</string>
-    <string name="onboarding_description">....</string>
+    <string name="onboarding_description">Descrição do Onboarding</string>
+    <string name="onboarding_image_desc">Imagem de Exemplo do Tutorial</string>
+    <string name="ver_tutorial_novamente">Ver tutorial novamente</string>
+    <string name="mostrar_sempre_ao_iniciar">Mostrar sempre ao iniciar</string>
+    <string name="indicadores_de_pagina">Indicadores de Página</string>
 
-    <string name="game_over_message">Game Over</string>
-    <string name="result_message">Resultado</string>
-    <string name="score">Pontuação: %1$d</string>
-    <string name="wrong_answers">Erros: %1$d</string>
+    <string name="qual_a_capital_da_fran_a">Qual é a capital da França?</string>
+    <string name="op_o">Opção</string>
+    <string name="moedas_format">Moedas: %d</string>
+    <string name="pontos_format">Pontos: %d</string>
+    <string name="sequencia_format">Sequência: %d</string>
+    <string name="perguntas_restantes_format">Perguntas restantes: %d</string>
+    <string name="tempo_m_dio_por_pergunta_placeholder" translatable="false">tempo_m_dio_por_pergunta</string>
+    <string name="pontuacao_total_format">Pontuação total: %d</string>
+
+    <!-- Avatar / Loja -->
+    <string name="select_avatar_first">Selecione um avatar primeiro.</string>
+
+    <string name="avatar_need_coins">
+    Você precisa de %1$d moedas para comprar este avatar. Você tem %2$d.
+</string>
+
+    <string name="avatar_purchase_failed">
+    Não foi possível comprar. Custo: %1$d moedas • Você tem %2$d.
+</string>
+
+    <string name="avatar_unlocked_coins">
+    ✅ Avatar desbloqueado! -%1$d moedas
+</string>
 
 
-    <!-- Ícones e Descrições -->
-    <string name="medal_description_">Descrição da Medalha</string>
+    <string name="settings_title">Configurações</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_desc">Alterar idioma do app</string>
 
-    <string name="Reiniciar">Reiniciar</string>
-    <string name="dialog_icon">Ícone de Troféu</string>
-    <string name="medal_description">Medalha de Troféu</string>
+    <string name="settings_avatar">Avatar</string>
+    <string name="settings_avatar_desc">Trocar seu avatar</string>
 
-    <string name="game_over_icon_description">desc</string>
-    <string name="animation_description">animation_description</string>
+    <string name="settings_tutorial">Tutorial</string>
+    <string name="settings_tutorial_desc">Ver o tutorial novamente</string>
+
+    <string name="settings_switch_account">Trocar conta</string>
+    <string name="settings_switch_account_desc">Sair e entrar com outra conta</string>
+
+    <string name="daily_title">🎯 Desafio Diário</string>
+    <string name="daily_subtitle">3 perguntas rápidas • 15s cada</string>
+    <string name="daily_question_placeholder">Pergunta aqui...</string>
+
+    <string name="daily_option_1">Opção 1</string>
+    <string name="daily_option_2">Opção 2</string>
+    <string name="daily_option_3">Opção 3</string>
+    <string name="daily_option_4">Opção 4</string>
+
+    <string name="daily_badge_desc">Badge</string>
+
+    <string name="daily_result_text_placeholder">Acertos: 0/3</string>
+    <string name="daily_xp_placeholder">+XP</string>
+
+    <string name="daily_come_back_tomorrow">🔁 Volte amanhã para um novo desafio diário!</string>
+
+
+
+
+
+    <string name="daily_label">Desafio diário</string>
+    <string name="daily_done_today">Concluído hoje</string>
+
+    <string name="daily_not_enough_questions">Sem perguntas suficientes para o desafio diário.</string>
+    <string name="daily_result_title">✅ Desafio Diário Concluído!</string>
+    <string name="daily_result_text_format">Acertos: %1$d/3 • Score diário: %2$d</string>
+    <string name="daily_xp_text_format">✨ +%1$d XP • Streak diário: %2$d</string>
+    <string name="daily_back_to_menu">Voltar ao menu</string>
+
+
+    <string name="settings_delete_account">Excluir conta</string>
+    <string name="settings_delete_account_desc">Apagar conta e dados (cuidado)</string>
+
+    <string name="open">Abrir</string>
+
+
+    <string name="language_portuguese_brazil">Português (Brasil)</string>
+    <string name="language_english_us">English (US)</string>
+    <string name="language_changed_success">✅ Idioma alterado com sucesso!</string>
+    <string name="selected">Selecionado</string>
+
+
+
     <string name="level_beginner">Iniciante</string>
     <string name="level_intermediate">Intermediário</string>
     <string name="level_advanced">Avançado</string>
-
-
-    <!-- Textos de Níveis -->
-    <string name="iniciante">Iniciante</string>
-    <string name="intermedi_rio">Intermediário</string>
-    <string name="avan_ado">Avançado</string>
-    <string name="n_vel_iniciante">Nível: Iniciante</string>
-    <string name="n_vel_iniciante_">Nível: Iniciante</string>
-    <string name="n_vel">Nível: %1$s</string>
+    <string name="nivel_format_string">Nível: %1$s</string>
+    <string name="novo_n_vel_desbloqueado_format">Novo Nível Desbloqueado: %1$s</string>
     <string name="fase_conclu_da">Fase concluída!</string>
     <string name="nenhuma_pergunta_dispon_vel_para_este_n_vel">Nenhuma pergunta disponível para este nível.</string>
 
-    <!-- Textos de Feedback -->
+    <string name="result_message">Resultado</string>
+    <string name="score">Pontuação: %1$d</string>
+    <string name="wrong_answers">Erros: %1$d</string>
+    <string name="game_over_message">Fim de Jogo</string>
+    <string name="game_over_title">Fim de Jogo</string>
+    <string name="reiniciando_em">Reiniciando em</string>
+    <string name="segundos">segundos</string>
+
+    <string name="well_done">Muito bem! Continue assim e você vai melhorar ainda mais!</string>
+    <string name="good_performance">Muito bom! Você pode melhorar.</string>
+    <string name="try_again">Não desista! Tente novamente!</string>
     <string name="voc_perdeu_tente_novamente">Você perdeu, tente novamente!</string>
-    <string name="voc_perdeu_fique_atento_nas_perguntas_mais_dif_ceis">Você perdeu! Fique atento nas perguntas mais difíceis!</string>
-    <string name="tempo_m_dio_por_pergunta_0_00_segundos">Tempo médio por pergunta: 0.00 segundos</string>
-    <string name="tentar_novamente__">Tentar Novamente</string>
-    <string name="tentar_novamente">Tentar Novamente</string>
     <string name="you_lost">Você perdeu! Fique atento nas perguntas mais difíceis!</string>
     <string name="almost_there">Quase lá! Estude mais nas questões questionadas!</string>
     <string name="great_performance">Ótimo desempenho! Continue assim!</string>
     <string name="incredible_all_correct">Incrível! Você acertou tudo!</string>
-    <string name="bem_vindo_usuario">Bem-vindo, %1$s!</string>
 
-    <!-- Textos de Navegação -->
-    <string name="abc_toolbar_collapse_description">Collapse</string>
-    <string name="call_notification_screening_text">Chamada de tela</string>
-    <string name="status_bar_notification_info_overflow">+99</string>
-    <string name="app_name">Desafio Lógico</string>
-    <string name="sair">Sair</string>
-    <string name="continuar">Continuar</string>
-    <string name="pular">Pular</string>
-    <string name="pr_ximo">Próximo</string>
+    <string name="stats_text">🕒 Tempo médio por pergunta: %1$.2f segundos\n📊 Desempenho: %2$.2f%%</string>
+    <string name="score_text">Você conquistou %1$d pontos em %2$d perguntas.</string>
 
-    <!-- Textos de Botões -->
-    <string name="retry_button">retry\n</string>
-    <string name="tentar_novamente_">Tentar Novamente</string>
-    <string name="sair_">Sair</string>
+    <string name="dialog_title_default">Parabéns!</string>
+    <string name="dialog_message_default">Você acertou 10 questões! Continue assim!</string>
+    <string name="dialog_continue">Continuar</string>
     <string name="exit_message">Você tem certeza que deseja sair?</string>
     <string name="exit_confirm">Sim</string>
     <string name="exit_cancel">Não</string>
-
-    <!-- Textos de Jogo -->
-    <string name="qual_a_capital_da_fran_a">Qual é a capital da França?</string>
-    <string name="op_o_1">Opção 1</string>
-    <string name="op_o_2">Opção 2</string>
-    <string name="op_o_3">Opção 3</string>
-    <string name="op_o_4">Opção 4</string>
-    <string name="moedas_0">Moedas: 0</string>
-    <string name="perguntas_restantes_44">Perguntas restantes: 44</string>
-    <string name="pontos_0">Pontos: 0</string>
-    <string name="bem_vindo_jogador">Bem-vindo, Jogador!</string>
-
-    <!-- Textos de Áudio -->
-    <string name="enable_audio">enabled_audio\n</string>
-    <string name="play_audio">play</string>
-
-    <!-- Textos de Feedback -->
-    <string name="game_over_message_placeholder">game_over_message_placeholder</string>
-    <string name="score_placeholder">score\n</string>
-    <string name="medal_image">melhada</string>
-    <string name="feedback_message_placeholder">feed</string>
-    <string name="stats_placeholder">statics</string>
-
-    <!-- Textos de AdMob -->
-    <string name="admob_app_id">ca-app-pub-4958622518589705~1887040194</string>
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+    <string name="excluir_apenas_meus_dados">Excluir Apenas Meus Dados</string>
+    <string name="excluir_conta_e_dados">Excluir Conta e Dados</string>
+    <string name="excluir_dados_opcoes">Você pode optar por excluir apenas seus dados locais (progresso e pontuação) ou apagar completamente sua conta.</string>
 
 
-    <!-- Outros Textos -->
-    <string name="app_logo">Logo do Aplicativo</string>
-    <string name="username">Nome de Usuário</string>
-    <string name="email">Email</string>
-    <string name="password">Senha</string>
-    <string name="login">Entrar</string>
-        <!-- Outras strings -->
-        <string name="continua">Continuar</string>
-    <string name="create_account">Criar Conta</string>
-    <string name="pontuacao_total">pontuacao_total: %d</string>
-    <string name="tempo_m_dio_por_pergunta">tempo_m_dio_por_pergunta</string>
-    <string name="default_feedback_message">default_feedback_message</string>
-    <string name="ganhar_moedas">Ganhar Moedas</string>
-    <string name="voltar">Voltar</string>
-    <string name="update_username" />
-    <string name="enter_username" />
-    <string name="update_username_description" />
-    <string name="mensagem_adicional">Mensagem adicional</string>
-    <string name="edit_username_description" />
-    <string name="pontuacao_format">Pontos: %d</string>
-    <string name="pontua_o_0">pontuacao</string>
+    <string name="medal_description">Medalha de Troféu</string>
+    <string name="dialog_icon">Ícone do diálogo</string>
+    <string name="avatar_do_jogador">Avatar do Jogador</string>
+    <string name="confirmar_avatar">Confirmar Avatar</string>
+    <string name="escolha_seu_avatar">Escolha seu Avatar</string>
+    <string name="medal_image">Imagem da Medalha</string>
+    <string name="animation_description">Descrição da Animação</string>
+    <string name="avatar_image">Imagem do Avatar</string>
+    <string name="default_username">Jogador</string>
+    <string name="welcome_user_format">Bem-vindo, %1$s!</string>
+
+    <string name="secret_level_relampago_title">⚡ Fase Secreta: Relâmpago!</string>
+    <string name="secret_level_perfeicao_title">✨ Fase Secreta: Perfeição!</string>
+    <string name="secret_level_enigma_title">🧩 Fase Secreta: Enigma!</string>
+    <string name="secret_level_generic_title">🔓 Fase Secreta Desbloqueada!</string>
+    <string name="secret_transition_animation_desc">Animação de transição da fase secreta</string>
+
+
+    <string name="fase_secreta_sucesso_prefix">✅ Fase secreta liberada:</string>
+    <string name="fase_secreta_falha_prefix">❌ Fase secreta não liberada:</string>
+
+    <string name="result_points_format">🏆 Pontos: %1$d • Perguntas: %2$d</string>
+    <string name="result_stats_format">📊 Desempenho: %1$.1f%% • ⏱️ Tempo médio: %2$.2fs</string>
+
+    <string name="game_over_score_only">💥 Fim de jogo! Sua pontuação final: %1$d</string>
+    <string name="game_over_limit_reached">🚫 Limite de %1$d erros atingido! Pontuação: %2$d</string>
+
+        <string name="streak_format">Sequência: %1$d</string>
+
+    <string name="expert_progress_format">Pergunta %1$d/%2$d</string>
+    <string name="expert_errors_format">Erros: %1$d/%2$d</string>
+
+    <string name="notifications_enabled">✅ Notificações ativadas.</string>
+    <string name="notifications_denied">⚠️ Notificações desativadas.</string>
+
+    <string name="exit_dialog_title">Sair do jogo?</string>
+    <string name="exit_dialog_message">Tem certeza que deseja sair?</string>
+
+    <string name="answer_yes">Sim</string>
+    <string name="answer_no">Não</string>
+
+
+    <!-- Level names -->
+    <string name="level_expert">Experiente</string>
+
+    <!-- Level unlock/lock messages -->
+    <string name="level_unlocked_format">%1$s desbloqueado!</string>
+    <string name="level_locked_format">🔒 %1$s bloqueado. Você precisa de %2$d pontos para liberar.</string>
+
+
+
+
+    <string name="admob_app_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="banner_ad_unit_id" translatable="false">ca-app-pub-4958622518589705/1887040194</string>
+    <string name="interstitial_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="admob_rewarded_ad_unit_id" translatable="false">ca-app-pub-4958622518589705/3051012274</string>
+    <string name="default_web_client_id" translatable="false">476676650911-jkaguigqgpjooud6p8q0o67acioldurp.apps.googleusercontent.com</string>
+
+    <string name="politica_de_privacidade">Política de Privacidade</string>
+    <string name="termos_de_servico">Termos de Serviço</string>
+    <string name="bem_vindo">Bem-vindo(a)</string>
+    <string name="avatar_atualizado">Avatar atualizado com sucesso!</string>
+    <string name="english_us">English (US)</string>
+    <string name="moedas_0" translatable="false">moedas_0</string>
+    <string name="voc_pode_optar_por_excluir" translatable="false">voc_pode_optar_por_excluir</string>
+
+    <string name="select_language">Selecione seu idioma</string>
+    <string name="portugues_brasil">Português (Brasil)</string>
 </resources>

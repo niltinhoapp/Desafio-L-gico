@@ -23,6 +23,9 @@
         <dimen name="margin_standard">16dp</dimen>
         <dimen name="text_size_large">22sp</dimen>
         <dimen name="icon_size">120dp</dimen>
+
+    <dimen name="option_card_stroke">2dp</dimen>
+
     </resources>
 
 

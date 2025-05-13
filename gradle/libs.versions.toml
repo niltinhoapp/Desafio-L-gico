@@ -1,70 +1,67 @@
 [versions]
 agp = "8.7.3"
-coreKtxVersion = "1.16.0"
-glide = "4.16.0"
-konfetti = "1.3.2"
-kotlin = "1.9.10"
+firebaseBom = "32.9.0" # Versão segura para Kotlin 1.9.24
+kotlin = "1.9.24" # Versão solicitada pelo usuário
 coreKtx = "1.15.0"
-junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
 appcompat = "1.7.0"
-androidxLifecycle = "2.8.7"
-leonidslib = "1.3.1"
-lottie = "6.6.1"
-material = "1.12.0"
 activity = "1.9.3"
 constraintlayout = "2.2.0"
-material3Android = "1.3.1"
-coil = "2.7.0"
-kotlinxCoroutines = "1.9.0"
-
-
-materialVersion = "1.11.0"
-playServicesAds = "23.6.0"
-playServicesAuth = "21.3.0"
 recyclerview = "1.3.2"
+material = "1.13.0"
+material3Android = "1.3.1"
+glide = "4.16.0"
+playServicesAuth = "21.1.0" # Downgrade para evitar conflito de metadados
+playServicesAds = "22.6.0" # Downgrade para evitar conflito de metadados
+lottie = "6.6.10"
+konfettiXmlVersion = "2.0.4"
+androidxLifecycle = "2.8.7"
 retrofit = "2.11.0"
 converterGson = "2.11.0"
+coil = "2.7.0"
 room = "2.6.1"
-firebaseInappmessaging = "21.0.1"
+kotlinxCoroutines = "1.9.0"
+animationCore = "1.9.3"
+espressoCore = "3.6.1"
+junit = "4.13.2"
+junitVersion = "1.2.1"
 googleGmsGoogleServices = "4.4.2"
-firebaseAnalytics = "22.1.2"
-firebaseAuth = "23.1.0"
+firebaseAuthKtx = "24.0.1"
+firebaseAuthCommon = "9.8.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-core-ktx-v1160 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
-androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
-compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-konfetti = { module = "nl.dionsegijn:konfetti", version.ref = "konfetti" }
-leonidslib = { module = "com.plattysoft.leonids:LeonidsLib", version.ref = "leonidslib" }
-lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+material-v1130 = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
+compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
+
+# CORREÇÃO CRÍTICA: Usando 'module' para maior clareza de artefato (BOM gerencia a versão)
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-database-ktx = { module = "com.google.firebase:firebase-database-ktx" }
+
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
+lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
+konfetti-xml-v204 = { module = "nl.dionsegijn:konfetti-xml", version.ref = "konfettiXmlVersion" }
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
 androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "androidxLifecycle" }
-kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
-
-
-material-v1110 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
-play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
-play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "converterGson" }
 coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-firebase-inappmessaging = { group = "com.google.firebase", name = "firebase-inappmessaging", version.ref = "firebaseInappmessaging" }
-firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics", version.ref = "firebaseAnalytics" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+androidx-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
+firebase-auth-common = { group = "com.google.firebase", name = "firebase-auth-common", version.ref = "firebaseAuthCommon" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

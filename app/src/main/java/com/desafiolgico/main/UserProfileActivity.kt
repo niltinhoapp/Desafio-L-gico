@@ -1,114 +1,97 @@
 package com.desafiolgico.main
 
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.desafiolgico.R
-import com.desafiolgico.adapters.AvatarAdapter
-import com.desafiolgico.main.MainActivity.Companion.GAME_PREFS
-import com.google.android.material.button.MaterialButton
+import com.desafiolgico.databinding.ActivityUserProfileBinding
+import com.desafiolgico.profile.AvatarSelectionActivity
+import com.desafiolgico.utils.CoinManager
+import com.desafiolgico.utils.GameDataManager
+import com.desafiolgico.utils.UserManager
+import com.desafiolgico.utils.applyEdgeToEdge
 
 class UserProfileActivity : AppCompatActivity() {
 
-    companion object {
-        const val USERNAME_KEY = "username"
-        const val AVATAR_KEY = "avatar"
-     //   const val USER_LEVEL_KEY = "user_level"
-       // const val TOTAL_SCORE_KEY = "totalScore"
-    }
-
-    private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var welcomeText: TextView
-    private lateinit var welcomeUsername: TextView
-
-    private lateinit var continueButton: MaterialButton
-    private lateinit var avatarImageView: ImageView
+    private lateinit var binding: ActivityUserProfileBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_user_profile)
+        applyEdgeToEdge()
+        binding = ActivityUserProfileBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // Inicializa SharedPreferences
-        sharedPreferences = getSharedPreferences(GAME_PREFS, MODE_PRIVATE)
+        GameDataManager.init(this)
 
-        // Inicializa Views
-        welcomeText = findViewById(R.id.welcomeTextPrefix)
-        welcomeUsername = findViewById(R.id.welcomeUsername)
-        continueButton = findViewById(R.id.continueButton)
-        avatarImageView = findViewById(R.id.logoImageView)
+        loadUserData()
+        setupButtons()
+    }
 
-        // Configura RecyclerView para avatares
-        val avatarRecyclerView = findViewById<RecyclerView>(R.id.avatarRecyclerView)
-        val avatars = listOf(
-            R.drawable.avatar1,
-            R.drawable.avatar2,
-            R.drawable.avatar3,
-            R.drawable.avatar4,
-            R.drawable.avatar5
-        )
-        avatarRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        avatarRecyclerView.adapter = AvatarAdapter(avatars) { selectedAvatar ->
-            saveAvatar(selectedAvatar, "Avatar Selecionado")
+    override fun onResume() {
+        super.onResume()
+        // Sempre recarrega os dados (nome + avatar) quando volta pra essa tela
+        loadUserData()
+    }
+
+    private fun loadUserData() {
+        val (usernameFromGDM, photoFromGDM, avatarFromGDM) = GameDataManager.loadUserData(this)
+
+        val userFromManager = UserManager.carregarDadosUsuario(this)
+        val avatarFromUserManager = userFromManager.avatarId.takeIf { it != 0 }
+
+        val prefs = getSharedPreferences("DesafioLogicoPrefs", MODE_PRIVATE)
+        val avatarFromPrefs = prefs.getInt("avatar", 0).takeIf { it != 0 }
+
+        val displayName = when {
+            !usernameFromGDM.isNullOrBlank() -> usernameFromGDM
+            userFromManager.name.isNotBlank() -> userFromManager.name
+            else -> getString(R.string.default_username)
         }
 
-        // Recupera nome ou avatar
-        val usernameOrAvatar = sharedPreferences.getString(USERNAME_KEY, "Jogador") ?: "Jogador"
-        val avatarId = sharedPreferences.getInt(AVATAR_KEY, R.drawable.avatar1)
+        binding.welcomeUsername.text = displayName
+        binding.welcomeUsername.visibility = View.VISIBLE
 
-        // Exibe nome ou avatar na interface
-        if (usernameOrAvatar.startsWith("Avatar")) {
-            avatarImageView.setImageResource(avatarId)
-            avatarImageView.visibility = View.VISIBLE
-            welcomeUsername.visibility = View.GONE
-        } else {
-            welcomeUsername.text = usernameOrAvatar
-            avatarImageView.visibility = View.VISIBLE // Caso queira manter o logo padrão
+        // ✅ Foto tem prioridade (usa GDM, e fallback no UserManager)
+        val finalPhoto = photoFromGDM.takeUnless { it.isNullOrBlank() } ?: userFromManager.photoUrl
+
+        // ✅ Escolhe o primeiro avatar que estiver desbloqueado
+        val candidateAvatars = listOfNotNull(avatarFromGDM, avatarFromUserManager, avatarFromPrefs)
+        val unlockedAvatar = candidateAvatars.firstOrNull { CoinManager.isAvatarUnlocked(this, it) }
+
+        when {
+            !finalPhoto.isNullOrBlank() -> {
+                Glide.with(this)
+                    .load(finalPhoto)
+                    .circleCrop()
+                    .into(binding.logoImageView)
+            }
+
+            unlockedAvatar != null -> {
+                binding.logoImageView.setImageResource(unlockedAvatar)
+            }
+
+            else -> {
+                // melhor usar o grátis como padrão
+                binding.logoImageView.setImageResource(R.drawable.avatar1)
+            }
         }
 
-        // Atualiza Texto de Boas-Vindas e Dados
-        updateWelcomeText()
+        binding.logoImageView.visibility = View.VISIBLE
+        binding.welcomeTextPrefix.text = getString(R.string.bem_vindo)
+    }
+    private fun setupButtons() {
+        // Clicar no avatar abre a tela de seleção/compra de avatar
+        binding.logoImageView.setOnClickListener {
+            startActivity(Intent(this, AvatarSelectionActivity::class.java))
+        }
 
-
-        // Botão de continuar
-        continueButton.setOnClickListener {
-            // Recupera nome e avatar
-            val usernameOrAvatar = sharedPreferences.getString(USERNAME_KEY, "Jogador") ?: "Jogador"
-            val avatarId = sharedPreferences.getInt(AVATAR_KEY, R.drawable.ic_email_foreground)
-
-            // Envia dados para TestActivity
+        // Botão "Continuar" vai pro jogo (outra tela que você já usa)
+        binding.continueButton.setOnClickListener {
             val intent = Intent(this, TestActivity::class.java)
-            intent.putExtra("username", usernameOrAvatar)
-            intent.putExtra("avatar", avatarId)
-
-            // Inicia TestActivity
             startActivity(intent)
-            finish() // Finaliza a UserProfileActivity
+            finish()
         }
     }
-
-    private fun updateWelcomeText() {
-        val usernameOrAvatar = sharedPreferences.getString(USERNAME_KEY, "Jogador") ?: "Jogador"
-        welcomeText.text = "Bem-vindo,"
-        welcomeUsername.text = usernameOrAvatar
-        Log.d("WelcomeText", "Nome ou Avatar exibido: $usernameOrAvatar")
-    }
-
-    private fun saveAvatar(avatarResId: Int, avatarName: String) {
-        sharedPreferences.edit().apply {
-            putInt(AVATAR_KEY, avatarResId) // Salva o ID do avatar
-            apply()
-        }
-        avatarImageView.setImageResource(avatarResId) // Atualiza o avatar no ImageView
-        Toast.makeText(this, "Avatar atualizado: $avatarName", Toast.LENGTH_SHORT).show()
-    }
-
-
 }

@@ -2,18 +2,19 @@ package com.desafiolgico.main
 
 import android.Manifest
 import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.util.TypedValue
 import android.view.View
 import android.widget.LinearLayout
-
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -22,150 +23,184 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.airbnb.lottie.LottieAnimationView
 import com.desafiolgico.R
-import com.google.android.gms.ads.MobileAds
+import com.desafiolgico.utils.GameDataManager
+import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
 
-    companion object {
-        const val GAME_PREFS = "game_prefs"
-        const val UNLOCKED_LEVEL_KEY = "unlocked_levels"
-        const val LEVEL_INTERMEDIATE = "Intermediário"
-        const val LEVEL_ADVANCED = "Avançado"
-
-    }
-
     private lateinit var mediaPlayer: MediaPlayer
-    private lateinit var sharedPreferences: SharedPreferences
-
-    private lateinit var startForResult: ActivityResultLauncher<Intent>
     private lateinit var lottieAnimationView: LottieAnimationView
+    private lateinit var levelManager: LevelManager
+    private lateinit var startForResult: ActivityResultLauncher<Intent>
+
+    // Daily
+    private lateinit var dailyLottie: LottieAnimationView
+    private lateinit var dailyLabel: android.widget.TextView
+    private var hideDailyLabelRunnable: Runnable? = null
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LanguageHelper.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // Inicializar views
+        // ✅ init primeiro (antes de usar isDailyDone etc.)
+        GameDataManager.init(this)
+
+        // Views
+        dailyLottie = findViewById(R.id.btnDailyChallenge)
+        dailyLabel = findViewById(R.id.txtDailyLabel)
+
         lottieAnimationView = findViewById(R.id.lottieAnimationView)
+        val mainContent = findViewById<LinearLayout>(R.id.mainContent)
 
+        levelManager = LevelManager(this)
 
-
-        // Solicitar permissão para notificações (Android 13 ou superior)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermission()
         }
 
-        // Inicializar o AdMob
-        MobileAds.initialize(this) {
-            Log.d("MainActivity", "AdMob initialized")
+        // Esconde durante intro
+        dailyLottie.visibility = View.GONE
+        dailyLabel.visibility = View.GONE
+
+        // ✅ 1 único listener do daily
+        dailyLottie.setOnClickListener {
+            playClickSound()
+
+            if (GameDataManager.isDailyDone(this)) {
+                showDailyTempMessage(getString(R.string.daily_come_back_tomorrow))
+                return@setOnClickListener
+            }
+
+            startActivity(Intent(this, DailyChallengeActivity::class.java))
         }
 
-        // Inicializar SharedPreferences
-        sharedPreferences = getSharedPreferences(GAME_PREFS, MODE_PRIVATE)
-
-        // Configurar a animação de inicialização
-        setupAnimation()
-
-        // Configurar botões e estados
-        setupButtons()
-        updateButtonStates()
-
-        // Inicializar música de fundo
+        setupAnimation(mainContent)
         initBackgroundMusic()
-
-        // Configurar o ActivityResultLauncher para a atividade de teste
         setupActivityResultLauncher()
 
-        // Configurar o LevelUnlockManager
-        val unlockedLevels = sharedPreferences.getStringSet(UNLOCKED_LEVEL_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
-        if (unlockedLevels.isEmpty()) {
-            unlockedLevels.add(LEVEL_INTERMEDIATE)
-            sharedPreferences.edit().putStringSet(UNLOCKED_LEVEL_KEY, unlockedLevels).apply()
-        }
+        // Botões de nível
+        val beginnerButton = findViewById<MaterialButton>(R.id.beginnerButton)
+        val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
+        val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
+        val expertButton = findViewById<MaterialButton>(R.id.expertButton)
+        val exitButton = findViewById<MaterialButton>(R.id.exitButton)
 
+        levelManager.setupButtons(
+            beginnerButton,
+            intermediateButton,
+            advancedButton,
+            expertButton,
+            exitButton,
+            ::handleButtonClick,
+            ::onLevelLocked,
+            ::showExitConfirmationDialog
+        )
 
-
+        levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
     }
-
-    private fun openLevel(nivel: String) {
-        val intent = Intent(this, TestActivity::class.java)
-        intent.putExtra("level", nivel)
-        startForResult.launch(intent)
-    }
-
 
     private fun setupActivityResultLauncher() {
-        startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                val data: Intent? = result.data
-                val score = data?.getIntExtra("score", 0) ?: 0
-                val level = data?.getStringExtra("level") ?: ""
-                // Processar os dados recebidos
-                Log.d("ActivityResult", "Level: $level, Score: $score")
+        startForResult =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == RESULT_OK) {
+                    val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
+                    val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
+                    val expertButton = findViewById<MaterialButton>(R.id.expertButton)
+                    levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
 
-                // Desbloquear o próximo nível com base na pontuação
-                unlockNextLevel(level, score)
-            }
-        }
-    }
-
-    private fun unlockNextLevel(currentLevel: String, score: Int) {
-        val unlockedLevels = sharedPreferences.getStringSet(UNLOCKED_LEVEL_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
-        when (currentLevel) {
-            getString(R.string.level_beginner) -> {
-                if (score >= 80) {
-                    unlockedLevels.add(LEVEL_INTERMEDIATE)
+                    // (opcional) se Daily voltar RESULT_OK e você quiser refletir:
+                    updateDailyLabelState()
+                    updateDailyUI()
                 }
             }
-            getString(R.string.level_intermediate) -> {
-                if (score >= 80) {
-                    unlockedLevels.add(LEVEL_ADVANCED)
-                }
-            }
-        }
-        sharedPreferences.edit().putStringSet(UNLOCKED_LEVEL_KEY, unlockedLevels).apply()
-        updateButtonStates()
     }
 
-    private fun setupAnimation() {
-        val mainContent = findViewById<LinearLayout>(R.id.mainContent)
-
+    private fun setupAnimation(mainContent: View) {
         lottieAnimationView.setAnimation(R.raw.airplane_explosion1)
         lottieAnimationView.visibility = View.VISIBLE
         mainContent.visibility = View.GONE
-
-        lottieAnimationView.repeatCount = 1
-        lottieAnimationView.invalidate()
-        lottieAnimationView.requestLayout()
+        lottieAnimationView.repeatCount = 0
         lottieAnimationView.playAnimation()
+        lottieAnimationView.removeAllAnimatorListeners()
 
-        lottieAnimationView.addAnimatorListener(object : Animator.AnimatorListener {
-            override fun onAnimationStart(animation: Animator) {
-                Log.d("Animation", "Animation started")
-            }
-
-            override fun onAnimationEnd(animation: Animator) {
-                Log.d("Animation", "Animation ended")
-                lottieAnimationView.visibility = View.GONE
-                mainContent.visibility = View.VISIBLE
-            }
-
-            override fun onAnimationCancel(animation: Animator) {
-                Log.d("Animation", "Animation canceled")
-            }
-
-            override fun onAnimationRepeat(animation: Animator) {
-                Log.d("Animation", "Animation repeated")
-            }
+        lottieAnimationView.addAnimatorListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) = finishIntro()
+            override fun onAnimationCancel(animation: Animator) = finishIntro()
         })
+    }
+
+    private fun finishIntro() {
+        lottieAnimationView.visibility = View.GONE
+        findViewById<LinearLayout>(R.id.mainContent).visibility = View.VISIBLE
+
+        dailyLottie.visibility = View.VISIBLE
+        dailyLottie.bringToFront()
+
+        updateDailyLabelState()
+        updateDailyUI()
+    }
+
+    private fun updateDailyLabelState() {
+        val done = GameDataManager.isDailyDone(this)
+
+        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
+        hideDailyLabelRunnable = null
+
+        dailyLabel.visibility = View.VISIBLE
+
+        if (done) {
+            dailyLabel.text = getString(R.string.daily_done_today)
+            dailyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            dailyLabel.alpha = 0.60f
+        } else {
+            dailyLabel.text = getString(R.string.daily_label)
+            dailyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            dailyLabel.alpha = 0.92f
+        }
+    }
+
+    private fun showDailyTempMessage(msg: String) {
+        dailyLabel.visibility = View.VISIBLE
+        dailyLabel.text = msg
+
+        dailyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        dailyLabel.alpha = 0f
+        dailyLabel.animate().alpha(0.92f).setDuration(180).start()
+
+        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
+
+        val r = Runnable {
+            dailyLabel.animate().alpha(0f).setDuration(180).withEndAction {
+                updateDailyLabelState()
+            }.start()
+        }
+        hideDailyLabelRunnable = r
+        dailyLabel.postDelayed(r, 3000L)
+    }
+
+    private fun updateDailyUI() {
+        val done = GameDataManager.isDailyDone(this)
+        val streak = GameDataManager.getDailyStreak(this)
+
+        dailyLottie.alpha = if (done) 0.55f else 1f
+        dailyLottie.isEnabled = true
+
+        dailyLottie.contentDescription =
+            if (done) "Desafio diário concluído. Streak $streak"
+            else "Abrir desafio diário. Streak $streak"
     }
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
             ) {
                 ActivityCompat.requestPermissions(
                     this,
@@ -176,69 +211,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupButtons() {
-        val levelManager = LevelUnlockManager(this)
-        val unlockedLevels = levelManager.getUnlockedLevelsList()
-
-        val beginnerButton = findViewById<MaterialButton>(R.id.beginnerButton)
-        val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
-        val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
-        val exitButton = findViewById<MaterialButton>(R.id.exitButton)
-
-        // Configurar os botões
-
-        beginnerButton.visibility = View.VISIBLE
-        intermediateButton.visibility = if ("Intermediário" in unlockedLevels) View.VISIBLE else View.GONE
-        advancedButton.visibility = if ("Avançado" in unlockedLevels) View.VISIBLE else View.GONE
-
-        beginnerButton.setOnClickListener {
-            handleButtonClick(beginnerButton, getString(R.string.level_beginner))
-        }
-
-        intermediateButton.setOnClickListener {
-            if (isLevelUnlocked(LEVEL_INTERMEDIATE)) {
-                handleButtonClick(intermediateButton, getString(R.string.level_intermediate))
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, getString(R.string.notifications_enabled), Toast.LENGTH_SHORT)
+                    .show()
             } else {
-                showLevelLockedMessage()
+                Toast.makeText(this, getString(R.string.notifications_denied), Toast.LENGTH_SHORT)
+                    .show()
             }
         }
-
-        advancedButton.setOnClickListener {
-            if (isLevelUnlocked(LEVEL_ADVANCED)) {
-                handleButtonClick(advancedButton, getString(R.string.level_advanced))
-            } else {
-                showLevelLockedMessage()
-            }
-        }
-
-        exitButton.setOnClickListener {
-            showExitConfirmationDialog()
-        }
     }
-
-
-
-    private fun updateButtonStates() {
-        val unlockedLevels = sharedPreferences.getStringSet(UNLOCKED_LEVEL_KEY, emptySet()) ?: emptySet()
-
-        val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
-        val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
-
-        if (unlockedLevels.contains(LEVEL_INTERMEDIATE)) {
-            intermediateButton.isEnabled = true
-            intermediateButton.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
-        } else {
-            intermediateButton.isEnabled = false
-        }
-
-        if (unlockedLevels.contains(LEVEL_ADVANCED)) {
-            advancedButton.isEnabled = true
-            advancedButton.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
-        } else {
-            advancedButton.isEnabled = false
-        }
-    }
-
 
     private fun initBackgroundMusic() {
         mediaPlayer = MediaPlayer.create(this, R.raw.background_music).apply {
@@ -247,36 +235,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun onLevelLocked(level: String) { /* sem toast duplicado */ }
+
     private fun handleButtonClick(button: MaterialButton, level: String) {
         playClickSound()
         animateButton(button)
         resetButtonColors()
         changeButtonColor(button)
-        if (level != "exit") {
+
+        if (level == GameDataManager.Levels.EXPERIENTE) {
+            startActivity(Intent(this, ExpertChallengeActivity::class.java))
+            finish()
+        } else {
             navigateToTestActivity(level)
         }
     }
 
-    private fun changeButtonColor(button: MaterialButton) {
-        button.backgroundTintList = ContextCompat.getColorStateList(this, R.color.button_selected)
+    private fun showExitConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.exit_dialog_title))
+            .setMessage(getString(R.string.exit_dialog_message))
+            .setPositiveButton(getString(R.string.answer_yes)) { _, _ -> finish() }
+            .setNegativeButton(getString(R.string.answer_no), null)
+            .show()
     }
 
     private fun resetButtonColors() {
-        val buttons = listOf(
+        val buttonIds = listOf(
             R.id.beginnerButton,
             R.id.intermediateButton,
             R.id.advancedButton,
+            R.id.expertButton,
             R.id.exitButton
         )
-        buttons.forEach { id ->
-            findViewById<MaterialButton>(id).backgroundTintList =
+        for (id in buttonIds) {
+            findViewById<MaterialButton>(id)?.backgroundTintList =
                 ContextCompat.getColorStateList(this, R.color.button_default)
         }
     }
 
+    private fun changeButtonColor(button: MaterialButton) {
+        button.backgroundTintList =
+            ContextCompat.getColorStateList(this, R.color.button_selected)
+    }
+
     private fun playClickSound() {
         MediaPlayer.create(this, R.raw.click_sound).apply {
-            setOnCompletionListener { release() }
+            setOnCompletionListener { mp -> mp.release() }
             start()
         }
     }
@@ -284,26 +289,10 @@ class MainActivity : AppCompatActivity() {
     private fun animateButton(button: MaterialButton) {
         val scaleX = ObjectAnimator.ofFloat(button, "scaleX", 1f, 1.1f, 1f)
         val scaleY = ObjectAnimator.ofFloat(button, "scaleY", 1f, 1.1f, 1f)
-
         AnimatorSet().apply {
             playTogether(scaleX, scaleY)
             duration = 300
             start()
-        }
-    }
-
-    private fun isLevelUnlocked(level: String): Boolean {
-        val unlockedLevels =
-            sharedPreferences.getStringSet(UNLOCKED_LEVEL_KEY, emptySet()) ?: emptySet()
-        return unlockedLevels.contains(level)
-    }
-
-    private fun showLevelLockedMessage() {
-        AlertDialog.Builder(this).apply {
-            setTitle("Nível Blockhead")
-            setMessage("Complete o nível anterior para desbloquear este.")
-            setPositiveButton("OK", null)
-            show()
         }
     }
 
@@ -314,43 +303,29 @@ class MainActivity : AppCompatActivity() {
         startForResult.launch(intent)
     }
 
-    private fun showExitConfirmationDialog() {
-        AlertDialog.Builder(this).apply {
-            setTitle("Sair")
-            setMessage("Você tem certeza que deseja sair?")
-            setPositiveButton("Sim") { _, _ -> finish() }
-            setNegativeButton("Não", null)
-            show()
-        }
-    }
-
     override fun onPause() {
         super.onPause()
-        if (::lottieAnimationView.isInitialized) {
+        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
+        hideDailyLabelRunnable = null
+        if (::mediaPlayer.isInitialized && mediaPlayer.isPlaying) mediaPlayer.pause()
+        if (::lottieAnimationView.isInitialized && lottieAnimationView.isAnimating) {
             lottieAnimationView.pauseAnimation()
-        }
-        if (::mediaPlayer.isInitialized && mediaPlayer.isPlaying) {
-            mediaPlayer.pause()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        if (::lottieAnimationView.isInitialized) {
-            lottieAnimationView.resumeAnimation()
-        }
-        if (::mediaPlayer.isInitialized && !mediaPlayer.isPlaying) {
-            mediaPlayer.start()
-        }
+        updateDailyLabelState()
+        updateDailyUI()
+        if (::mediaPlayer.isInitialized && !mediaPlayer.isPlaying) mediaPlayer.start()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::lottieAnimationView.isInitialized) {
-            lottieAnimationView.cancelAnimation()
-        }
         if (::mediaPlayer.isInitialized) {
+            mediaPlayer.stop()
             mediaPlayer.release()
         }
+        if (::lottieAnimationView.isInitialized) lottieAnimationView.cancelAnimation()
     }
 }

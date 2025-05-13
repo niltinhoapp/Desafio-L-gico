@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ad-services-config>
+    <ad-service id="com.google.android.gms.ads.AD_SERVICE" />
+</ad-services-config>

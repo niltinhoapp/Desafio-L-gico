@@ -1,0 +1,3 @@
+<resources>
+    <bool name="show_guest">false</bool>
+</resources>

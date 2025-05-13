@@ -2,76 +2,96 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_color">
+    android:background="@drawable/bg_onboarding_gradient">
 
-    <!-- ViewPager para navegação -->
+    <!-- 🌀 ViewPager2: controla as páginas do onboarding -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/tabLayout"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:padding="16dp" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- TabLayout abaixo do ViewPager -->
+    <!-- ☑️ CheckBox "Mostrar sempre ao iniciar" -->
+    <CheckBox
+        android:id="@+id/checkBoxAlwaysShow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/mostrar_sempre_ao_iniciar"
+        android:textColor="@color/white"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:checked="false"
+        android:padding="8dp"
+        android:buttonTint="@color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 🔘 TabLayout: indicadores das páginas -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:tabGravity="center"
-        app:tabIndicatorColor="@android:color/holo_blue_dark"
-        app:tabSelectedTextColor="@android:color/holo_blue_dark"
-        app:tabTextColor="@color/colorPrimary"
+        android:padding="8dp"
+        app:tabIndicatorColor="@android:color/black"
+        app:tabSelectedTextColor="@android:color/black"
+        app:tabTextColor="@android:color/darker_gray"
         app:layout_constraintTop_toBottomOf="@id/viewPager"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/buttonContainer"
-        android:contentDescription="descricao"
-        android:padding="8dp" />
+        app:layout_constraintBottom_toTopOf="@id/onboardingProgress"
+        android:contentDescription="@string/indicadores_de_pagina" />
 
-    <!-- Contêiner de botões -->
+    <!-- 📈 Barra de progresso inferior -->
+    <ProgressBar
+        android:id="@+id/onboardingProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="6dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="@color/white"
+        android:indeterminate="false"
+        app:layout_constraintBottom_toTopOf="@id/buttonContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 🎯 Botões de navegação -->
     <LinearLayout
         android:id="@+id/buttonContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="center"
-        android:padding="16dp">
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Grupo de botões alternáveis -->
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/buttonToggleGroup"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSkip"
+            style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            app:singleSelection="false">
+            android:text="@string/pular"
+            android:layout_marginEnd="8dp"
+            android:textColor="@android:color/black"
+            android:backgroundTint="@color/button_default" />
 
-            <!-- Botão 'Pular' -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSkip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/pular"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_marginEnd="8dp"
-                android:backgroundTint="@color/button_default"
-                android:textColor="@color/white" />
-
-            <!-- Botão 'Próximo' -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnNext"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/pr_ximo"
-                style="?attr/materialButtonStyle"
-                android:backgroundTint="@color/button_default"
-                android:textColor="@color/background_color" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNext"
+            style="?attr/materialButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/proximo"
+            android:textColor="@android:color/black"
+            android:backgroundTint="@color/button_default" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

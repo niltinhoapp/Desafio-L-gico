@@ -1,73 +1,134 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/resultScroll"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@drawable/bg_result_gradient"
+    tools:context=".main.ResultOrGameOverActivity">
 
-    <!-- Conteúdo Principal -->
     <LinearLayout
+        android:id="@+id/resultContainer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:gravity="center_horizontal"
+        android:padding="24dp"
+        android:elevation="4dp">
 
-        <!-- Medalha ou imagem representativa -->
+        <!-- 🏅 Medalha -->
         <ImageView
             android:id="@+id/medalImageView"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_gravity="center_horizontal"
-            android:contentDescription="@string/medal_description_"
-            android:src="@drawable/gold_medal" />
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginTop="32dp"
+            android:contentDescription="@string/medal_description"
+            android:src="@drawable/gold_medal"
+            android:scaleType="fitCenter"
+            tools:src="@drawable/ic_trophy" />
 
-        <!-- Texto de feedback -->
+        <!-- 💬 Feedback -->
         <TextView
             android:id="@+id/feedbackTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="16dp"
+            android:layout_marginTop="24dp"
             android:gravity="center"
-            android:textColor="@color/colorPrimary"
-            android:textColorHint="@color/your_on_secondary_color"
-            android:textSize="22sp" />
+            android:textColor="@color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:shadowColor="#88000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            tools:text="Parabéns! Desempenho incrível!" />
 
-        <!-- Texto com estatísticas -->
-        <TextView
-            android:id="@+id/statsTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:gravity="center"
-            android:textColor="@color/colorPrimary"
-            android:textSize="20sp" />
-
-        <!-- Pontuação animada -->
+        <!-- 🔢 Pontuação -->
         <TextView
             android:id="@+id/scoreTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginTop="12dp"
             android:gravity="center"
-            android:textColor="@color/colorPrimary"
-            android:textSize="22sp" />
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:shadowColor="#77000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            tools:text="Você conquistou 32 pontos de 48" />
 
-        <!-- Botão para tentar novamente -->
+        <!-- 📊 Estatísticas -->
+        <TextView
+            android:id="@+id/statsTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            tools:text="🕒 Tempo médio: 1.55 seg\n📊 Desempenho: 85.33%" />
+
+        <!-- 🎉 SEÇÃO DE CELEBRAÇÃO -->
+        <!-- 🌟 Mensagem de incentivo -->
+        <LinearLayout
+            android:id="@+id/inspirationBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginTop="24dp"
+            android:background="#1FFFFFFF"
+            android:padding="20dp"
+            android:elevation="6dp"
+            android:clipToOutline="true"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/inspirationTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📚 Continue evoluindo!"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:shadowColor="#AA000000"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="3" />
+
+            <TextView
+                android:id="@+id/inspirationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:textColor="@color/white"
+                android:textSize="17sp"
+                android:lineSpacingExtra="4dp"
+                android:text="Aprender é o caminho para o sucesso. Estude um pouco a cada dia e transforme seu conhecimento em poder!" />
+        </LinearLayout>
+
+
+        <!-- 🔁 Botão de continuar -->
         <Button
             android:id="@+id/retryButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:backgroundTint="@color/colorPrimary"
-            android:text="@string/Reiniciar"
-            android:textColor="@color/white" />
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="48dp"
+            android:backgroundTint="@color/button_default"
+            android:text="@string/continuar"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingHorizontal="32dp"
+            android:paddingVertical="12dp"
+            android:elevation="8dp" />
+
     </LinearLayout>
 
-    <!-- View para fogos de artifício -->
-    <nl.dionsegijn.konfetti.KonfettiView
-        android:id="@+id/konfettiView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:focusable="false"
-        tools:ignore="MissingClass" />
-</FrameLayout>
+</ScrollView>

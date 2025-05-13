@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/containerBoasVindas"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="@drawable/background_gradient">
+
+    <!-- Avatar do usuário -->
+    <ImageView
+        android:id="@+id/userAvatarImage"
+        android:layout_width="130dp"
+        android:layout_height="130dp"
+        android:layout_marginBottom="24dp"
+        android:src="@drawable/ic_user_placeholder"
+        android:background="@drawable/gradient_background"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/avatar_image" />
+
+    <!-- Saudação -->
+    <TextView
+        android:id="@+id/userNameText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ol_jogador"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        android:shadowColor="#80000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="3"
+        android:layout_marginBottom="40dp" />
+
+    <!-- Botões estilizados -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnContinueGame"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/continuar_jogo"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"
+        app:cornerRadius="12dp"
+        app:backgroundTint="@color/button_default" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnNewGame"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/novo_jogo"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"
+        app:cornerRadius="12dp"
+        app:backgroundTint="@color/button_default" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSwitchAccount"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/trocar_conta"
+        android:textAllCaps="false"
+        android:textSize="18sp"
+        android:textColor="@color/white"
+        app:cornerRadius="12dp"
+        app:strokeWidth="2dp"
+        app:strokeColor="@color/white"
+        android:layout_marginTop="8dp"
+        app:backgroundTint="@color/button_default"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDeleteAccount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Excluir Conta"
+        android:textSize="18sp"
+        android:textColor="@color/white"
+        app:cornerRadius="12dp"
+        app:strokeWidth="2dp"
+        android:layout_marginTop="8dp"
+        app:backgroundTint="@color/button_default"
+        />
+
+    <Button
+        android:id="@+id/btnViewOnboarding"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/ver_tutorial_novamente"
+        android:backgroundTint="@color/button_default"
+        android:textColor="@color/white"
+        app:cornerRadius="12dp"
+        app:strokeWidth="2dp"
+        android:layout_marginTop="12dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⚙️ Config"
+        android:layout_marginTop="12dp"/>
+
+
+</LinearLayout>

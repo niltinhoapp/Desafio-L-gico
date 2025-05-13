@@ -2,19 +2,21 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/red"
-    android:padding="24dp">
+    android:background="@drawable/bg_game_over"
+    android:padding="0dp">
 
-    <!-- Diretriz superior para alinhamento flexível -->
+    <!-- 📏 Guia superior -->
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guidelineTop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintGuide_begin="24dp" />
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="60dp" />
 
-    <!-- Animação Lottie para feedback visual -->
+    <!-- 🎞️ Animação Lottie -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
         android:layout_width="250dp"
@@ -27,101 +29,79 @@
         app:lottie_autoPlay="true"
         app:lottie_loop="true" />
 
-    <!-- Mensagem principal de feedback -->
+    <!-- 💬 Feedback -->
     <TextView
-        android:id="@+id/messageTextView"
-        android:layout_width="wrap_content"
+        android:id="@+id/gameOverFeedbackTextView"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="@string/default_feedback_message"
-        android:textColor="?attr/colorOnSurface"
-        android:textSize="20sp"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="24dp"
         android:fontFamily="@font/roboto_mediu"
-        android:layout_marginTop="16dp"
+        android:gravity="center"
+
+        android:textAlignment="center"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
         app:layout_constraintTop_toBottomOf="@id/lottieAnimationView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Mensagem principal de feedback -->
-
-    <!-- Texto de desempenho médio -->
-
-    <!-- Texto para pontuação total -->
-
-    <!-- Botão de tentar novamente -->
-
-    <!-- Botão de sair -->
-    <TextView
-        android:id="@+id/averageTimeTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="56dp"
-        android:fontFamily="@font/roboto_mediu"
-        android:gravity="center"
-        android:text="@string/tempo_m_dio_por_pergunta"
-        android:textColor="?attr/colorOnSurface"
-        android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.536"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/messageTextView" />
+        tools:text="Game Over: você atingiu o limite de erros." />
 
+    <!-- 🔢 Pontuação total -->
     <TextView
         android:id="@+id/totalScoreTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="112dp"
+        android:layout_marginTop="16dp"
         android:fontFamily="@font/roboto_mediu"
         android:gravity="center"
-        android:text="@string/pontuacao_total"
-        android:textColor="?attr/colorOnSurface"
-        android:textSize="18sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.584"
+        android:text="@string/pontuacao_total_format"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        app:layout_constraintTop_toBottomOf="@id/gameOverFeedbackTextView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/averageTimeTextView" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 🔁 Botão "Tentar novamente" -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/retryButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="32dp"
         android:backgroundTint="?attr/colorPrimary"
         android:elevation="4dp"
         android:fontFamily="@font/roboto_mediu"
-        android:padding="12dp"
+        android:paddingVertical="14dp"
         android:text="@string/tentar_novamente"
         android:textColor="?attr/colorOnPrimary"
-        android:textSize="20sp"
+        android:textSize="18sp"
         app:cornerRadius="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.387"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/totalScoreTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_max="320dp" />
 
+    <!-- 🚪 Botão "Sair" -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/exitButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="32dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="32dp"
         android:backgroundTint="@color/primary_color"
         android:elevation="4dp"
         android:fontFamily="@font/roboto_mediu"
-        android:padding="12dp"
+        android:paddingVertical="14dp"
         android:text="@string/sair"
         android:textColor="@color/background_color"
-        android:textSize="20sp"
+        android:textSize="18sp"
         app:cornerRadius="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.312"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/retryButton"
-        app:layout_constraintVertical_bias="0.08"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_max="320dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

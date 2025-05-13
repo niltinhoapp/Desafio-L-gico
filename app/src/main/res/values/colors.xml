@@ -10,17 +10,35 @@
         <color name="background_color">#F5F5F5</color>
         <color name="button_skip_color">#FF5722</color>
         <color name="button_next_color">#4CAF50</color>
+    <color name="primaryColor">#3F51B5</color>
+    <color name="green_success">#4CAF50</color>
+    <color name="gray_dark">#333333</color>
+
+    <!-- Verde Material padrão -->
+    <color name="progress_green">#4CAF50</color>
+
+    <!-- Alternativas -->
+    <color name="progress_green_light">#66BB6A</color> <!-- verde claro -->
+    <color name="progress_green_dark">#2E7D32</color> <!-- verde escuro -->
 
 
-        <!-- Cor de início do gradiente -->
-        <color name="colorStart">#FF6F00</color> <!-- Laranja vibrante -->
+
+    <!-- Cor de início do gradiente -->
 
         <!-- Cor de fim do gradiente -->
-        <color name="colorEnd">#FF9100</color> <!-- Laranja mais suave -->
+    <color name="endColor">#9575CD</color>
+    <color name="centerColor">#673AB7</color>
+    <color name="startColor">#512DA8</color>
+    <color name="colorStart">#FF5722</color>
+    <color name="colorEnd">#4A148C</color>
 
 
 
 
+
+    <color name="gold_color">#FFD700</color>
+    <color name="silver_color">#C0C0C0</color>
+    <color name="ripple_glow">#80FFFFFF</color>
     <color name="white">#FFFFFFFF</color>
     <color name="lime_green">#32CD32</color>
     <!-- Cores do progresso -->
@@ -31,12 +49,16 @@
     <color name="progress_color">#FF9800</color> <!-- Exemplo: cor laranja -->
     <color name="colorAccent">#FF4081</color>
     <color name="colorPrimary">#6200EE</color>
+    <color name="button_defaulti">#00C853</color> <!-- Verde vibrante -->
     <color name="colorSecondary">#03DAC5</color>
     <!-- Cores do Feedback -->
     <color name="correct_answer">#32CD32</color> <!-- Verde claro -->
     <color name="wrong_answer">#F44336</color>  <!-- Vermelho -->
     <!-- Cores para o feedback textual -->
     <color name="green">#32CD32</color> <!-- Verde claro -->
+    <color name="gold">#DCEFDA20</color>
+    <color name="orange">#DE4415</color>
+    <color name="yellow_streak">#FFC107</color>
     <color name="red">#F44336</color>   <!-- Vermelho -->
     <color name="defaultButtonColor">#3F51B5</color> <!-- Azul padrão -->
     <color name="correctAnswerColor">#4CAF50</color> <!-- Verde -->
