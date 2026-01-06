@@ -1,112 +1,187 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_onboarding_gradient">
+    android:background="@drawable/bg_onboarding_gradient"
+    android:paddingStart="@dimen/padding_screen_horizontal"
+    android:paddingEnd="@dimen/padding_screen_horizontal"
+    android:paddingTop="@dimen/padding_screen_top"
+    android:paddingBottom="@dimen/padding_screen_bottom"
+    android:animateLayoutChanges="true">
 
-    <!-- Animação Lottie - intro -->
+    <!-- Lottie Intro (some depois no Kotlin) -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
-        android:layout_width="323dp"
-        android:layout_height="134dp"
-        android:layout_centerInParent="true"
+        android:layout_width="0dp"
+        android:layout_height="170dp"
+        android:contentDescription="@string/app_name"
         android:scaleType="fitCenter"
         app:lottie_loop="false"
-        app:lottie_rawRes="@raw/airplane_explosion1" />
+        android:layout_marginTop="50dp"
+        app:lottie_rawRes="@raw/airplane_explosion1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+    <!-- ⚙️ Configurações (Main) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSettingsMain"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:text="⚙️"
+        android:textSize="22sp"
+        android:textColor="@android:color/white"
+android:layout_marginTop="20dp"
+        android:background="@android:color/transparent"
+        app:backgroundTint="@android:color/transparent"
+        app:strokeWidth="0dp"
+        app:rippleColor="@color/white_20"
+        app:cornerRadius="999dp"
 
-    <!-- Conteúdo principal (botões), inicialmente escondido -->
-    <LinearLayout
-        android:id="@+id/mainContent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:gravity="center"
-        android:visibility="gone">
+        android:insetLeft="0dp"
+        android:insetRight="0dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:padding="0dp"
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/beginnerButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="@string/level_beginner"
-            android:textSize="26sp"
-            android:backgroundTint="@color/button_default"
-            android:textColor="@color/white" />
+        android:elevation="8dp"
+        android:outlineProvider="none"
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/intermediateButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="@string/level_intermediate"
-            android:textSize="26sp"
-            android:backgroundTint="@color/button_default"
-            android:textColor="@color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/advancedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="@string/level_advanced"
-            android:textSize="26sp"
-            android:backgroundTint="@color/button_default"
-            android:textColor="@color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/expertButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="@string/level_expert"
-            android:textSize="26sp"
-            android:backgroundTint="@color/button_default"
-            android:textColor="@color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/exitButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/sair"
-            android:textSize="20sp"
-            android:backgroundTint="@color/button_default"
-            android:textColor="@color/white" />
-    </LinearLayout>
-
-
-    <!-- ✅ LOTTIE DO DESAFIO DIÁRIO -->
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/btnDailyChallenge"
-        android:layout_width="160dp"
-        android:layout_height="160dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_margin="14dp"
-        android:clickable="true"
-        android:focusable="true"
         android:visibility="gone"
-        app:lottie_rawRes="@raw/ic_animationcerebro"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true" />
+        android:contentDescription="@string/settings_title"
 
-    <!-- ✅ TEXTO ABAIXO DA LOTTIE -->
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+    <!-- Título -->
     <TextView
-        android:id="@+id/txtDailyLabel"
+        android:id="@+id/txtTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/text_title"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:alpha="0.95"
+        app:layout_constraintTop_toBottomOf="@id/lottieAnimationView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="50dp" />
+
+    <!-- Subtítulo -->
+    <TextView
+        android:id="@+id/txtSubtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/subtitle_text"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/text_body"
+        android:gravity="center"
+        android:alpha="0.78"
+        app:layout_constraintTop_toBottomOf="@id/txtTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="@dimen/spacing_xsmall" />
+
+    <!-- DAILY CHALLENGE NO RODAPÉ (sem moldura) -->
+    <LinearLayout
+        android:id="@+id/dailyChallengeCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnDailyChallenge"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="8dp"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="8dp"
-        android:text="Desafio diário"
-        android:textColor="@android:color/white"
-        android:textSize="14sp"
-        android:alpha="0.92"
         android:visibility="gone"
-        android:background="#66000000" />
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="@dimen/spacing_medium">
 
-</RelativeLayout>
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/btnDailyChallenge"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:background="@android:color/transparent"
+            android:scaleType="fitCenter"
+            app:lottie_rawRes="@raw/ic_animationcerebro"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="true"
+            android:contentDescription="@string/daily_label" />
+
+        <!-- Label travado para não “empurrar” layout -->
+        <TextView
+            android:id="@+id/txtDailyLabel"
+            android:layout_width="132dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:text="@string/daily_label"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/text_small"
+            android:alpha="0.9"
+            android:layout_marginTop="@dimen/spacing_xsmall"
+
+            android:paddingHorizontal="@dimen/padding_label_horizontal"
+            android:paddingVertical="@dimen/padding_label_vertical" />
+
+    </LinearLayout>
+
+    <!-- MENU (Scroll) - nunca vai sobrepor o Daily -->
+    <ScrollView
+        android:id="@+id/menuCard"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/txtSubtitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/dailyChallengeCard"
+        android:layout_marginTop="@dimen/spacing_medium"
+        android:layout_marginBottom="@dimen/spacing_small">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/beginnerButton"
+                style="@style/LevelButton"
+                android:text="@string/level_beginner" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/intermediateButton"
+                style="@style/LevelButton"
+                android:text="@string/level_intermediate" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/advancedButton"
+                style="@style/LevelButton"
+                android:text="@string/level_advanced" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/expertButton"
+                style="@style/LevelButton"
+                android:text="@string/level_expert" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/exitButton"
+                style="@style/ExitButton"
+                android:text="@string/sair"
+                android:layout_marginTop="@dimen/spacing_small" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

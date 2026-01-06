@@ -12,7 +12,7 @@
     <string name="reiniciar">Reiniciar</string>
     <string name="tentar_novamente">Tentar Novamente</string>
     <string name="trocar_conta">Trocar Conta</string>
-    <string name="novo_jogo">Novo Jogo</string>
+    <string name="novo_jogo">Jogar</string>
     <string name="ver_resultados">Ver Resultados</string>
     <string name="ganhar_moedas">Ganhar Moedas</string>
     <string name="assistir_e_ganhar_moedas">🎁 Assistir e ganhar moedas</string>
@@ -101,7 +101,7 @@
     <string name="daily_result_text_placeholder">Acertos: 0/3</string>
     <string name="daily_xp_placeholder">+XP</string>
 
-    <string name="daily_come_back_tomorrow">🔁 Volte amanhã para um novo desafio diário!</string>
+    <string name="daily_come_back_tomorrow">Volte amanhã </string>
 
 
 
@@ -154,6 +154,8 @@
     <string name="almost_there">Quase lá! Estude mais nas questões questionadas!</string>
     <string name="great_performance">Ótimo desempenho! Continue assim!</string>
     <string name="incredible_all_correct">Incrível! Você acertou tudo!</string>
+    <string name="subtitle_text">Selecione o nível e desafie sua mente</string>
+
 
     <string name="stats_text">🕒 Tempo médio por pergunta: %1$.2f segundos\n📊 Desempenho: %2$.2f%%</string>
     <string name="score_text">Você conquistou %1$d pontos em %2$d perguntas.</string>

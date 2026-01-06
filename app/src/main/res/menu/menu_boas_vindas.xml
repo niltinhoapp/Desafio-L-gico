@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_continue"
+        android:title="@string/continuar_jogo" />
+
+    <item
+        android:id="@+id/action_settings"
+        android:title="Configurações" />
+
+    <item
+        android:id="@+id/action_tutorial"
+        android:title="@string/ver_tutorial_novamente" />
+
+    <item
+        android:id="@+id/action_switch_account"
+        android:title="@string/trocar_conta" />
+
+    <item
+        android:id="@+id/action_delete_account"
+        android:title="Excluir Conta" />
+
+</menu>

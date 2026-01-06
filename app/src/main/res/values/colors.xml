@@ -1,79 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- ===================== -->
+    <!-- Material 3 (Base)     -->
+    <!-- ===================== -->
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorOnPrimary">#FFFFFFFF</color>
 
-        <color name="background_dynamic">#FFEB3B</color> <!-- Cor de fundo dinâmica -->
-        <color name="button_default">#3F51B5</color> <!-- Cor padrão dos botões -->
-        <color name="button_selected">#FF4081</color> <!-- Cor dos botões quando selecionados -->
+    <color name="colorSecondary">#03DAC5</color>
+    <color name="colorOnSecondary">#FF000000</color>
 
+    <!-- Fundo/Superfícies (importante p/ Material3) -->
+    <color name="colorBackground">#0E0B1E</color>
+    <color name="colorOnBackground">#FFFFFFFF</color>
 
-        <color name="background_color">#F5F5F5</color>
-        <color name="button_skip_color">#FF5722</color>
-        <color name="button_next_color">#4CAF50</color>
-    <color name="primaryColor">#3F51B5</color>
-    <color name="green_success">#4CAF50</color>
+    <color name="colorSurface">#14102A</color>
+    <color name="colorOnSurface">#FFFFFFFF</color>
+
+    <!-- Accent legado (se ainda usa em alguns lugares) -->
+    <color name="colorAccent">#FF4081</color>
+
+    <!-- ===================== -->
+    <!-- Game / UI Tokens      -->
+    <!-- ===================== -->
+    <color name="white">#FFFFFFFF</color>
     <color name="gray_dark">#333333</color>
 
-    <!-- Verde Material padrão -->
-    <color name="progress_green">#4CAF50</color>
+    <color name="successGreen">#00C853</color>
+    <color name="warningOrange">#FF5722</color>
+    <color name="errorRed">#F44336</color>
 
-    <!-- Alternativas -->
-    <color name="progress_green_light">#66BB6A</color> <!-- verde claro -->
-    <color name="progress_green_dark">#2E7D32</color> <!-- verde escuro -->
-
-
-
-    <!-- Cor de início do gradiente -->
-
-        <!-- Cor de fim do gradiente -->
-    <color name="endColor">#9575CD</color>
-    <color name="centerColor">#673AB7</color>
-    <color name="startColor">#512DA8</color>
-    <color name="colorStart">#FF5722</color>
-    <color name="colorEnd">#4A148C</color>
-
-
-
-
+    <color name="infoBlue">#3F51B5</color>
 
     <color name="gold_color">#FFD700</color>
     <color name="silver_color">#C0C0C0</color>
+
+    <!-- ===================== -->
+    <!-- Buttons               -->
+    <!-- ===================== -->
+    <color name="button_default">@color/infoBlue</color>
+    <color name="button_selected">@color/colorAccent</color>
+
+    <color name="button_skip_color">@color/warningOrange</color>
+    <color name="button_next_color">@color/successGreen</color>
+
+    <!-- ===================== -->
+    <!-- Cards / Overlays       -->
+    <!-- ===================== -->
+    <color name="menu_card_bg">#1AFFFFFF</color>
+    <color name="daily_card_bg">#22FFFFFF</color>
+
+    <color name="white_20">#33FFFFFF</color>
+    <color name="white_40">#66FFFFFF</color>
     <color name="ripple_glow">#80FFFFFF</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="lime_green">#32CD32</color>
-    <!-- Cores do progresso -->
-    <color name="progress_start">#2DF418</color> <!-- Azul Profundo -->
+
+    <!-- ===================== -->
+    <!-- Gradients             -->
+    <!-- ===================== -->
+    <color name="startColor">#512DA8</color>
+    <color name="centerColor">#673AB7</color>
+    <color name="endColor">#9575CD</color>
+
+    <color name="colorStart">@color/warningOrange</color>
+    <color name="colorEnd">#4A148C</color>
+
+    <!-- ===================== -->
+    <!-- Progress              -->
+    <!-- ===================== -->
+    <color name="progress_green">@color/successGreen</color>
+    <color name="progress_green_light">#66BB6A</color>
+    <color name="progress_green_dark">#2E7D32</color>
+
+    <color name="progress_start">#2DF418</color>
     <color name="progress_middle">#D7CE16</color>
-    <color name="progress_end">#F00606</color> <!-- Cinza Claro -->
-    <!-- Definindo uma cor sólida para a barra de progresso -->
-    <color name="progress_color">#FF9800</color> <!-- Exemplo: cor laranja -->
-    <color name="colorAccent">#FF4081</color>
-    <color name="colorPrimary">#6200EE</color>
-    <color name="button_defaulti">#00C853</color> <!-- Verde vibrante -->
-    <color name="colorSecondary">#03DAC5</color>
-    <!-- Cores do Feedback -->
-    <color name="correct_answer">#32CD32</color> <!-- Verde claro -->
-    <color name="wrong_answer">#F44336</color>  <!-- Vermelho -->
-    <!-- Cores para o feedback textual -->
-    <color name="green">#32CD32</color> <!-- Verde claro -->
-    <color name="gold">#DCEFDA20</color>
-    <color name="orange">#DE4415</color>
+    <color name="progress_end">#F00606</color>
+    <color name="progress_color">#FF9800</color>
+
+    <!-- ===================== -->
+    <!-- Feedback              -->
+    <!-- ===================== -->
+    <color name="correct_answer">@color/successGreen</color>
+    <color name="wrong_answer">@color/errorRed</color>
     <color name="yellow_streak">#FFC107</color>
-    <color name="red">#F44336</color>   <!-- Vermelho -->
-    <color name="defaultButtonColor">#3F51B5</color> <!-- Azul padrão -->
-    <color name="correctAnswerColor">#4CAF50</color> <!-- Verde -->
-    <color name="wrongAnswerColor">#F44336</color> <!-- Vermelho -->
-    <color name="primary_color">#6200EE</color>
-    <color name="your_primary_variant_color">#3700B3</color>
-    <color name="your_on_primary_color">#FFFFFF</color>
-    <color name="your_secondary_color">#03DAC6</color>
+
+    <!-- ===================== -->
+    <!-- Backgrounds (legado)  -->
+    <!-- ===================== -->
+    <color name="background_color">#F5F5F5</color>
+    <color name="background_dynamic">#FFEB3B</color>
+
+    <!-- ===================== -->
+    <!-- Aliases (não quebrar código antigo) -->
+    <!-- ===================== -->
+    <color name="primaryColor">@color/infoBlue</color>
+    <color name="green_success">@color/successGreen</color>
+    <color name="lime_green">@color/successGreen</color>
+
+    <color name="green">@color/successGreen</color>
+    <color name="red">@color/errorRed</color>
+    <color name="orange">@color/warningOrange</color>
+
+    <color name="defaultButtonColor">@color/button_default</color>
+    <color name="correctAnswerColor">@color/correct_answer</color>
+    <color name="wrongAnswerColor">@color/wrong_answer</color>
+
+    <color name="primary_color">@color/colorPrimary</color>
+
+    <!-- Mantive seu gold com alpha (AARRGGBB) -->
+    <color name="gold">#DCEFDA20</color>
+
+    <!-- Seu verde vibrante antigo -->
+    <color name="button_defaulti">@color/successGreen</color>
+
+    <!-- Tokens “your_*” (legado/template) -->
+    <color name="your_primary_variant_color">@color/colorPrimaryDark</color>
+    <color name="your_on_primary_color">@color/colorOnPrimary</color>
+    <color name="your_secondary_color">@color/colorSecondary</color>
     <color name="your_secondary_variant_color">#018786</color>
-    <color name="your_on_secondary_color">#000000</color>
-    <color name="your_surface_color">#FFFFFF</color>
-    <color name="your_on_surface_color">#000000</color>
+    <color name="your_on_secondary_color">@color/colorOnSecondary</color>
+    <color name="your_surface_color">@color/colorSurface</color>
+    <color name="your_on_surface_color">@color/colorOnSurface</color>
+    <color name="your_on_background_color">@color/colorOnBackground</color>
 
-        <color name="colorPrimaryDark">#3700B3</color>
-        <color name="colorOnPrimary">#FFFFFF</color>
-
-    <color name="your_on_background_color">#000000</color>
 </resources>

@@ -23,10 +23,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.airbnb.lottie.LottieAnimationView
 import com.desafiolgico.R
+import com.desafiolgico.settings.SettingsActivity
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
+import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,6 +36,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var lottieAnimationView: LottieAnimationView
     private lateinit var levelManager: LevelManager
     private lateinit var startForResult: ActivityResultLauncher<Intent>
+    private lateinit var btnSettingsMain: MaterialButton
+
+
+    // Cards/layout novo
+    private lateinit var menuCard: View
+    private lateinit var dailyCard: View
 
     // Daily
     private lateinit var dailyLottie: LottieAnimationView
@@ -49,15 +57,27 @@ class MainActivity : AppCompatActivity() {
         applyEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // ✅ init primeiro (antes de usar isDailyDone etc.)
+        // ✅ init primeiro
         GameDataManager.init(this)
 
-        // Views
+        btnSettingsMain = findViewById(R.id.btnSettingsMain)
+        btnSettingsMain.visibility = View.GONE
+
+        btnSettingsMain.setOnClickListener {
+            playClickSound()
+            animateTap(btnSettingsMain)
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+
+
+        // Views (layout novo)
+        lottieAnimationView = findViewById(R.id.lottieAnimationView)
+        menuCard = findViewById(R.id.menuCard)
+
+        dailyCard = findViewById(R.id.dailyChallengeCard)
         dailyLottie = findViewById(R.id.btnDailyChallenge)
         dailyLabel = findViewById(R.id.txtDailyLabel)
-
-        lottieAnimationView = findViewById(R.id.lottieAnimationView)
-        val mainContent = findViewById<LinearLayout>(R.id.mainContent)
 
         levelManager = LevelManager(this)
 
@@ -66,22 +86,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Esconde durante intro
-        dailyLottie.visibility = View.GONE
-        dailyLabel.visibility = View.GONE
+        menuCard.visibility = View.GONE
+        dailyCard.visibility = View.GONE
 
-        // ✅ 1 único listener do daily
-        dailyLottie.setOnClickListener {
+        // ✅ clique do daily (card e lottie)
+        val dailyClick = View.OnClickListener {
             playClickSound()
 
             if (GameDataManager.isDailyDone(this)) {
                 showDailyTempMessage(getString(R.string.daily_come_back_tomorrow))
-                return@setOnClickListener
+                return@OnClickListener
             }
 
             startActivity(Intent(this, DailyChallengeActivity::class.java))
         }
+        dailyCard.setOnClickListener(dailyClick)
+        dailyLottie.setOnClickListener(dailyClick)
 
-        setupAnimation(mainContent)
+        setupAnimation()
         initBackgroundMusic()
         setupActivityResultLauncher()
 
@@ -115,17 +137,15 @@ class MainActivity : AppCompatActivity() {
                     val expertButton = findViewById<MaterialButton>(R.id.expertButton)
                     levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
 
-                    // (opcional) se Daily voltar RESULT_OK e você quiser refletir:
                     updateDailyLabelState()
                     updateDailyUI()
                 }
             }
     }
 
-    private fun setupAnimation(mainContent: View) {
+    private fun setupAnimation() {
         lottieAnimationView.setAnimation(R.raw.airplane_explosion1)
         lottieAnimationView.visibility = View.VISIBLE
-        mainContent.visibility = View.GONE
         lottieAnimationView.repeatCount = 0
         lottieAnimationView.playAnimation()
         lottieAnimationView.removeAllAnimatorListeners()
@@ -138,13 +158,77 @@ class MainActivity : AppCompatActivity() {
 
     private fun finishIntro() {
         lottieAnimationView.visibility = View.GONE
-        findViewById<LinearLayout>(R.id.mainContent).visibility = View.VISIBLE
 
-        dailyLottie.visibility = View.VISIBLE
-        dailyLottie.bringToFront()
+        // Mostra card do menu com animação suave
+        showWithFadeSlide(menuCard, fromDpY = 24f, delay = 0L, duration = 260L)
+
+        // Mostra daily card com animação (subindo de leve)
+        showWithFadeSlide(dailyCard, fromDpY = -12f, delay = 120L, duration = 220L)
+
+        showWithFadeSlide(btnSettingsMain, fromDpY = -10f, delay = 80L, duration = 180L)
+        startGlow(btnSettingsMain)
+
 
         updateDailyLabelState()
         updateDailyUI()
+    }
+
+    private fun showWithFadeSlide(view: View, fromDpY: Float, delay: Long, duration: Long) {
+        val fromPx = dp(fromDpY)
+
+        view.visibility = View.VISIBLE
+        view.alpha = 0f
+        view.translationY = fromPx
+
+        view.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setStartDelay(delay)
+            .setDuration(duration)
+            .start()
+    }
+    private fun animateTap(view: View) {
+        view.animate().cancel()
+        view.scaleX = 1f
+        view.scaleY = 1f
+        view.animate()
+            .scaleX(0.92f).scaleY(0.92f)
+            .setDuration(90)
+            .withEndAction {
+                view.animate()
+                    .scaleX(1f).scaleY(1f)
+                    .setDuration(130)
+                    .start()
+            }
+            .start()
+    }
+
+    private fun startGlow(view: View) {
+        view.animate().cancel()
+        view.alpha = 1f
+
+        // glow bem leve (não some, só “respira”)
+        view.animate()
+            .alpha(0.78f)
+            .setDuration(900)
+            .withEndAction {
+                view.animate()
+                    .alpha(1f)
+                    .setDuration(900)
+                    .withEndAction { startGlow(view) }
+                    .start()
+            }
+            .start()
+    }
+
+    private fun stopGlow(view: View) {
+        view.animate().cancel()
+        view.alpha = 1f
+    }
+
+
+    private fun dp(value: Float): Float {
+        return (value * resources.displayMetrics.density)
     }
 
     private fun updateDailyLabelState() {
@@ -190,12 +274,30 @@ class MainActivity : AppCompatActivity() {
         val streak = GameDataManager.getDailyStreak(this)
 
         dailyLottie.alpha = if (done) 0.55f else 1f
-        dailyLottie.isEnabled = true
+
+        // chama atenção só quando estiver disponível
+        dailyCard.animate().cancel()
+        if (!done) {
+            dailyCard.animate()
+                .scaleX(1.03f).scaleY(1.03f)
+                .setDuration(650)
+                .withEndAction {
+                    dailyCard.animate()
+                        .scaleX(1f).scaleY(1f)
+                        .setDuration(650)
+                        .start()
+                }
+                .start()
+        } else {
+            dailyCard.scaleX = 1f
+            dailyCard.scaleY = 1f
+        }
 
         dailyLottie.contentDescription =
             if (done) "Desafio diário concluído. Streak $streak"
             else "Abrir desafio diário. Streak $streak"
     }
+
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -219,11 +321,9 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1001) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, getString(R.string.notifications_enabled), Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(this, getString(R.string.notifications_enabled), Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, getString(R.string.notifications_denied), Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(this, getString(R.string.notifications_denied), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -240,7 +340,9 @@ class MainActivity : AppCompatActivity() {
     private fun handleButtonClick(button: MaterialButton, level: String) {
         playClickSound()
         animateButton(button)
-        resetButtonColors()
+
+        // Só muda cor dos botões de nível (exit é outlined)
+        resetLevelButtonColors()
         changeButtonColor(button)
 
         if (level == GameDataManager.Levels.EXPERIENTE) {
@@ -260,23 +362,31 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun resetButtonColors() {
-        val buttonIds = listOf(
+    private fun resetLevelButtonColors() {
+        val levelButtonIds = listOf(
             R.id.beginnerButton,
             R.id.intermediateButton,
             R.id.advancedButton,
-            R.id.expertButton,
-            R.id.exitButton
+            R.id.expertButton
         )
-        for (id in buttonIds) {
+        for (id in levelButtonIds) {
             findViewById<MaterialButton>(id)?.backgroundTintList =
                 ContextCompat.getColorStateList(this, R.color.button_default)
         }
     }
 
     private fun changeButtonColor(button: MaterialButton) {
-        button.backgroundTintList =
-            ContextCompat.getColorStateList(this, R.color.button_selected)
+        // Só aplica seleção se for botão de nível
+        val isLevelButton = button.id in listOf(
+            R.id.beginnerButton,
+            R.id.intermediateButton,
+            R.id.advancedButton,
+            R.id.expertButton
+        )
+        if (isLevelButton) {
+            button.backgroundTintList =
+                ContextCompat.getColorStateList(this, R.color.button_selected)
+        }
     }
 
     private fun playClickSound() {
@@ -287,11 +397,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun animateButton(button: MaterialButton) {
-        val scaleX = ObjectAnimator.ofFloat(button, "scaleX", 1f, 1.1f, 1f)
-        val scaleY = ObjectAnimator.ofFloat(button, "scaleY", 1f, 1.1f, 1f)
+        // Animação mais “premium” (leve)
+        val scaleX = ObjectAnimator.ofFloat(button, "scaleX", 1f, 0.98f, 1f)
+        val scaleY = ObjectAnimator.ofFloat(button, "scaleY", 1f, 0.98f, 1f)
         AnimatorSet().apply {
             playTogether(scaleX, scaleY)
-            duration = 300
+            duration = 170
             start()
         }
     }
@@ -305,6 +416,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        stopGlow(btnSettingsMain)
+
         hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
         hideDailyLabelRunnable = null
         if (::mediaPlayer.isInitialized && mediaPlayer.isPlaying) mediaPlayer.pause()
@@ -315,6 +428,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (::btnSettingsMain.isInitialized && btnSettingsMain.visibility == View.VISIBLE) {
+            startGlow(btnSettingsMain)
+        }
         updateDailyLabelState()
         updateDailyUI()
         if (::mediaPlayer.isInitialized && !mediaPlayer.isPlaying) mediaPlayer.start()

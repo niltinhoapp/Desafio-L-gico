@@ -1,30 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="DialogAnimation">
-        <item name="android:windowEnterAnimation">@anim/slide_in</item>
-        <item name="android:windowExitAnimation">@anim/slide_out</item>
+
+    <!-- Estilo antigo (se você ainda usa style="@style/ButtonStyle") -->
+    <style name="ButtonStyle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:backgroundTint">@color/colorPrimary</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">22sp</item>
     </style>
 
+    <style name="TextViewStyle">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">22sp</item>
+    </style>
 
-<!-- Tema Principal -->
-<style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-    <item name="colorPrimary">@color/colorPrimary</item>
-    <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-    <item name="colorAccent">@color/colorAccent</item>
-</style>
+    <!-- Botões do menu -->
+    <style name="LevelButton" parent="Widget.Material3.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
 
-<!-- Estilo para Botões -->
-<style name="ButtonStyle">
-    <item name="android:layout_width">0dp</item>
-    <item name="android:layout_height">wrap_content</item>
-    <item name="android:backgroundTint">@color/colorPrimary</item>
-    <item name="android:textColor">@android:color/white</item>
-    <item name="android:textSize">22sp</item>
-</style>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/white</item>
 
-<!-- Estilo para TextViews -->
-<style name="TextViewStyle">
-    <item name="android:textColor">@android:color/white</item>
-    <item name="android:textSize">22sp</item>
-</style>
+        <item name="backgroundTint">@color/button_default</item>
+        <item name="cornerRadius">18dp</item>
+
+        <!-- Se você NÃO criou res/animator/btn_press_elevate.xml, troque por @null -->
+        <item name="android:stateListAnimator">@animator/btn_press_elevate</item>
+
+        <item name="rippleColor">@color/white_20</item>
+    </style>
+
+    <style name="ExitButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">52dp</item>
+
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/white</item>
+
+        <item name="strokeColor">@color/white_40</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">18dp</item>
+
+        <!-- Se não criou o animator, troque por @null -->
+        <item name="android:stateListAnimator">@animator/btn_press_elevate</item>
+
+        <item name="rippleColor">@color/white_20</item>
+    </style>
+
 </resources>
