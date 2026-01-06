@@ -76,7 +76,8 @@
             android:textColor="@color/white" />
     </LinearLayout>
 
-    <!-- ✅ LOTTIE DO DESAFIO DIÁRIO (o "botão") - fora do mainContent -->
+
+    <!-- ✅ LOTTIE DO DESAFIO DIÁRIO -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/btnDailyChallenge"
         android:layout_width="160dp"
@@ -97,8 +98,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/btnDailyChallenge"
-        android:layout_alignEnd="@id/btnDailyChallenge"
-        android:layout_marginTop="6dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
         android:paddingHorizontal="20dp"
         android:paddingVertical="8dp"
         android:text="Desafio diário"
