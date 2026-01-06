@@ -1,12 +1,10 @@
 package com.desafiologico.main
 
 import android.content.Context
-import android.content.Context.VIBRATOR_SERVICE
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
-import android.view.MotionEvent
 import android.widget.Toast
 import com.desafiologico.R
 import com.desafiologico.utils.GameDataManager
@@ -18,7 +16,6 @@ class LevelManager(private val context: Context) {
         private const val PREFS_NAME = "game_data"
         private const val KEY_TOTAL_POINTS = "totalPoints"
     }
-
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -33,7 +30,7 @@ class LevelManager(private val context: Context) {
     }
 
     // Verifica se o nível está desbloqueado via GameDataManager
-   private fun isLevelUnlocked(level: String): Boolean {
+    private fun isLevelUnlocked(level: String): Boolean {
         return GameDataManager.isLevelUnlocked(context, level)
     }
 
@@ -114,9 +111,5 @@ class LevelManager(private val context: Context) {
         val nivelDepois = getTotalPoints()
         Log.d("LevelManager", "Pontos antes: $nivelAntes, depois: $nivelDepois")
         return nivelDepois != nivelAntes
-
     }
-
-
 }
-    // Método para lidar com o clique do botão  }
