@@ -18,3 +18,13 @@ Thumbs.db
 /captures
 .externalNativeBuild/
 .cxx/
+
+# Keystore / chaves (NUNCA versionar)
+keystore/
+*.jks
+*.keystore
+
+# Pacotes de build (NUNCA versionar)
+*.aab
+*.apk
+
