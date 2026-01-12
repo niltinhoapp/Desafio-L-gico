@@ -16,7 +16,12 @@ object GameDataManager {
     private const val KEY_ULTIMO_NIVEL_NORMAL = "ultimo_nivel_normal"
 
 
+    private const val KEY_CORRECT_BY_LEVEL = "correct_by_level_"
+
+
     private const val KEY_PREFER_AVATAR = "prefer_avatar_over_photo"
+
+    private const val KEY_TOTAL_CORRECT = "total_correct"
 
     // =====================================================
 // 📅 Daily Challenge (por usuário)
@@ -50,6 +55,8 @@ object GameDataManager {
     private const val KEY_UNLOCKED_LEVELS = "unlocked_levels"
     private const val KEY_HIGHEST_STREAK = "highest_streak"
     private const val KEY_LAST_QUESTION_INDEX = "last_q_index"
+    private const val KEY_TOTAL_CORRECT_GLOBAL = "total_correct_global" // ✅ para o Mapa (por usuário)
+
     private const val KEY_UNLOCKED_AVATARS = "unlocked_avatars"
 
     private var prefs: SharedPreferences? = null
@@ -239,8 +246,34 @@ object GameDataManager {
         val p = getPrefs(context)
         val key = getUserKey(KEY_TOTAL_SCORE)
         val total = p.getInt(key, 0) + points
+
         p.edit().putInt(key, total.coerceAtLeast(0)).apply()
     }
+
+    // =====================================================
+// 🗺️ Progresso do Mapa (por usuário)
+// - cada acerto soma +1 (persistente)
+// - step = total / 10
+// =====================================================
+    fun incrementTotalCorrectGlobal(context: Context, delta: Int = 1) {
+        val p = getPrefs(context)
+        val key = getUserKey(KEY_TOTAL_CORRECT_GLOBAL)
+        val total = (p.getInt(key, 0) + delta).coerceAtLeast(0)
+        p.edit().putInt(key, total).apply()
+    }
+
+    fun getTotalCorrectGlobal(context: Context): Int =
+        getPrefs(context).getInt(getUserKey(KEY_TOTAL_CORRECT_GLOBAL), 0)
+
+    fun getMapStep(context: Context, stepSize: Int = 10): Int {
+        if (stepSize <= 0) return 0
+        return getTotalCorrectGlobal(context) / stepSize
+    }
+
+    fun resetMapProgress(context: Context) {
+        getPrefs(context).edit().remove(getUserKey(KEY_TOTAL_CORRECT_GLOBAL)).apply()
+    }
+
 
     fun getOverallTotalScore(context: Context): Int =
         getPrefs(context).getInt(getUserKey(KEY_TOTAL_SCORE), 0)
@@ -339,6 +372,17 @@ object GameDataManager {
             .apply()
     }
 
+    fun addTotalCorrect(context: Context, amount: Int = 1) {
+        val p = getPrefs(context)
+        val key = getUserKey(KEY_TOTAL_CORRECT)
+        val total = p.getInt(key, 0) + amount
+        p.edit().putInt(key, total.coerceAtLeast(0)).apply()
+    }
+
+    fun getTotalCorrect(context: Context): Int =
+        getPrefs(context).getInt(getUserKey(KEY_TOTAL_CORRECT), 0)
+
+
     fun getDailyLastResult(context: Context): Triple<Int, Int, Int> {
         val p = getPrefs(context)
         val correct = p.getInt(getUserKey(KEY_DAILY_CORRECT), 0)
@@ -420,6 +464,8 @@ object GameDataManager {
             "${id}_$KEY_UNLOCKED_LEVELS",
             "${id}_$KEY_HIGHEST_STREAK",
             "${id}_$KEY_UNLOCKED_AVATARS",
+            "${id}_$KEY_TOTAL_CORRECT_GLOBAL",
+
 
             // Daily (se você adicionou essas keys)
             "${id}_$KEY_DAILY_DONE_DATE",
@@ -442,7 +488,65 @@ object GameDataManager {
         // Reseta variáveis de sessão em memória
         currentStreak = 0
         totalErrors = 0
+        // ✅ zera progresso do mapa por nível
+        resetCorrectForAllLevels(context)
     }
+
+    // --- Map progress: correct answers per level (per user) ---
+
+
+
+    // =====================================================
+// 🗺️ MAPA: Acertos por nível (por usuário) - 30 por nível
+// =====================================================
+
+    private fun sanitizeLevelKey(level: String): String {
+        // remove acentos/símbolos de forma simples (Intermediário -> Intermedi_rio)
+        return level.trim().replace("\\W+".toRegex(), "_")
+    }
+
+    private fun correctKeyForLevel(level: String): String {
+        // KEY_CORRECT_BY_LEVEL já tem "_" no final no seu arquivo
+        return getUserKey(KEY_CORRECT_BY_LEVEL + sanitizeLevelKey(level))
+    }
+
+    fun getCorrectForLevel(context: Context, level: String): Int {
+        return getPrefs(context).getInt(correctKeyForLevel(level), 0)
+    }
+
+    fun setCorrectForLevel(context: Context, level: String, value: Int) {
+        getPrefs(context).edit()
+            .putInt(correctKeyForLevel(level), value.coerceAtLeast(0))
+            .apply()
+    }
+
+    fun addCorrectForLevel(context: Context, level: String, delta: Int = 1) {
+        if (delta == 0) return
+        val p = getPrefs(context)
+        val key = correctKeyForLevel(level)
+        val updated = (p.getInt(key, 0) + delta).coerceAtLeast(0)
+        p.edit().putInt(key, updated).apply()
+    }
+
+    fun resetCorrectForLevel(context: Context, level: String) {
+        getPrefs(context).edit().remove(correctKeyForLevel(level)).apply()
+    }
+
+    fun resetCorrectForAllLevels(context: Context) {
+        resetCorrectForLevel(context, Levels.INICIANTE)
+        resetCorrectForLevel(context, Levels.INTERMEDIARIO)
+        resetCorrectForLevel(context, Levels.AVANCADO)
+        resetCorrectForLevel(context, Levels.EXPERIENTE)
+    }
+
+    fun getTotalCorrectAllLevels(context: Context): Int {
+        return listOf(Levels.INICIANTE, Levels.INTERMEDIARIO, Levels.AVANCADO, Levels.EXPERIENTE)
+            .sumOf { getCorrectForLevel(context, it) }
+    }
+
+
+
+
 
 
     fun setPreferAvatar(context: Context, prefer: Boolean) {

@@ -13,40 +13,57 @@ import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
-import android.widget.LinearLayout
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.OvershootInterpolator
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.airbnb.lottie.LottieAnimationView
 import com.desafiolgico.R
 import com.desafiolgico.settings.SettingsActivity
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
-import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
 
+    // Audio / Intro
     private lateinit var mediaPlayer: MediaPlayer
     private lateinit var lottieAnimationView: LottieAnimationView
+
+    // Managers
     private lateinit var levelManager: LevelManager
+
+    // Launchers
     private lateinit var startForResult: ActivityResultLauncher<Intent>
-    private lateinit var btnSettingsMain: MaterialButton
+    private lateinit var requestNotifLauncher: ActivityResultLauncher<String>
 
-
-    // Cards/layout novo
+    // Layout
     private lateinit var menuCard: View
     private lateinit var dailyCard: View
 
     // Daily
     private lateinit var dailyLottie: LottieAnimationView
-    private lateinit var dailyLabel: android.widget.TextView
+    private lateinit var dailyLabel: TextView
     private var hideDailyLabelRunnable: Runnable? = null
+
+    // Top buttons
+    private lateinit var btnSettingsMain: MaterialButton
+    private lateinit var btnRecordsMain: MaterialButton
+
+    // Level buttons (campos da Activity => acessíveis no onResume)
+    private lateinit var beginnerButton: MaterialButton
+    private lateinit var intermediateButton: MaterialButton
+    private lateinit var advancedButton: MaterialButton
+    private lateinit var expertButton: MaterialButton
+    private lateinit var exitButton: MaterialButton
+    private lateinit var mapButton: MaterialButton
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
@@ -60,18 +77,11 @@ class MainActivity : AppCompatActivity() {
         // ✅ init primeiro
         GameDataManager.init(this)
 
-        btnSettingsMain = findViewById(R.id.btnSettingsMain)
-        btnSettingsMain.visibility = View.GONE
+        // ✅ Launchers primeiro (pra não esquecer)
+        setupActivityResultLauncher()
+        setupNotificationLauncher()
 
-        btnSettingsMain.setOnClickListener {
-            playClickSound()
-            animateTap(btnSettingsMain)
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
-
-
-        // Views (layout novo)
+        // Views
         lottieAnimationView = findViewById(R.id.lottieAnimationView)
         menuCard = findViewById(R.id.menuCard)
 
@@ -79,8 +89,19 @@ class MainActivity : AppCompatActivity() {
         dailyLottie = findViewById(R.id.btnDailyChallenge)
         dailyLabel = findViewById(R.id.txtDailyLabel)
 
+        btnRecordsMain = findViewById(R.id.btnRecordsMain)
+        btnSettingsMain = findViewById(R.id.btnSettingsMain)
+
+        beginnerButton = findViewById(R.id.beginnerButton)
+        intermediateButton = findViewById(R.id.intermediateButton)
+        advancedButton = findViewById(R.id.advancedButton)
+        expertButton = findViewById(R.id.expertButton)
+        exitButton = findViewById(R.id.exitButton)
+        mapButton = findViewById(R.id.mapButton)
+
         levelManager = LevelManager(this)
 
+        // Permissão notificação (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermission()
         }
@@ -88,32 +109,47 @@ class MainActivity : AppCompatActivity() {
         // Esconde durante intro
         menuCard.visibility = View.GONE
         dailyCard.visibility = View.GONE
+        btnRecordsMain.visibility = View.GONE
+        btnSettingsMain.visibility = View.GONE
+
+        // ✅ Recordes (compacto)
+        btnRecordsMain.setOnClickListener {
+            playClickSound()
+            animateTap(btnRecordsMain)
+            startActivity(Intent(this, LocalRecordsActivity::class.java))
+
+
+        }
+
+        // ✅ Settings
+        btnSettingsMain.setOnClickListener {
+            playClickSound()
+            animateTap(btnSettingsMain)
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         // ✅ clique do daily (card e lottie)
         val dailyClick = View.OnClickListener {
             playClickSound()
+            animateTap(dailyCard)
 
             if (GameDataManager.isDailyDone(this)) {
                 showDailyTempMessage(getString(R.string.daily_come_back_tomorrow))
                 return@OnClickListener
             }
-
             startActivity(Intent(this, DailyChallengeActivity::class.java))
         }
         dailyCard.setOnClickListener(dailyClick)
         dailyLottie.setOnClickListener(dailyClick)
 
-        setupAnimation()
-        initBackgroundMusic()
-        setupActivityResultLauncher()
+        // ✅ Map
+        mapButton.setOnClickListener {
+            playClickSound()
+            animateTap(mapButton)
+            startActivity(Intent(this, MapActivity::class.java))
+        }
 
-        // Botões de nível
-        val beginnerButton = findViewById<MaterialButton>(R.id.beginnerButton)
-        val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
-        val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
-        val expertButton = findViewById<MaterialButton>(R.id.expertButton)
-        val exitButton = findViewById<MaterialButton>(R.id.exitButton)
-
+        // Setup botões de nível
         levelManager.setupButtons(
             beginnerButton,
             intermediateButton,
@@ -125,323 +161,333 @@ class MainActivity : AppCompatActivity() {
             ::showExitConfirmationDialog
         )
 
+        // ✅ Atualiza estados já no create
         levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
-    }
 
-    private fun setupActivityResultLauncher() {
-        startForResult =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == RESULT_OK) {
-                    val intermediateButton = findViewById<MaterialButton>(R.id.intermediateButton)
-                    val advancedButton = findViewById<MaterialButton>(R.id.advancedButton)
-                    val expertButton = findViewById<MaterialButton>(R.id.expertButton)
-                    levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
-
-                    updateDailyLabelState()
-                    updateDailyUI()
-                }
-            }
-    }
-
-    private fun setupAnimation() {
-        lottieAnimationView.setAnimation(R.raw.airplane_explosion1)
-        lottieAnimationView.visibility = View.VISIBLE
-        lottieAnimationView.repeatCount = 0
-        lottieAnimationView.playAnimation()
-        lottieAnimationView.removeAllAnimatorListeners()
-
-        lottieAnimationView.addAnimatorListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) = finishIntro()
-            override fun onAnimationCancel(animation: Animator) = finishIntro()
-        })
-    }
-
-    private fun finishIntro() {
-        lottieAnimationView.visibility = View.GONE
-
-        // Mostra card do menu com animação suave
-        showWithFadeSlide(menuCard, fromDpY = 24f, delay = 0L, duration = 260L)
-
-        // Mostra daily card com animação (subindo de leve)
-        showWithFadeSlide(dailyCard, fromDpY = -12f, delay = 120L, duration = 220L)
-
-        showWithFadeSlide(btnSettingsMain, fromDpY = -10f, delay = 80L, duration = 180L)
-        startGlow(btnSettingsMain)
-
-
+        // UI diária + recordes
         updateDailyLabelState()
         updateDailyUI()
-    }
+        updateRecordsButtonText()
 
-    private fun showWithFadeSlide(view: View, fromDpY: Float, delay: Long, duration: Long) {
-        val fromPx = dp(fromDpY)
-
-        view.visibility = View.VISIBLE
-        view.alpha = 0f
-        view.translationY = fromPx
-
-        view.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setStartDelay(delay)
-            .setDuration(duration)
-            .start()
-    }
-    private fun animateTap(view: View) {
-        view.animate().cancel()
-        view.scaleX = 1f
-        view.scaleY = 1f
-        view.animate()
-            .scaleX(0.92f).scaleY(0.92f)
-            .setDuration(90)
-            .withEndAction {
-                view.animate()
-                    .scaleX(1f).scaleY(1f)
-                    .setDuration(130)
-                    .start()
-            }
-            .start()
-    }
-
-    private fun startGlow(view: View) {
-        view.animate().cancel()
-        view.alpha = 1f
-
-        // glow bem leve (não some, só “respira”)
-        view.animate()
-            .alpha(0.78f)
-            .setDuration(900)
-            .withEndAction {
-                view.animate()
-                    .alpha(1f)
-                    .setDuration(900)
-                    .withEndAction { startGlow(view) }
-                    .start()
-            }
-            .start()
-    }
-
-    private fun stopGlow(view: View) {
-        view.animate().cancel()
-        view.alpha = 1f
-    }
-
-
-    private fun dp(value: Float): Float {
-        return (value * resources.displayMetrics.density)
-    }
-
-    private fun updateDailyLabelState() {
-        val done = GameDataManager.isDailyDone(this)
-
-        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
-        hideDailyLabelRunnable = null
-
-        dailyLabel.visibility = View.VISIBLE
-
-        if (done) {
-            dailyLabel.text = getString(R.string.daily_done_today)
-            dailyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            dailyLabel.alpha = 0.60f
-        } else {
-            dailyLabel.text = getString(R.string.daily_label)
-            dailyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            dailyLabel.alpha = 0.92f
-        }
-    }
-
-    private fun showDailyTempMessage(msg: String) {
-        dailyLabel.visibility = View.VISIBLE
-        dailyLabel.text = msg
-
-        dailyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        dailyLabel.alpha = 0f
-        dailyLabel.animate().alpha(0.92f).setDuration(180).start()
-
-        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
-
-        val r = Runnable {
-            dailyLabel.animate().alpha(0f).setDuration(180).withEndAction {
-                updateDailyLabelState()
-            }.start()
-        }
-        hideDailyLabelRunnable = r
-        dailyLabel.postDelayed(r, 3000L)
-    }
-
-    private fun updateDailyUI() {
-        val done = GameDataManager.isDailyDone(this)
-        val streak = GameDataManager.getDailyStreak(this)
-
-        dailyLottie.alpha = if (done) 0.55f else 1f
-
-        // chama atenção só quando estiver disponível
-        dailyCard.animate().cancel()
-        if (!done) {
-            dailyCard.animate()
-                .scaleX(1.03f).scaleY(1.03f)
-                .setDuration(650)
-                .withEndAction {
-                    dailyCard.animate()
-                        .scaleX(1f).scaleY(1f)
-                        .setDuration(650)
-                        .start()
-                }
-                .start()
-        } else {
-            dailyCard.scaleX = 1f
-            dailyCard.scaleY = 1f
-        }
-
-        dailyLottie.contentDescription =
-            if (done) "Desafio diário concluído. Streak $streak"
-            else "Abrir desafio diário. Streak $streak"
-    }
-
-
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    1001
-                )
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1001) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, getString(R.string.notifications_enabled), Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, getString(R.string.notifications_denied), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun initBackgroundMusic() {
-        mediaPlayer = MediaPlayer.create(this, R.raw.background_music).apply {
-            isLooping = true
-            start()
-        }
-    }
-
-    private fun onLevelLocked(level: String) { /* sem toast duplicado */ }
-
-    private fun handleButtonClick(button: MaterialButton, level: String) {
-        playClickSound()
-        animateButton(button)
-
-        // Só muda cor dos botões de nível (exit é outlined)
-        resetLevelButtonColors()
-        changeButtonColor(button)
-
-        if (level == GameDataManager.Levels.EXPERIENTE) {
-            startActivity(Intent(this, ExpertChallengeActivity::class.java))
-            finish()
-        } else {
-            navigateToTestActivity(level)
-        }
-    }
-
-    private fun showExitConfirmationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.exit_dialog_title))
-            .setMessage(getString(R.string.exit_dialog_message))
-            .setPositiveButton(getString(R.string.answer_yes)) { _, _ -> finish() }
-            .setNegativeButton(getString(R.string.answer_no), null)
-            .show()
-    }
-
-    private fun resetLevelButtonColors() {
-        val levelButtonIds = listOf(
-            R.id.beginnerButton,
-            R.id.intermediateButton,
-            R.id.advancedButton,
-            R.id.expertButton
-        )
-        for (id in levelButtonIds) {
-            findViewById<MaterialButton>(id)?.backgroundTintList =
-                ContextCompat.getColorStateList(this, R.color.button_default)
-        }
-    }
-
-    private fun changeButtonColor(button: MaterialButton) {
-        // Só aplica seleção se for botão de nível
-        val isLevelButton = button.id in listOf(
-            R.id.beginnerButton,
-            R.id.intermediateButton,
-            R.id.advancedButton,
-            R.id.expertButton
-        )
-        if (isLevelButton) {
-            button.backgroundTintList =
-                ContextCompat.getColorStateList(this, R.color.button_selected)
-        }
-    }
-
-    private fun playClickSound() {
-        MediaPlayer.create(this, R.raw.click_sound).apply {
-            setOnCompletionListener { mp -> mp.release() }
-            start()
-        }
-    }
-
-    private fun animateButton(button: MaterialButton) {
-        // Animação mais “premium” (leve)
-        val scaleX = ObjectAnimator.ofFloat(button, "scaleX", 1f, 0.98f, 1f)
-        val scaleY = ObjectAnimator.ofFloat(button, "scaleY", 1f, 0.98f, 1f)
-        AnimatorSet().apply {
-            playTogether(scaleX, scaleY)
-            duration = 170
-            start()
-        }
-    }
-
-    private fun navigateToTestActivity(level: String) {
-        val intent = Intent(this, TestActivity::class.java).apply {
-            putExtra("level", level)
-        }
-        startForResult.launch(intent)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        stopGlow(btnSettingsMain)
-
-        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
-        hideDailyLabelRunnable = null
-        if (::mediaPlayer.isInitialized && mediaPlayer.isPlaying) mediaPlayer.pause()
-        if (::lottieAnimationView.isInitialized && lottieAnimationView.isAnimating) {
-            lottieAnimationView.pauseAnimation()
-        }
+        // Intro + música
+        setupAnimation()
+        initBackgroundMusic()
     }
 
     override fun onResume() {
         super.onResume()
+
+        // ✅ TEMPO REAL: voltou pra Main => recalcula desbloqueios e atualiza botões
+        if (::levelManager.isInitialized
+            && ::intermediateButton.isInitialized
+            && ::advancedButton.isInitialized
+            && ::expertButton.isInitialized
+        ) {
+            levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
+        }
+
+        // ✅ Mostra aviso somente quando desbloqueou pela primeira vez
+        notifyNewUnlocksIfAny()
+        // ✅ Atualiza recordes / daily sempre que voltar
+        updateRecordsButtonText()
+        updateDailyLabelState()
+        updateDailyUI()
+
+        // Glow se estiver visível
         if (::btnSettingsMain.isInitialized && btnSettingsMain.visibility == View.VISIBLE) {
             startGlow(btnSettingsMain)
         }
-        updateDailyLabelState()
-        updateDailyUI()
+
+        // Música
         if (::mediaPlayer.isInitialized && !mediaPlayer.isPlaying) mediaPlayer.start()
     }
 
+    override fun onPause() {
+        super.onPause()
+        if (::mediaPlayer.isInitialized && mediaPlayer.isPlaying) mediaPlayer.pause()
+        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
+    }
+
     override fun onDestroy() {
+        try {
+            if (::mediaPlayer.isInitialized) {
+                mediaPlayer.stop()
+                mediaPlayer.release()
+            }
+        } catch (_: Exception) {}
         super.onDestroy()
-        if (::mediaPlayer.isInitialized) {
-            mediaPlayer.stop()
-            mediaPlayer.release()
+    }
+
+    private fun unlockNotifPrefs() =
+        getSharedPreferences("unlock_notifs", MODE_PRIVATE)
+
+    private fun notifyNewUnlocksIfAny() {
+        val p = unlockNotifPrefs()
+
+        // 👇 Se o LevelManager usa outro comportamento visual, a forma MAIS segura
+        // é basear no "isEnabled" (ou "alpha") depois do updateButtonStates()
+        checkAndNotifyUnlock(
+            key = "unlock_intermediate_notified",
+            isUnlockedNow = intermediateButton.isEnabled,
+            message = "🔥 NOVO NÍVEL DESBLOQUEADO: INTERMEDIÁRIO!",
+            targetView = intermediateButton
+        )
+
+        checkAndNotifyUnlock(
+            key = "unlock_advanced_notified",
+            isUnlockedNow = advancedButton.isEnabled,
+            message = "⭐ NOVO NÍVEL DESBLOQUEADO: AVANÇADO!",
+            targetView = advancedButton
+        )
+
+        checkAndNotifyUnlock(
+            key = "unlock_expert_notified",
+            isUnlockedNow = expertButton.isEnabled,
+            message = "👑 NOVO NÍVEL DESBLOQUEADO: EXPERIENTE!",
+            targetView = expertButton
+        )
+    }
+
+    private fun checkAndNotifyUnlock(
+        key: String,
+        isUnlockedNow: Boolean,
+        message: String,
+        targetView: View
+    ) {
+        if (!isUnlockedNow) return
+
+        val p = unlockNotifPrefs()
+        val alreadyNotified = p.getBoolean(key, false)
+        if (alreadyNotified) return
+
+        // marca que já avisou
+        p.edit().putBoolean(key, true).apply()
+
+        // ✅ aviso
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+
+        // ✅ animação “AAA” simples e bonita no botão
+        bounceUnlock(targetView)
+        glowUnlock(targetView)
+    }
+
+    private fun bounceUnlock(v: View) {
+        v.animate().cancel()
+        v.scaleX = 1f
+        v.scaleY = 1f
+        v.animate()
+            .scaleX(1.08f).scaleY(1.08f)
+            .setDuration(160)
+            .withEndAction {
+                v.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
+            }
+            .start()
+    }
+
+    private fun glowUnlock(v: View) {
+        // brilho rápido (sem precisar de recurso)
+        v.alpha = 1f
+        v.animate().cancel()
+        v.animate()
+            .alpha(0.75f)
+            .setDuration(120)
+            .withEndAction {
+                v.animate().alpha(1f).setDuration(180).start()
+            }
+            .start()
+    }
+
+    // =============================================================================================
+    // Launchers
+    // =============================================================================================
+
+    private fun setupActivityResultLauncher() {
+        startForResult =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                // Quando volta do jogo, o onResume já atualiza tudo.
+            }
+    }
+
+    private fun setupNotificationLauncher() {
+        requestNotifLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                if (!granted) {
+                    // opcional: toast
+                }
+            }
+    }
+
+    private fun requestNotificationPermission() {
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            requestNotifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        if (::lottieAnimationView.isInitialized) lottieAnimationView.cancelAnimation()
+    }
+
+    // =============================================================================================
+    // Click handlers
+    // =============================================================================================
+
+    private fun handleButtonClick(btn: MaterialButton, level: String) {
+        playClickSound()
+        animateTap(btn)
+        startForResult.launch(
+            Intent(this, TestActivity::class.java).apply {
+                putExtra("level", level)
+            }
+        )
+    }
+
+    private fun onLevelLocked(level: String) {
+        // opcional: analytics/feedback
+    }
+
+    private fun showExitConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.exit_confirm_title))
+            .setMessage(getString(R.string.exit_confirm_message))
+            .setPositiveButton(getString(R.string.exit_confirm_yes)) { _, _ -> finish() }
+            .setNegativeButton(getString(R.string.exit_confirm_no), null)
+            .show()
+    }
+
+    // =============================================================================================
+    // UI updates (Recordes / Daily)
+    // =============================================================================================
+
+    private fun updateRecordsButtonText() {
+        if (!::btnRecordsMain.isInitialized) return
+
+        val bestToday = LocalRecordsManager.getBestStreakOfDay(this)
+        btnRecordsMain.text = if (bestToday > 0) "Recordes (🔥$bestToday)" else "Recordes"
+
+        // se já passou da intro, deixa visível
+        if (menuCard.visibility == View.VISIBLE) {
+            btnRecordsMain.visibility = View.VISIBLE
+            btnSettingsMain.visibility = View.VISIBLE
+        }
+    }
+
+    private fun updateDailyLabelState() {
+        if (!::dailyLabel.isInitialized) return
+
+        dailyLabel.text = if (GameDataManager.isDailyDone(this)) {
+            getString(R.string.daily_done_label) // ex: "Concluído hoje ✅"
+        } else {
+            getString(R.string.daily_available_label) // ex: "Disponível hoje 🎯"
+        }
+    }
+
+    private fun updateDailyUI() {
+        if (!::dailyCard.isInitialized) return
+
+        val done = GameDataManager.isDailyDone(this)
+        dailyCard.alpha = if (done) 0.7f else 1f
+    }
+
+    private fun showDailyTempMessage(msg: String) {
+        dailyLabel.text = msg
+        dailyLabel.visibility = View.VISIBLE
+
+        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
+        hideDailyLabelRunnable = Runnable {
+            updateDailyLabelState()
+        }.also { dailyLabel.postDelayed(it, 1700L) }
+    }
+
+    // =============================================================================================
+    // Intro + animações + música
+    // =============================================================================================
+
+    private fun setupAnimation() {
+        // Se você já tem uma animação pronta, pode manter a sua e só chamar showMenu()
+        lottieAnimationView.visibility = View.VISIBLE
+        lottieAnimationView.playAnimation()
+
+        lottieAnimationView.addAnimatorListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                showMenu()
+            }
+            override fun onAnimationCancel(animation: Animator) {
+                showMenu()
+            }
+        })
+    }
+
+    private fun showMenu() {
+        lottieAnimationView.visibility = View.GONE
+        menuCard.visibility = View.VISIBLE
+        dailyCard.visibility = View.VISIBLE
+        btnRecordsMain.visibility = View.VISIBLE
+        btnSettingsMain.visibility = View.VISIBLE
+
+        // ✅ garante que quando a intro acabar, já esteja atualizado
+        levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
+        updateRecordsButtonText()
+        updateDailyLabelState()
+        updateDailyUI()
+    }
+
+    private fun initBackgroundMusic() {
+        // Troque o raw se seu arquivo tiver outro nome
+        mediaPlayer = MediaPlayer.create(this, R.raw.background_music)
+        mediaPlayer.isLooping = true
+        mediaPlayer.setVolume(0.5f, 0.5f)
+        mediaPlayer.start()
+    }
+
+    // =============================================================================================
+    // FX helpers
+    // =============================================================================================
+
+    private fun animateTap(v: View) {
+        v.animate().cancel()
+        v.scaleX = 1f
+        v.scaleY = 1f
+        v.animate()
+            .scaleX(0.96f)
+            .scaleY(0.96f)
+            .setDuration(70)
+            .withEndAction {
+                v.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(120)
+                    .setInterpolator(OvershootInterpolator(0.8f))
+                    .start()
+            }
+            .start()
+    }
+
+    private fun startGlow(v: View) {
+        v.animate().cancel()
+        val a1 = ObjectAnimator.ofFloat(v, View.ALPHA, 1f, 0.7f).apply { duration = 450 }
+        val a2 = ObjectAnimator.ofFloat(v, View.ALPHA, 0.7f, 1f).apply { duration = 450 }
+        AnimatorSet().apply {
+            interpolator = AccelerateDecelerateInterpolator()
+            playSequentially(a1, a2)
+            start()
+        }
+    }
+
+    private fun playClickSound() {
+        // Opcional: se você tiver R.raw.click_sound, use ele.
+        // Se não tiver, pode deixar vazio.
+        try {
+            val mp = MediaPlayer.create(this, R.raw.click_sound)
+            mp.setOnCompletionListener { it.release() }
+            mp.start()
+        } catch (_: Exception) { }
+    }
+
+    // util opcional (caso use em algum lugar)
+    private fun dp(value: Int): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            value.toFloat(),
+            resources.displayMetrics
+        ).toInt()
     }
 }

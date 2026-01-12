@@ -30,6 +30,18 @@
         android:theme="@style/Theme.DesafioLógico"
         tools:targetApi="34">
 
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+
+
         <!-- 🚀 Entrada do app (Launcher) -->
         <activity
             android:name=".auth.LoginActivity"
@@ -40,6 +52,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".main.MapActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".main.EnigmaPortalActivity"
+            android:exported="false" />
+
+
+
+
+        <activity
+            android:name=".main.LocalRecordsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+
+        <activity
+            android:name=".main.SecretTransitionActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
 
         <!-- 🌍 Seleção de idioma (não é launcher) -->
         <activity
@@ -56,6 +92,8 @@
         <activity
             android:name=".settings.SettingsActivity"
             android:exported="false" />
+
+
 
 
         <!-- 💡 Onboarding -->
@@ -78,6 +116,9 @@
 
         <activity
             android:name=".main.DailyChallengeActivity"
+            android:exported="false" />
+
+        <activity android:name=".main.ExpertChallengeActivity"
             android:exported="false" />
 
 

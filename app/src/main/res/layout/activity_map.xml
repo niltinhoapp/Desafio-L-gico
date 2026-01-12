@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mapRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_2">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarMap"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:title="Mapa"
+        android:titleTextColor="@android:color/white"
+        app:navigationIconTint="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/mapContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/toolbarMap"
+        app:layout_constraintBottom_toTopOf="@id/txtMapProgress"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/imgMap"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/mapa_pa" />
+
+        <!-- Overlay tem que ter o MESMO tamanho do imgMap -->
+        <FrameLayout
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <View
+                android:id="@+id/starGlow"
+                android:layout_width="92dp"
+                android:layout_height="92dp"
+                android:background="@drawable/bg_glow_soft"
+                android:visibility="gone" />
+
+            <View
+                android:id="@+id/starPing"
+                android:layout_width="92dp"
+                android:layout_height="92dp"
+                android:background="@drawable/bg_ping_ring"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/imgStar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="Star"
+                android:src="@drawable/star_outline_layer"
+                 />
+
+        </FrameLayout>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/txtMapProgress"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:alpha="0.9"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

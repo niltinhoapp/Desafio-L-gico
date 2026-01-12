@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp"
+    android:background="@drawable/bg_rewards_gradient">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/recordsCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="10dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="#33FFFFFF"
+        app:cardBackgroundColor="#1E233A"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏆 Recordes"
+                android:textStyle="bold"
+                android:textSize="22sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/roboto_mediu"/>
+
+            <TextView
+                android:id="@+id/bestStreakTodayText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="🔥 Melhor streak do dia: 0"
+                android:textColor="#E6FFFFFF"
+                android:textSize="16sp"
+                android:fontFamily="@font/roboto_mediu"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="14dp"
+                android:alpha="0.2"
+                android:background="#FFFFFF"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="📌 Por nível (pontos / tempo médio)"
+                android:textColor="#CCFFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@font/roboto_mediu"/>
+
+            <TextView
+                android:id="@+id/levelsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="#E6FFFFFF"
+                android:textSize="15sp"
+                android:lineSpacingExtra="3dp"
+                android:fontFamily="@font/roboto_mediu"
+                android:text="Iniciante: 0 pts • 00:00\nIntermediário: 0 pts • 00:00\nAvançado: 0 pts • 00:00\nExperiente: 0 pts • 00:00"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShare"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="📤 Compartilhar placar"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        app:cornerRadius="30dp"
+        app:backgroundTint="@color/button_default"
+        app:layout_constraintTop_toBottomOf="@id/recordsCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="14dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnBack"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Voltar"
+        android:textSize="18sp"
+        android:textAllCaps="false"
+        android:textColor="#FF5722"
+        app:layout_constraintTop_toBottomOf="@id/btnShare"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

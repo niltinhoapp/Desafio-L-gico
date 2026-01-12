@@ -87,7 +87,8 @@
             android:id="@+id/gameElementsScrollView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:clipToPadding="false">
+            android:clipToPadding="false"
+            android:paddingBottom="24dp">
 
             <LinearLayout
                 android:id="@+id/gameElements"
@@ -95,7 +96,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="16dp"
-                android:paddingTop="8dp">
+                android:paddingTop="8dp"
+                android:paddingBottom="24dp">
 
                 <!-- 🧩 Pergunta -->
                 <com.google.android.material.card.MaterialCardView
@@ -128,6 +130,7 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- ✅ Os botões de resposta entram aqui via inflateOptionButtons() -->
+
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
@@ -152,11 +155,11 @@
         android:padding="16dp"
         android:background="#202A44"
         android:elevation="4dp"
-        app:layout_constraintBottom_toTopOf="@id/adView"
+        app:layout_constraintBottom_toTopOf="@id/adContainer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- ✅ Texto do tempo (FALTAVA NO SEU XML) -->
+        <!-- Tempo -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/timerTextView"
             android:layout_width="match_parent"
@@ -215,11 +218,41 @@
                 android:shadowRadius="3" />
         </LinearLayout>
 
+        <!-- ⭐ Progresso para fase secreta (fica AQUI, não dentro da linha horizontal) -->
+        <LinearLayout
+            android:id="@+id/secretProgressLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/secretProgressText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Rumo à fase secreta: 0/10"
+                android:textColor="#CCFFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@font/roboto_mediu" />
+
+            <ProgressBar
+                android:id="@+id/secretProgressBar"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="4dp"
+                android:max="10"
+                android:progress="0"
+                android:progressTint="@color/yellow_streak"
+                android:progressBackgroundTint="#33FFFFFF" />
+        </LinearLayout>
+
         <!-- Moedas e Perguntas Restantes -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
@@ -246,28 +279,47 @@
                 android:textSize="14sp"
                 android:fontFamily="@font/roboto_mediu" />
         </LinearLayout>
+
     </LinearLayout>
 
-    <!-- 📺 Banner Ad -->
-    <com.google.android.gms.ads.AdView
-        android:id="@+id/adView"
+    <!-- ✅ Banner FIXO: não empurra layout ao carregar -->
+    <FrameLayout
+        android:id="@+id/adContainer"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:adSize="BANNER"
-        app:adUnitId="ca-app-pub-4958622518589705/1734854735"
+        android:layout_height="50dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.gms.ads.AdView
+            android:id="@+id/adView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:adSize="BANNER"
+            app:adUnitId="ca-app-pub-4958622518589705/1734854735" />
+    </FrameLayout>
 
     <!-- 🎉 Efeito Konfetti (overlay) -->
     <nl.dionsegijn.konfetti.xml.KonfettiView
         android:id="@+id/konfettiView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 🧩 Overlay AAA (chips, curiosidades, moedas animadas) -->
+    <FrameLayout
+        android:id="@+id/overlayContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

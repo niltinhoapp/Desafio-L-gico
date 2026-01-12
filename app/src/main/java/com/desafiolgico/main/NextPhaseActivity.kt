@@ -11,6 +11,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityNextPhaseBinding
+import com.desafiolgico.utils.GameDataManager
 
 class NextPhaseActivity : AppCompatActivity() {
 
@@ -18,11 +19,14 @@ class NextPhaseActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
 
     private val handler = Handler(Looper.getMainLooper())
+    private var autoCloseMs = 6000L
+
     private val autoCloseRunnable = Runnable {
         if (!isFinishing) finish()
     }
 
-    private var pulseAnimator: ObjectAnimator? = null
+    private var pulseX: ObjectAnimator? = null
+    private var pulseY: ObjectAnimator? = null
 
     private val curiosities = listOf(
         "🌊 Sabia que o coração de um camarão fica na cabeça?",
@@ -52,36 +56,43 @@ class NextPhaseActivity : AppCompatActivity() {
         binding = ActivityNextPhaseBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val curiosity = curiosities.random()
+        // ✅ Vem da fase secreta?
+        val fromSecret = intent.getBooleanExtra("FROM_SECRET", false)
+        val secretLevel = intent.getStringExtra("SECRET_LEVEL") ?: ""
+        val hits = intent.getIntExtra("HITS", 0)
 
-        // Sugestão: usar phaseTextView como título e curiosityTextView como texto
-        binding.phaseTextView.text = "✨ Curiosidade rápida"
-        binding.curiosityTextView.text = curiosity
+        // ✅ 3s no modo secreto (pedido)
+        autoCloseMs = if (fromSecret) 3000L else 6000L
 
-        // Fade-in
+        // Título inteligente
+        val title = if (fromSecret) {
+            when (secretLevel) {
+                GameDataManager.SecretLevels.RELAMPAGO -> "⚡ Curiosidade Relâmpago"
+                GameDataManager.SecretLevels.PERFEICAO -> "💎 Curiosidade Perfeição"
+                GameDataManager.SecretLevels.ENIGMA -> "🧩 Curiosidade Enigma"
+                else -> "✨ Curiosidade rápida"
+            }
+        } else {
+            "✨ Curiosidade rápida"
+        }
+
+
+
+        binding.phaseTextView.text = title
+        binding.curiosityTextView.text = curiosities.random()
+
+        // Fade-in leve (não atrapalha leitura)
         binding.curiosityTextView.alpha = 0f
         binding.curiosityTextView.animate()
             .alpha(1f)
-            .setDuration(650)
+            .setDuration(220)
             .start()
 
-        // Som inicial
+        // Som curtinho
         playSound(R.raw.correct_sound)
 
-        // Animação suave no botão
-        pulseAnimator = ObjectAnimator.ofFloat(binding.continueButton, "scaleX", 1f, 1.05f, 1f).apply {
-            duration = 1000
-            repeatCount = ValueAnimator.INFINITE
-            interpolator = AccelerateDecelerateInterpolator()
-            start()
-        }
-        // também anima no Y pra ficar mais “vivo”
-        ObjectAnimator.ofFloat(binding.continueButton, "scaleY", 1f, 1.05f, 1f).apply {
-            duration = 1000
-            repeatCount = ValueAnimator.INFINITE
-            interpolator = AccelerateDecelerateInterpolator()
-            start()
-        }
+        // Botão com pulso bem suave
+        startPulse()
 
         binding.continueButton.setOnClickListener {
             handler.removeCallbacks(autoCloseRunnable)
@@ -89,8 +100,32 @@ class NextPhaseActivity : AppCompatActivity() {
             finish()
         }
 
-        // Fecha automático
-        handler.postDelayed(autoCloseRunnable, 6000)
+        handler.postDelayed(autoCloseRunnable, autoCloseMs)
+    }
+
+    private fun startPulse() {
+        stopPulse()
+
+        pulseX = ObjectAnimator.ofFloat(binding.continueButton, "scaleX", 1f, 1.04f, 1f).apply {
+            duration = 900
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+            start()
+        }
+
+        pulseY = ObjectAnimator.ofFloat(binding.continueButton, "scaleY", 1f, 1.04f, 1f).apply {
+            duration = 900
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+            start()
+        }
+    }
+
+    private fun stopPulse() {
+        try { pulseX?.cancel() } catch (_: Exception) {}
+        try { pulseY?.cancel() } catch (_: Exception) {}
+        pulseX = null
+        pulseY = null
     }
 
     private fun playSound(resId: Int) {
@@ -110,22 +145,14 @@ class NextPhaseActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        try {
-            mediaPlayer?.let { if (it.isPlaying) it.pause() }
-        } catch (_: Exception) {}
+        try { mediaPlayer?.let { if (it.isPlaying) it.pause() } } catch (_: Exception) {}
     }
 
     override fun onDestroy() {
         super.onDestroy()
-
         handler.removeCallbacks(autoCloseRunnable)
-
-        try { pulseAnimator?.cancel() } catch (_: Exception) {}
-        pulseAnimator = null
-
-        try {
-            mediaPlayer?.release()
-        } catch (_: Exception) {}
+        stopPulse()
+        try { mediaPlayer?.release() } catch (_: Exception) {}
         mediaPlayer = null
     }
 }

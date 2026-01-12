@@ -81,6 +81,8 @@ class ScoreManager(private val context: Context) {
         val oldStreak = _currentStreakLive.value ?: 0
         val newStreak = oldStreak + 1
         totalCorrectAnswers++
+        GameDataManager.incrementTotalCorrectGlobal(context, 1) // ✅ progresso do mapa (persistente)
+
 
         val streakBonus = newStreak * STREAK_BONUS_INCREMENT
         val timeBonus = calculateTimeBonus(remainingTimeInMillis, totalTimeInMillis)

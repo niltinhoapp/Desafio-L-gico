@@ -3,9 +3,13 @@ import org.gradle.kotlin.dsl.libs
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+
+    // Room (KSP)
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+
+    // Firebase
     alias(libs.plugins.google.gms.google.services)
-    id("com.google.firebase.crashlytics") // ✅ Crashlytics ativo
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -16,27 +20,27 @@ android {
         applicationId = "com.desafiolgico"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 8
+        versionName = "1.0.8"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
-        // 🔹 Versão de TESTE (sem R8)
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+
         release {
-            // ❌ Desativa R8 e shrink nesta versão
+            // (como você deixou) sem R8/shrink
             isMinifyEnabled = false
             isShrinkResources = false
 
-            // Mantém regras (sem ofuscar)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-        }
-
-        debug {
-            isMinifyEnabled = false
         }
     }
 
@@ -52,18 +56,22 @@ android {
     buildFeatures {
         viewBinding = true
         dataBinding = true
+
+        // ✅ garante geração do BuildConfig (para BuildConfig.DEBUG existir)
         buildConfig = true
     }
 
     packaging {
-        resources.excludes += setOf(
-            "META-INF/LICENSE.txt",
-            "META-INF/NOTICE.txt",
-            "META-INF/*.kotlin_module"
-        )
+        resources {
+            excludes += setOf(
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE.txt",
+                "META-INF/*.kotlin_module"
+            )
+        }
     }
 
-    // 🔧 Corrige possíveis conflitos de libs
+    // 🔧 (mantive como você tinha) força versões para evitar conflitos
     configurations.all {
         resolutionStrategy {
             force("org.jetbrains:annotations:23.0.0")
@@ -90,7 +98,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-database-ktx")
-    implementation("com.google.firebase:firebase-crashlytics") // 🔹 coleta de falhas automática
+    implementation("com.google.firebase:firebase-crashlytics")
 
     // Login Google + Credential Manager
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
@@ -115,7 +123,7 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.play.services.auth)
 
-    // Banco de dados local (Room)
+    // Room
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
 

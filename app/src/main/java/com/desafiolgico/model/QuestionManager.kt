@@ -1,322 +1,285 @@
 package com.desafiolgico.model
 
 import com.desafiolgico.utils.GameDataManager
+import java.text.Normalizer
+import kotlin.random.Random
 
-class QuestionManager (private val languageCode: String) {
+class QuestionManager(private val languageCode: String) {
 
     private val isEnglish: Boolean
         get() = languageCode.startsWith("en", ignoreCase = true)
 
-    fun getQuestionsByLevel(selectedLevel: String): List<Question> {
-        return when (selectedLevel) {
+    /**
+     * IMPORTANTE:
+     * - Passe sempre um seed fixo (salvo na TestActivity) para não mudar a ordem ao voltar de tela.
+     * - Sem seed (seed = 0L) ele embaralha diferente a cada chamada (pode causar repetição ao restaurar).
+     */
+    fun getQuestionsByLevel(selectedLevel: String, seed: Long = 0L): List<Question> {
+        val (baseList, takeCount) = when (selectedLevel) {
 
-            GameDataManager.Levels.INICIANTE -> {
-                if (isEnglish)
-                    beginnerQuestionsEn.shuffled().take(30)
-                else
-                    beginnerQuestionsPt.shuffled().take(30)
-            }
+            GameDataManager.Levels.INICIANTE ->
+                if (isEnglish) beginnerQuestionsEn to 30 else beginnerQuestionsPt to 30
 
-            GameDataManager.Levels.INTERMEDIARIO -> {
-                if (isEnglish)
-                    intermediateQuestionsEn.shuffled().take(25)
-                else
-                    intermediateQuestionsPt.shuffled().take(25)
-            }
+            GameDataManager.Levels.INTERMEDIARIO ->
+                if (isEnglish) intermediateQuestionsEn to 25 else intermediateQuestionsPt to 25
 
-            GameDataManager.Levels.AVANCADO -> {
-                if (isEnglish)
-                    advancedQuestionsEn.shuffled().take(20)
-                else
-                    advancedQuestionsPt.shuffled().take(20)
-            }
+            GameDataManager.Levels.AVANCADO ->
+                if (isEnglish) advancedQuestionsEn to 20 else advancedQuestionsPt to 20
 
-            GameDataManager.Levels.EXPERIENTE -> {
-                if (isEnglish)
-                    expertQuestionsEn.shuffled().take(15)
-                else
-                    expertQuestionsPt.shuffled().take(15)
-            }
-
+            GameDataManager.Levels.EXPERIENTE ->
+                if (isEnglish) expertQuestionsEn to 15 else expertQuestionsPt to 15
 
             // Fases secretas
-            GameDataManager.SecretLevels.RELAMPAGO -> {
-                if (isEnglish) {
-                    relampagoBaseQuestionsEn.shuffled().take(5)
-                } else {
-                    relampagoBaseQuestionsPt.shuffled().take(5)
-                }
-            }
+            GameDataManager.SecretLevels.RELAMPAGO ->
+                if (isEnglish) relampagoBaseQuestionsEn to 5 else relampagoBaseQuestionsPt to 5
 
-            GameDataManager.SecretLevels.PERFEICAO -> {
-                if (isEnglish) {
-                    perfeicaoBaseQuestionsEn.shuffled().take(3)
-                } else {
-                    perfeicaoBaseQuestionsPt.shuffled().take(3)
-                }
-            }
+            GameDataManager.SecretLevels.PERFEICAO ->
+                if (isEnglish) perfeicaoBaseQuestionsEn to 3 else perfeicaoBaseQuestionsPt to 3
 
-            GameDataManager.SecretLevels.ENIGMA -> {
-                if (isEnglish) {
-                    enigmaBaseQuestionsEn.shuffled().take(3)
-                } else {
-                    enigmaBaseQuestionsPt.shuffled().take(3)
-                }
-            }
+            GameDataManager.SecretLevels.ENIGMA ->
+                if (isEnglish) enigmaBaseQuestionsEn to 3 else enigmaBaseQuestionsPt to 3
 
-            else -> emptyList()
+            else -> emptyList<Question>() to 0
         }
+
+        if (baseList.isEmpty() || takeCount <= 0) return emptyList()
+
+        // 1) remove duplicadas (100% sem repetir)
+        val unique = dedupeQuestions(baseList)
+
+        // 2) shuffle determinístico com seed (pra não repetir ao restaurar)
+        val actualSeed = if (seed != 0L) seed else System.currentTimeMillis()
+        val rnd = Random(seedToInt(actualSeed, selectedLevel))
+
+        // 3) não repete dentro do lote: se tiver menos que takeCount, devolve menos (sem repetir)
+        return unique.shuffled(rnd).take(minOf(takeCount, unique.size))
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // DEDUPE ROBUSTO (não repete nem se as opções vierem em ordem diferente)
+    // ---------------------------------------------------------------------------------------------
+
+    private fun dedupeQuestions(list: List<Question>): List<Question> {
+        val map = LinkedHashMap<String, Question>()
+        for (q in list) {
+            val key = questionKey(q)
+            if (!map.containsKey(key)) map[key] = q
+        }
+        return map.values.toList()
+    }
+
+    private fun questionKey(q: Question): String {
+        val textKey = normalizeKey(q.questionText)
+
+        val optKeys = q.options
+            .map { normalizeKey(it) }
+            .filter { it.isNotBlank() }
+            .sorted() // ✅ ordem não importa
+
+        val correctTextKey = q.options
+            .getOrNull(q.correctAnswerIndex)
+            ?.let { normalizeKey(it) }
+            ?: ""
+
+        val base = if (textKey.isNotBlank()) textKey else "no_text"
+        return "$base|${optKeys.joinToString(",")}|$correctTextKey"
+    }
+
+    private fun normalizeKey(input: String): String {
+        val trimmed = input.trim().lowercase()
+        if (trimmed.isBlank()) return ""
+        val noAccents = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
+            .replace("\\p{Mn}+".toRegex(), "")
+        return noAccents.replace("[^a-z0-9]+".toRegex(), "")
+    }
+
+    private fun seedToInt(seed: Long, salt: String): Int {
+        // mistura seed + level pra ficar estável e bem distribuído
+        val mixed = seed xor salt.hashCode().toLong().shl(32)
+        return (mixed xor (mixed ushr 32)).toInt()
     }
 
 
-    //lista de perguntas para nivel iniciante
+
+    // Lista de perguntas para nível iniciante (5ª a 8ª série)
     private val beginnerQuestionsPt = listOf(
 
+        // Ciências / Natureza
         Question(
-            questionText = "Qual é a cor do céu em um dia claro?",
-            options = listOf("Azul", "Verde", "Vermelho", "Amarelo"),
+            questionText = "O céu parece azul principalmente por causa de:",
+            options = listOf(
+                "Reflexo da cor do mar",
+                "Espalhamento da luz do Sol na atmosfera",
+                "Sombras das nuvens",
+                "A luz da Lua durante o dia"
+            ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "A substância que dá cor verde às plantas é:",
+            options = listOf("Clorofila", "Celulose", "Hemoglobina", "Glicose"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Quantos dias tem uma semana?",
-            options = listOf("5", "6", "7", "8"),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Qual é o número que vem após o 4?",
-            options = listOf("3", "5", "2", "4"),
+            questionText = "Qual gás a planta absorve do ar para realizar a fotossíntese?",
+            options = listOf("Oxigênio", "Dióxido de carbono (CO₂)", "Nitrogênio", "Hélio"),
             correctAnswerIndex = 1
         ),
         Question(
             questionText = "Qual é o maior órgão do corpo humano?",
-            options = listOf(
-                "Coração",
-                "Fígado",
-                "Pele",
-                "Pulmão"
-            ),
+            options = listOf("Coração", "Fígado", "Pele", "Pulmão"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual é o planeta mais próximo do Sol?",
-            options = listOf(
-                "Marte",
-                "Vênus",
-                "Mercúrio",
-                "Terra"
-            ),
+            questionText = "Qual órgão é responsável por bombear o sangue no corpo?",
+            options = listOf("Pulmão", "Cérebro", "Coração", "Estômago"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual é o nome da substância que dá cor às plantas?",
-            options = listOf(
-                "Clorofila",
-                "Celulose",
-                "Fotossíntese",
-                "Hemoglobina"
-            ),
-            correctAnswerIndex = 0
-        ),
-
-        // Perguntas de História
-        Question(
-            questionText = "Quem foi o primeiro presidente do Brasil?",
-            options = listOf(
-                "Getúlio Vargas",
-                "Deodoro da Fonseca",
-                "Dom Pedro II",
-                "Juscelino Kubitschek"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Em que ano o homem pisou na Lua pela primeira vez?",
-            options = listOf(
-                "1965",
-                "1969",
-                "1971",
-                "1975"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual era a capital do Brasil antes de Brasília?",
-            options = listOf(
-                "São Paulo",
-                "Belo Horizonte",
-                "Rio de Janeiro",
-                "Salvador"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Perguntas de Matemática
-        Question(
-            questionText = "Quanto é 2 + 2?",
-            options = listOf(
-                "3",
-                "4",
-                "5",
-                "6"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o valor de π (pi) aproximadamente?",
-            options = listOf(
-                "2.14",
-                "3.14",
-                "4.14",
-                "5.14"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é a metade de 10?",
-            options = listOf(
-                "4",
-                "5",
-                "6",
-                "7"
-            ),
-            correctAnswerIndex = 1
-        ),
-        // Perguntas de Geografia
-        Question(
-            questionText = "Qual é o maior continente do mundo?",
-            options = listOf(
-                "África",
-                "Ásia",
-                "América",
-                "Europa"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o rio mais longo do mundo?",
-            options = listOf(
-                "Rio Nilo",
-                "Rio Amazonas",
-                "Rio Yangtzé",
-                "Rio Mississippi"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é a capital da França?",
-            options = listOf(
-                "Londres",
-                "Berlim",
-                "Paris",
-                "Madri"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Perguntas de Astronomia
-        Question(
-            questionText = "Qual é o maior planeta do Sistema Solar?",
-            options = listOf(
-                "Júpiter",
-                "Saturno",
-                "Urano",
-                "Terra"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Quantas luas tem a Terra?",
-            options = listOf(
-                "1",
-                "2",
-                "3",
-                "4"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o nome da nossa galáxia?",
-            options = listOf(
-                "Andrômeda",
-                "Via Láctea",
-                "Triângulo",
-                "Órion"
-            ),
-            correctAnswerIndex = 1
-        ),
-
-        // Perguntas de Cultura Geral
-        Question(
-            questionText = "Qual é o idioma mais falado no mundo?",
-            options = listOf(
-                "Inglês",
-                "Mandarim",
-                "Espanhol",
-                "Hindi"
-            ), correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual animal é conhecido como 'o melhor amigo do homem'?",
-            options = listOf(
-                "Cachorro",
-                "Gato",
-                "Cavalo",
-                "Peixe"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o esporte mais popular do mundo?",
-            options = listOf(
-                "Basquete",
-                "Críquete",
-                "Futebol",
-                "Tênis"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-
-        // Perguntas de Ciências
-        Question(
-            questionText = "Qual é o estado físico da água a 0°C?",
+            questionText = "A água a 0°C, em condições normais, fica no estado:",
             options = listOf("Líquido", "Gasoso", "Sólido", "Plasma"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual é o principal gás que respiramos?",
-            options = listOf("Oxigênio", "Nitrogênio", "Hélio", "Dióxido de carbono"),
+            questionText = "O gás que o nosso corpo usa na respiração para produzir energia é:",
+            options = listOf("Oxigênio", "Nitrogênio", "Hélio", "Ozônio"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Qual órgão é responsável por bombear o sangue no corpo humano?",
-            options = listOf("Pulmão", "Cérebro", "Coração", "Estômago"),
+            questionText = "Em uma cadeia alimentar, quem são os produtores?",
+            options = listOf("Animais carnívoros", "Plantas e algas", "Fungos", "Bactérias causadoras de doenças"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual destas fontes de energia é renovável?",
+            options = listOf("Carvão mineral", "Petróleo", "Eólica (vento)", "Gás natural"),
             correctAnswerIndex = 2
         ),
 
-        // Perguntas de Cultura
+        // Astronomia
         Question(
-            questionText = "Qual é a cor principal da bandeira do Brasil?",
-            options = listOf("Verde", "Amarelo", "Azul", "Branco"),
+            questionText = "Qual é o planeta mais próximo do Sol?",
+            options = listOf("Marte", "Vênus", "Mercúrio", "Terra"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Qual é o maior planeta do Sistema Solar?",
+            options = listOf("Júpiter", "Saturno", "Urano", "Terra"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Quem escreveu *Dom Casmurro*?",
-            options = listOf(
-                "Machado de Assis",
-                "José de Alencar",
-                "Jorge Amado",
-                "Carlos Drummond"
-            ),
+            questionText = "Quantas luas naturais a Terra tem?",
+            options = listOf("1", "2", "3", "4"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Qual país é conhecido como a terra do sol nascente?",
+            questionText = "Qual é o nome da nossa galáxia?",
+            options = listOf("Andrômeda", "Via Láctea", "Órion", "Triângulo"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "O planeta conhecido como 'Planeta Vermelho' é:",
+            options = listOf("Marte", "Vênus", "Júpiter", "Saturno"),
+            correctAnswerIndex = 0
+        ),
+
+        // Geografia
+        Question(
+            questionText = "Qual é o maior continente do mundo em área?",
+            options = listOf("África", "Ásia", "Europa", "Oceania"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual oceano banha o litoral brasileiro?",
+            options = listOf("Pacífico", "Atlântico", "Índico", "Ártico"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual é a capital da França?",
+            options = listOf("Londres", "Berlim", "Paris", "Madri"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "A linha imaginária que divide a Terra em Hemisfério Norte e Sul é:",
+            options = listOf("Trópico de Capricórnio", "Meridiano de Greenwich", "Linha do Equador", "Círculo Polar Ártico"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Em qual região do Brasil predomina o bioma Caatinga?",
+            options = listOf("Sul", "Nordeste", "Centro-Oeste", "Norte"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual país é conhecido como a 'Terra do Sol Nascente'?",
             options = listOf("China", "Japão", "Coreia do Sul", "Tailândia"),
             correctAnswerIndex = 1
         ),
+        Question(
+            questionText = "Qual é o menor país do mundo (em área)?",
+            options = listOf("Mônaco", "Vaticano", "San Marino", "Liechtenstein"),
+            correctAnswerIndex = 1
+        ),
 
-        // Perguntas de Esportes
+        // História
+        Question(
+            questionText = "Quem foi o primeiro presidente do Brasil?",
+            options = listOf("Getúlio Vargas", "Deodoro da Fonseca", "Dom Pedro II", "Juscelino Kubitschek"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual era a capital do Brasil antes de Brasília?",
+            options = listOf("São Paulo", "Belo Horizonte", "Rio de Janeiro", "Salvador"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Em que ano foi proclamada a Independência do Brasil?",
+            options = listOf("1808", "1822", "1889", "1891"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Em que ano foi proclamada a República no Brasil?",
+            options = listOf("1822", "1888", "1889", "1930"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Qual civilização construiu as pirâmides de Gizé?",
+            options = listOf("Maias", "Egípcios", "Astecas", "Incas"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Em que ano o homem pisou na Lua pela primeira vez?",
+            options = listOf("1965", "1969", "1971", "1975"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Quem liderou a expedição que chegou ao Brasil em 1500?",
+            options = listOf("Pedro Álvares Cabral", "Cristóvão Colombo", "Vasco da Gama", "Fernão de Magalhães"),
+            correctAnswerIndex = 0
+        ),
+
+        // Língua Portuguesa / Cultura
+        Question(
+            questionText = "Quem escreveu 'Dom Casmurro'?",
+            options = listOf("Machado de Assis", "José de Alencar", "Jorge Amado", "Carlos Drummond"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "Qual é o autor de 'Romeu e Julieta'?",
+            options = listOf("William Shakespeare", "Miguel de Cervantes", "Victor Hugo", "J.K. Rowling"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "Qual destas palavras é um verbo no infinitivo?",
+            options = listOf("canto", "cantou", "cantar", "cantando"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Qual opção é um sinônimo de 'feliz'?",
+            options = listOf("Triste", "Contente", "Bravo", "Cansado"),
+            correctAnswerIndex = 1
+        ),
+
+        // Esportes
         Question(
             questionText = "Quantos jogadores compõem um time de futebol em campo?",
             options = listOf("10", "11", "12", "13"),
@@ -332,32 +295,31 @@ class QuestionManager (private val languageCode: String) {
             options = listOf("Tênis", "Basquete", "Vôlei", "Golfe"),
             correctAnswerIndex = 0
         ),
-        // Perguntas de História
+
+        // Matemática (fácil, mas sem ser “4+4”)
         Question(
-            questionText = "Em que ano foi proclamada a independência do Brasil?",
-            options = listOf("1808", "1822", "1889", "1891"),
-            correctAnswerIndex = 1
+            questionText = "Qual número completa a sequência: 3, 6, 9, 12, __ ?",
+            options = listOf("13", "14", "15", "16"),
+            correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual civilização construiu as pirâmides de Gizé?",
-            options = listOf("Maias", "Egípcios", "Astecas", "Incas"),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Quem descobriu o Brasil?",
-            options = listOf(
-                "Pedro Álvares Cabral",
-                "Cristóvão Colombo",
-                "Vasco da Gama",
-                "Fernão de Magalhães"
-            ),
+            questionText = "Quanto é 30 - (4 × 5)?",
+            options = listOf("10", "20", "30", "40"),
             correctAnswerIndex = 0
         ),
-
-        // Perguntas de Matemática
         Question(
-            questionText = "Quanto é 3 × 3?",
-            options = listOf("6", "9", "12", "15"),
+            questionText = "Se x + 7 = 19, então x vale:",
+            options = listOf("10", "11", "12", "13"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Quanto é 25% de 200?",
+            options = listOf("25", "40", "50", "75"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Qual é o valor aproximado de π (pi)?",
+            options = listOf("2,14", "3,14", "4,14", "5,14"),
             correctAnswerIndex = 1
         ),
         Question(
@@ -366,356 +328,189 @@ class QuestionManager (private val languageCode: String) {
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Quanto é 10 ÷ 2?",
-            options = listOf("3", "4", "5", "6"),
-            correctAnswerIndex = 2
-        ),
-
-        // Perguntas de Geografia
-        Question(
-            questionText = "Qual é o menor país do mundo?",
-            options = listOf("Mônaco", "Vaticano", "San Marino", "Liechtenstein"),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o oceano que banha o litoral brasileiro?",
-            options = listOf("Pacífico", "Ártico", "Atlântico", "Índico"),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Qual país tem a maior população do mundo?",
-            options = listOf("Índia", "China", "EUA", "Rússia"),
-            correctAnswerIndex = 1
-        ),
-
-        // Perguntas de Astronomia
-        Question(
-            questionText = "Quantos planetas existem no Sistema Solar?",
-            options = listOf("7", "8", "9", "10"),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o astro que ilumina a Terra?",
-            options = listOf("Lua", "Marte", "Sol", "Estrela Polar"),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Qual é o planeta conhecido como Planeta Vermelho?",
-            options = listOf("Marte", "Vênus", "Júpiter", "Saturno"),
-            correctAnswerIndex = 0
-        ),
-
-        // Perguntas de Cultura Geral
-        Question(
-            questionText = "Qual o autor da obra *Romeu e Julieta*?",
-            options = listOf(
-                "William Shakespeare",
-                "Miguel de Cervantes",
-                "J.K. Rowling",
-                "Victor Hugo"
-            ),
+            questionText = "Qual fração é equivalente a 1/2?",
+            options = listOf("2/4", "2/3", "3/5", "1/3"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Quantos meses têm 28 dias?",
-            options = listOf("1", "2", "6", "12"),
-            correctAnswerIndex = 3
-        ),
-        Question(
-            questionText = "Qual é o nome do fundador da Microsoft?",
-            options = listOf("Steve Jobs", "Bill Gates", "Mark Zuckerberg", "Jeff Bezos"),
-            correctAnswerIndex = 1
-        ),
-
-        // Mais perguntas aleatórias
-        Question(
-            questionText = "Qual é o nome do maior deserto do mundo?",
-            options = listOf("Saara", "Gobi", "Kalahari", "Atacama"),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o animal mais rápido do mundo?",
-            options = listOf("Leão", "Guepardo", "Falcão Peregrino", "Cavalo"),
+            questionText = "Qual é a área de um retângulo de 6 cm por 4 cm?",
+            options = listOf("10 cm²", "18 cm²", "24 cm²", "30 cm²"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual o principal ingrediente do pão?",
-            options = listOf("Farinha", "Açúcar", "Sal", "Água"),
+            questionText = "Qual é o perímetro de um retângulo de lados 5 cm e 3 cm?",
+            options = listOf("8 cm", "16 cm", "15 cm", "10 cm"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Quantos minutos há em 2 horas e meia?",
+            options = listOf("120", "130", "150", "180"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Um relógio marca 15:20. Que horas serão 50 minutos depois?",
+            options = listOf("15:50", "16:00", "16:10", "16:20"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Se uma loja dá R$ 5 de desconto a cada R$ 20 gastos, qual desconto em uma compra de R$ 80?",
+            options = listOf("R$ 10", "R$ 15", "R$ 20", "R$ 25"),
+            correctAnswerIndex = 2
+        ),
+
+        // Cultura geral (leve, mas interessante)
+        Question(
+            questionText = "Qual animal atinge a maior velocidade em mergulho no ar?",
+            options = listOf("Guepardo", "Águia", "Falcão peregrino", "Leão"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Qual é o principal ingrediente do pão tradicional?",
+            options = listOf("Farinha", "Açúcar", "Sal", "Óleo"),
             correctAnswerIndex = 0
         )
-
-
     )
 
+
+    // Beginner level questions (Grades 5–8) - EN
     private val beginnerQuestionsEn = listOf(
 
+        // Science / Nature
         Question(
-            questionText = "What is the color of the sky on a clear day?",
-            options = listOf("Blue", "Green", "Red", "Yellow"),
+            questionText = "The sky looks blue mainly because of:",
+            options = listOf(
+                "The reflection of the ocean",
+                "The scattering of sunlight in the atmosphere",
+                "The shadows of clouds",
+                "Moonlight during the day"
+            ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "The substance that gives plants their green color is:",
+            options = listOf("Chlorophyll", "Cellulose", "Hemoglobin", "Glucose"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "How many days are there in a week?",
-            options = listOf("5", "6", "7", "8"),
+            questionText = "Which gas do plants absorb from the air to perform photosynthesis?",
+            options = listOf("Oxygen", "Carbon dioxide (CO₂)", "Nitrogen", "Helium"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "What is the largest organ in the human body?",
+            options = listOf("Heart", "Liver", "Skin", "Lung"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Which number comes after 4?",
-            options = listOf("3", "5", "2", "4"),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is the largest organ of the human body?",
-            options = listOf(
-                "Heart",
-                "Liver",
-                "Skin",
-                "Lung"
-            ),
+            questionText = "Which organ is responsible for pumping blood through the body?",
+            options = listOf("Lung", "Brain", "Heart", "Stomach"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Which planet is closest to the Sun?",
-            options = listOf(
-                "Mars",
-                "Venus",
-                "Mercury",
-                "Earth"
-            ),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "What is the name of the substance that gives plants their green color?",
-            options = listOf(
-                "Chlorophyll",
-                "Cellulose",
-                "Photosynthesis",
-                "Hemoglobin"
-            ),
-            correctAnswerIndex = 0
-        ),
-
-        // History questions
-        Question(
-            questionText = "Who was the first president of Brazil?",
-            options = listOf(
-                "Getúlio Vargas",
-                "Deodoro da Fonseca",
-                "Dom Pedro II",
-                "Juscelino Kubitschek"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "In what year did humankind first walk on the Moon?",
-            options = listOf(
-                "1965",
-                "1969",
-                "1971",
-                "1975"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What was the capital of Brazil before Brasília?",
-            options = listOf(
-                "São Paulo",
-                "Belo Horizonte",
-                "Rio de Janeiro",
-                "Salvador"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Math questions
-        Question(
-            questionText = "What is 2 + 2?",
-            options = listOf(
-                "3",
-                "4",
-                "5",
-                "6"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is the approximate value of π (pi)?",
-            options = listOf(
-                "2.14",
-                "3.14",
-                "4.14",
-                "5.14"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is half of 10?",
-            options = listOf(
-                "4",
-                "5",
-                "6",
-                "7"
-            ),
-            correctAnswerIndex = 1
-        ),
-
-        // Geography questions
-        Question(
-            questionText = "What is the largest continent in the world?",
-            options = listOf(
-                "Africa",
-                "Asia",
-                "America",
-                "Europe"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which is the longest river in the world?",
-            options = listOf(
-                "Nile River",
-                "Amazon River",
-                "Yangtze River",
-                "Mississippi River"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is the capital of France?",
-            options = listOf(
-                "London",
-                "Berlin",
-                "Paris",
-                "Madrid"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Astronomy questions
-        Question(
-            questionText = "What is the largest planet in the Solar System?",
-            options = listOf(
-                "Jupiter",
-                "Saturn",
-                "Uranus",
-                "Earth"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "How many moons does Earth have?",
-            options = listOf(
-                "1",
-                "2",
-                "3",
-                "4"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the name of our galaxy?",
-            options = listOf(
-                "Andromeda",
-                "Milky Way",
-                "Triangulum",
-                "Orion"
-            ),
-            correctAnswerIndex = 1
-        ),
-
-        // General culture questions
-        Question(
-            questionText = "What is the most spoken language in the world?",
-            options = listOf(
-                "English",
-                "Mandarin Chinese",
-                "Spanish",
-                "Hindi"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which animal is known as \"man's best friend\"?",
-            options = listOf(
-                "Dog",
-                "Cat",
-                "Horse",
-                "Fish"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the most popular sport in the world?",
-            options = listOf(
-                "Basketball",
-                "Cricket",
-                "Football (Soccer)",
-                "Tennis"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Science questions
-        Question(
-            questionText = "What is the physical state of water at 0°C (32°F)?",
+            questionText = "At 0°C, water (under normal conditions) is in the state:",
             options = listOf("Liquid", "Gas", "Solid", "Plasma"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "What is the main gas that we breathe?",
-            options = listOf("Oxygen", "Nitrogen", "Helium", "Carbon dioxide"),
+            questionText = "The gas our body uses in respiration to produce energy is:",
+            options = listOf("Oxygen", "Nitrogen", "Helium", "Ozone"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Which organ is responsible for pumping blood through the human body?",
-            options = listOf("Lung", "Brain", "Heart", "Stomach"),
+            questionText = "In a food chain, who are the producers?",
+            options = listOf("Carnivorous animals", "Plants and algae", "Fungi", "Disease-causing bacteria"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which of these energy sources is renewable?",
+            options = listOf("Coal", "Oil", "Wind (eolic energy)", "Natural gas"),
             correctAnswerIndex = 2
         ),
 
-        // Culture questions
+        // Astronomy
         Question(
-            questionText = "What is the main color of the Brazilian flag?",
-            options = listOf("Green", "Yellow", "Blue", "White"),
+            questionText = "Which planet is closest to the Sun?",
+            options = listOf("Mars", "Venus", "Mercury", "Earth"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "What is the largest planet in the Solar System?",
+            options = listOf("Jupiter", "Saturn", "Uranus", "Earth"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Who wrote *Dom Casmurro*?",
-            options = listOf(
-                "Machado de Assis",
-                "José de Alencar",
-                "Jorge Amado",
-                "Carlos Drummond"
-            ),
+            questionText = "How many natural moons does Earth have?",
+            options = listOf("1", "2", "3", "4"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Which country is known as the Land of the Rising Sun?",
+            questionText = "What is the name of our galaxy?",
+            options = listOf("Andromeda", "Milky Way", "Orion", "Triangulum"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "The planet known as the 'Red Planet' is:",
+            options = listOf("Mars", "Venus", "Jupiter", "Saturn"),
+            correctAnswerIndex = 0
+        ),
+
+        // Geography
+        Question(
+            questionText = "Which is the largest continent by area?",
+            options = listOf("Africa", "Asia", "Europe", "Oceania"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which ocean borders the Brazilian coast?",
+            options = listOf("Pacific", "Atlantic", "Indian", "Arctic"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "What is the capital of France?",
+            options = listOf("London", "Berlin", "Paris", "Madrid"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "The imaginary line that divides Earth into the Northern and Southern Hemispheres is the:",
+            options = listOf("Tropic of Capricorn", "Prime Meridian (Greenwich)", "Equator", "Arctic Circle"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "In which region of Brazil is the Caatinga biome most common?",
+            options = listOf("South", "Northeast", "Center-West", "North"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which country is known as the 'Land of the Rising Sun'?",
             options = listOf("China", "Japan", "South Korea", "Thailand"),
             correctAnswerIndex = 1
         ),
-
-        // Sports questions
         Question(
-            questionText = "How many players are there on a soccer team on the field?",
-            options = listOf("10", "11", "12", "13"),
+            questionText = "What is the smallest country in the world (by area)?",
+            options = listOf("Monaco", "Vatican City", "San Marino", "Liechtenstein"),
+            correctAnswerIndex = 1
+        ),
+
+        // History
+        Question(
+            questionText = "Who was the first President of Brazil?",
+            options = listOf("Getúlio Vargas", "Deodoro da Fonseca", "Dom Pedro II", "Juscelino Kubitschek"),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Which country hosted the FIFA World Cup in 2014?",
-            options = listOf("Russia", "Brazil", "Germany", "South Africa"),
-            correctAnswerIndex = 1
+            questionText = "What was Brazil’s capital before Brasília?",
+            options = listOf("São Paulo", "Belo Horizonte", "Rio de Janeiro", "Salvador"),
+            correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Which sport uses a racket and a yellow ball?",
-            options = listOf("Tennis", "Basketball", "Volleyball", "Golf"),
-            correctAnswerIndex = 0
-        ),
-
-        // History questions
-        Question(
-            questionText = "In what year was Brazil's independence proclaimed?",
+            questionText = "In which year was Brazil’s Independence proclaimed?",
             options = listOf("1808", "1822", "1889", "1891"),
             correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "In which year was the Republic proclaimed in Brazil?",
+            options = listOf("1822", "1888", "1889", "1930"),
+            correctAnswerIndex = 2
         ),
         Question(
             questionText = "Which civilization built the Pyramids of Giza?",
@@ -723,7 +518,12 @@ class QuestionManager (private val languageCode: String) {
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Who discovered Brazil?",
+            questionText = "In which year did humans first walk on the Moon?",
+            options = listOf("1965", "1969", "1971", "1975"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Who led the expedition that arrived in Brazil in 1500?",
             options = listOf(
                 "Pedro Álvares Cabral",
                 "Christopher Columbus",
@@ -733,10 +533,69 @@ class QuestionManager (private val languageCode: String) {
             correctAnswerIndex = 0
         ),
 
-        // More math questions
+        // Portuguese Language / Culture (adapted to English)
         Question(
-            questionText = "What is 3 × 3?",
-            options = listOf("6", "9", "12", "15"),
+            questionText = "Who wrote 'Dom Casmurro'?",
+            options = listOf("Machado de Assis", "José de Alencar", "Jorge Amado", "Carlos Drummond"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "Who is the author of 'Romeo and Juliet'?",
+            options = listOf("William Shakespeare", "Miguel de Cervantes", "Victor Hugo", "J.K. Rowling"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "Which option is a verb in the base form (infinitive)?",
+            options = listOf("sang", "sings", "to sing", "singing"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "Which word is a synonym for 'happy'?",
+            options = listOf("Sad", "Content", "Angry", "Tired"),
+            correctAnswerIndex = 1
+        ),
+
+        // Sports
+        Question(
+            questionText = "How many players are on the field for one soccer team?",
+            options = listOf("10", "11", "12", "13"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which country hosted the 2014 FIFA World Cup?",
+            options = listOf("Russia", "Brazil", "Germany", "South Africa"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which sport uses a racket and a yellow ball?",
+            options = listOf("Tennis", "Basketball", "Volleyball", "Golf"),
+            correctAnswerIndex = 0
+        ),
+
+        // Math (easy, but not too simple)
+        Question(
+            questionText = "Which number completes the sequence: 3, 6, 9, 12, __ ?",
+            options = listOf("13", "14", "15", "16"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "What is 30 - (4 × 5)?",
+            options = listOf("10", "20", "30", "40"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "If x + 7 = 19, then x equals:",
+            options = listOf("10", "11", "12", "13"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "What is 25% of 200?",
+            options = listOf("25", "40", "50", "75"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "What is the approximate value of π (pi)?",
+            options = listOf("2.14", "3.14", "4.14", "5.14"),
             correctAnswerIndex = 1
         ),
         Question(
@@ -745,615 +604,268 @@ class QuestionManager (private val languageCode: String) {
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "What is 10 ÷ 2?",
-            options = listOf("3", "4", "5", "6"),
-            correctAnswerIndex = 2
-        ),
-
-        // More geography questions
-        Question(
-            questionText = "What is the smallest country in the world?",
-            options = listOf("Monaco", "Vatican City", "San Marino", "Liechtenstein"),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which ocean borders the Brazilian coastline?",
-            options = listOf("Pacific", "Arctic", "Atlantic", "Indian"),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Which country has the largest population in the world?",
-            options = listOf("India", "China", "USA", "Russia"),
-            correctAnswerIndex = 1
-        ),
-
-        // More astronomy questions
-        Question(
-            questionText = "How many planets are there in the Solar System?",
-            options = listOf("7", "8", "9", "10"),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which celestial body lights the Earth?",
-            options = listOf("Moon", "Mars", "Sun", "Polaris"),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Which planet is known as the Red Planet?",
-            options = listOf("Mars", "Venus", "Jupiter", "Saturn"),
-            correctAnswerIndex = 0
-        ),
-
-        // More general culture questions
-        Question(
-            questionText = "Who is the author of *Romeo and Juliet*?",
-            options = listOf(
-                "William Shakespeare",
-                "Miguel de Cervantes",
-                "J.K. Rowling",
-                "Victor Hugo"
-            ),
+            questionText = "Which fraction is equivalent to 1/2?",
+            options = listOf("2/4", "2/3", "3/5", "1/3"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "How many months have 28 days?",
-            options = listOf("1", "2", "6", "12"),
-            correctAnswerIndex = 3
-        ),
-        Question(
-            questionText = "What is the name of the founder of Microsoft?",
-            options = listOf("Steve Jobs", "Bill Gates", "Mark Zuckerberg", "Jeff Bezos"),
-            correctAnswerIndex = 1
-        ),
-
-        // More random questions
-        Question(
-            questionText = "What is the name of the largest desert in the world?",
-            options = listOf("Sahara", "Gobi", "Kalahari", "Atacama"),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the fastest animal in the world?",
-            options = listOf("Lion", "Cheetah", "Peregrine Falcon", "Horse"),
+            questionText = "What is the area of a rectangle that is 6 cm by 4 cm?",
+            options = listOf("10 cm²", "18 cm²", "24 cm²", "30 cm²"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "What is the main ingredient in bread?",
-            options = listOf("Flour", "Sugar", "Salt", "Water"),
+            questionText = "What is the perimeter of a rectangle with sides 5 cm and 3 cm?",
+            options = listOf("8 cm", "16 cm", "15 cm", "10 cm"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "How many minutes are in 2 and a half hours?",
+            options = listOf("120", "130", "150", "180"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "A clock shows 3:20 PM. What time will it be 50 minutes later?",
+            options = listOf("3:50 PM", "4:00 PM", "4:10 PM", "4:20 PM"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "A store gives a $5 discount for every $20 spent. What is the discount on an $80 purchase?",
+            options = listOf("$10", "$15", "$20", "$25"),
+            correctAnswerIndex = 2
+        ),
+
+        // General knowledge (light but interesting)
+        Question(
+            questionText = "Which animal reaches the highest speed while diving through the air?",
+            options = listOf("Cheetah", "Eagle", "Peregrine falcon", "Lion"),
+            correctAnswerIndex = 2
+        ),
+        Question(
+            questionText = "What is the main ingredient in traditional bread?",
+            options = listOf("Flour", "Sugar", "Salt", "Oil"),
             correctAnswerIndex = 0
         )
     )
 
-
     // pergunta para nivel intermediario
+// Lista de perguntas para nível intermediário (Ensino Médio) - PT
     private val intermediateQuestionsPt = listOf(
 
+        // Matemática (EM)
         Question(
-            questionText = "Qual é a capital da França?",
-            options = listOf("Paris", "Londres", "Roma", "Berlim"),
+            questionText = "Se f(x) = 2x - 3, qual é o valor de f(5)?",
+            options = listOf("7", "10", "13", "17"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "Qual é o maior planeta do Sistema Solar?",
-            options = listOf("Terra", "Júpiter", "Marte", "Saturno"),
+            questionText = "Qual é a solução da equação 3x + 2 = 17?",
+            options = listOf("3", "5", "6", "7"),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Quem escreveu 'Dom Casmurro'?",
+            questionText = "Qual é o valor de √(49) + √(16)?",
+            options = listOf("9", "10", "11", "12"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "O que representa o discriminante (Δ) em uma equação do 2º grau?",
             options = listOf(
-                "Machado de Assis",
-                "José de Alencar",
-                "Monteiro Lobato",
-                "Clarice Lispector"
+                "O número de termos do polinômio",
+                "A quantidade de raízes reais e sua natureza",
+                "O valor máximo da função",
+                "A inclinação da reta tangente"
             ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Se um triângulo retângulo tem catetos 6 e 8, a hipotenusa vale:",
+            options = listOf("10", "12", "14", "16"),
             correctAnswerIndex = 0
         ),
-
         Question(
-            questionText = "Qual é a fórmula química da água?",
-            options = listOf(
-                "H2O",
-                "CO2",
-                "H2O2",
-                "CH4"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o principal gás responsável pelo efeito estufa?",
-            options = listOf(
-                "Oxigênio",
-                "Dióxido de carbono",
-                "Nitrogênio",
-                "Hidrogênio"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o processo pelo qual as plantas produzem seu próprio alimento?",
-            options = listOf(
-                "Respiração celular",
-                "Fotossíntese",
-                "Fermentação",
-                "Digestão"
-            ),
-            correctAnswerIndex = 1
-        ),
-
-        // Perguntas de Matemática
-        Question(
-            questionText = "Qual é o valor da raiz quadrada de 144?",
-            options = listOf(
-                "10",
-                "12",
-                "14",
-                "16"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Quanto é 15% de 200?",
-            options = listOf(
-                "20",
-                "25",
-                "30",
-                "35"
-            ),
+            questionText = "Qual é o valor de 15% de 240?",
+            options = listOf("24", "30", "36", "40"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual é o resultado de (3² + 4²)?",
-            options = listOf(
-                "12",
-                "16",
-                "25",
-                "29"
-            ),
-            correctAnswerIndex = 3
+            questionText = "Se log10(x) = 2, então x é:",
+            options = listOf("10", "50", "100", "1000"),
+            correctAnswerIndex = 2
         ),
 
-        // Perguntas de História
+        // Física (EM)
         Question(
-            questionText = "Qual evento marcou o início da Segunda Guerra Mundial?",
-            options = listOf(
-                "Ataque a Pearl Harbor",
-                "Invasão da Polônia pela Alemanha",
-                "Queda da Bolsa de Nova York",
-                "Revolução Russa"
-            ),
+            questionText = "Qual é a expressão correta da 2ª Lei de Newton?",
+            options = listOf("F = m·a", "E = m·c²", "P = m·g", "V = d/t"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "Um carro aumenta sua velocidade de 10 m/s para 30 m/s em 10 s. A aceleração média é:",
+            options = listOf("1 m/s²", "2 m/s²", "3 m/s²", "4 m/s²"),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Quem era o líder do Egito antigo conhecido por construir a Grande Esfinge?",
-            options = listOf(
-                "Ramsés II",
-                "Tutancâmon",
-                "Quéops",
-                "Amenófis"
-            ),
+            questionText = "Qual é a unidade de resistência elétrica no SI?",
+            options = listOf("Ampère", "Ohm", "Volt", "Watt"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual tipo de energia está associado ao movimento de um corpo?",
+            options = listOf("Potencial", "Térmica", "Cinética", "Elástica"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Em que ano foi proclamada a independência do Brasil?",
+            questionText = "Em um circuito, a Lei de Ohm relaciona:",
             options = listOf(
-                "1808",
-                "1822",
-                "1889",
-                "1900"
+                "Potência e tempo",
+                "Tensão, corrente e resistência",
+                "Força e massa",
+                "Calor e temperatura"
             ),
             correctAnswerIndex = 1
         ),
 
-        // Perguntas de Geografia
+        // Química (EM)
         Question(
-            questionText = "Qual país tem o maior número de fusos horários?",
+            questionText = "Qual é a fórmula do ácido sulfúrico?",
+            options = listOf("HCl", "H2SO4", "HNO3", "NaOH"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "O número atômico de um elemento representa:",
             options = listOf(
-                "Estados Unidos",
-                "China",
-                "Rússia",
-                "França"
+                "Número de nêutrons",
+                "Número de prótons",
+                "Massa atômica",
+                "Número de elétrons de valência"
             ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual ligação química ocorre quando há compartilhamento de elétrons?",
+            options = listOf("Iônica", "Covalente", "Metálica", "Hidrogênio"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual é o pH de uma solução neutra a 25°C?",
+            options = listOf("0", "7", "10", "14"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual substância é considerada um hidrocarboneto?",
+            options = listOf("NaCl", "CH4", "H2SO4", "NH3"),
+            correctAnswerIndex = 1
+        ),
+
+        // Biologia (EM)
+        Question(
+            questionText = "Qual organela celular é responsável pela produção de ATP?",
+            options = listOf("Mitocôndria", "Lisossomo", "Ribossomo", "Complexo de Golgi"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "Na fotossíntese, as plantas produzem glicose usando principalmente:",
+            options = listOf("Oxigênio e luz", "CO₂ e água", "Nitrogênio e água", "CO₂ e sal mineral"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Qual é a função principal do DNA?",
+            options = listOf(
+                "Produzir energia",
+                "Armazenar informação genética",
+                "Transportar oxigênio",
+                "Controlar o pH do sangue"
+            ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "A meiose é importante porque:",
+            options = listOf(
+                "Produz células idênticas",
+                "Forma gametas com metade do número de cromossomos",
+                "Aumenta o número de cromossomos",
+                "Ocorre apenas em bactérias"
+            ),
+            correctAnswerIndex = 1
+        ),
+
+        // Geografia (EM)
+        Question(
+            questionText = "Qual país possui o maior número de fusos horários considerando seus territórios ultramarinos?",
+            options = listOf("Estados Unidos", "China", "Rússia", "França"),
             correctAnswerIndex = 3
         ),
         Question(
             questionText = "Qual é o oceano mais profundo do mundo?",
-            options = listOf(
-                "Oceano Atlântico",
-                "Oceano Pacífico",
-                "Oceano Índico",
-                "Oceano Ártico"
-            ),
+            options = listOf("Atlântico", "Pacífico", "Índico", "Ártico"),
             correctAnswerIndex = 1
         ),
         Question(
             questionText = "Qual é a capital da Austrália?",
-            options = listOf(
-                "Sydney",
-                "Melbourne",
-                "Canberra",
-                "Perth"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Perguntas de Astronomia
-        Question(
-            questionText = "Quantos planetas compõem o Sistema Solar?",
-            options = listOf(
-                "7",
-                "8",
-                "9",
-                "10"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o nome do maior satélite natural de Saturno?",
-            options = listOf(
-                "Ganimedes",
-                "Io",
-                "Titã",
-                "Europa"
-            ),
+            options = listOf("Sydney", "Melbourne", "Canberra", "Perth"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Qual é a unidade astronômica usada para medir distâncias no Sistema Solar?",
+            questionText = "O fenômeno El Niño está relacionado principalmente a:",
             options = listOf(
-                "Anos-luz",
-                "Parsecs",
-                "Unidade Astronômica (UA)",
-                "Kilômetros"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Perguntas de Física
-        Question(
-            questionText = "Qual é a fórmula da Segunda Lei de Newton?",
-            options = listOf(
-                "F = m × a",
-                "E = mc²",
-                "P = m × g",
-                "V = d / t"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é a unidade de resistência elétrica no SI?",
-            options = listOf(
-                "Ampère",
-                "Ohm",
-                "Volt",
-                "Watt"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual fenômeno explica a propagação do som em ondas?",
-            options = listOf(
-                "Refração",
-                "Difração",
-                "Ressonância",
-                "Ondas mecânicas"
-            ),
-            correctAnswerIndex = 3
-        ),
-
-        // Perguntas de Química
-        Question(
-            questionText = "Qual elemento químico é conhecido como o \"metal líquido\"?",
-            options = listOf(
-                "Mercúrio",
-                "Prata",
-                "Ouro",
-                "Cobre"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o número atômico do carbono?",
-            options = listOf(
-                "6",
-                "12",
-                "8",
-                "14"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o símbolo químico do sódio?",
-            options = listOf(
-                "So",
-                "Na",
-                "S",
-                "N"
+                "Resfriamento do Atlântico Norte",
+                "Aquecimento anormal do Pacífico Equatorial",
+                "Aumento de terremotos",
+                "Furacões no Mediterrâneo"
             ),
             correctAnswerIndex = 1
         ),
 
-        // Perguntas de Cultura Geral
+        // História (EM)
         Question(
-            questionText = "Quem pintou a obra \"A Última Ceia\"?",
+            questionText = "Qual evento marcou o início da Segunda Guerra Mundial?",
+            options = listOf("Ataque a Pearl Harbor", "Invasão da Polônia pela Alemanha", "Revolução Russa", "Crise de 1929"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "A Revolução Francesa começou em 1789 e teve como uma de suas causas:",
             options = listOf(
-                "Michelangelo",
-                "Leonardo da Vinci",
-                "Rafael",
-                "Donatello"
+                "Expansão do feudalismo",
+                "Crise econômica e insatisfação com privilégios da nobreza",
+                "Descoberta da América",
+                "Unificação da Alemanha"
             ),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Qual é o livro mais vendido do mundo?",
+            questionText = "A 'Guerra Fria' foi caracterizada principalmente por:",
             options = listOf(
-                "O Senhor dos Anéis",
-                "A Bíblia",
-                "Harry Potter",
-                "Dom Quixote"
+                "Conflitos diretos entre EUA e URSS",
+                "Disputa ideológica e corrida armamentista entre EUA e URSS",
+                "Domínio europeu na África",
+                "Guerra civil no Japão"
             ),
             correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Em que país foi fundada a Organização das Nações Unidas (ONU)?",
-            options = listOf(
-                "Estados Unidos",
-                "Suíça",
-                "Reino Unido",
-                "França"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o maior deserto do mundo?",
-            options = listOf(
-                "Saara",
-                "Gobi",
-                "Atacama",
-                "Antártida"
-            ),
-            correctAnswerIndex = 3
-        ),
-        Question(
-            questionText = "Qual rio atravessa a cidade de Londres?",
-            options = listOf(
-                "Tâmisa",
-                "Danúbio",
-                "Sena",
-                "Reno"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é a maior ilha do mundo?",
-            options = listOf(
-                "Groelândia",
-                "Madagascar",
-                "Borneo",
-                "Nova Guiné"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Quem foi o primeiro imperador de Roma?",
-            options = listOf(
-                "Júlio César",
-                "Nero",
-                "Calígula",
-                "Augusto"
-            ),
-            correctAnswerIndex = 3
-        ),
-        Question(
-            questionText = "Qual guerra foi conhecida como a 'Grande Guerra'?",
-            options = listOf(
-                "Segunda Guerra Mundial",
-                "Primeira Guerra Mundial",
-                "Guerra Fria",
-                "Guerra Civil Americana"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual era o nome do navio que afundou em 1912?",
-            options = listOf(
-                "Titanic",
-                "Lusitânia",
-                "Queen Mary",
-                "Britannic"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual país inventou o papel?",
-            options = listOf(
-                "China",
-                "Egito",
-                "Grécia",
-                "Babilônia"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual civilização construiu Machu Picchu?",
-            options = listOf(
-                "Incas",
-                "Maias",
-                "Astecas",
-                "Olmecas"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Quem foi o primeiro homem a pisar na Lua?",
-            options = listOf(
-                "Neil Armstrong",
-                "Buzz Aldrin",
-                "Yuri Gagarin",
-                "John Glenn"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Em que ano começou a Revolução Francesa?",
-            options = listOf(
-                "1776",
-                "1789",
-                "1804",
-                "1812"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Quem foi conhecido como o 'Rei Sol' da França?",
-            options = listOf(
-                "Luís XIV",
-                "Luís XVI",
-                "Napoleão Bonaparte",
-                "Carlos Magno"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual invenção é atribuída a Alexander Graham Bell?",
-            options = listOf(
-                "Telefone",
-                "Lâmpada",
-                "Rádio",
-                "Televisão"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é a montanha mais alta do mundo?",
-            options = listOf(
-                "K2",
-                "Everest",
-                "Kangchenjunga",
-                "Lhotse"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual país é conhecido como o berço das Olimpíadas?",
-            options = listOf(
-                "Itália",
-                "Grécia",
-                "Egito",
-                "China"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual é o nome da camada de gás que protege a Terra dos raios UV?",
-            options = listOf(
-                "Ozônio",
-                "Nitrogênio",
-                "Oxigênio",
-                "Hidrogênio"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual é o menor país do mundo em área?",
-            options = listOf(
-                "Mônaco",
-                "Malta",
-                "Vaticano",
-                "San Marino"
-            ),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Qual é a capital do Canadá?",
-            options = listOf(
-                "Toronto",
-                "Ottawa",
-                "Vancouver",
-                "Montreal"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Quem foi o autor de 'O Príncipe'?",
-            options = listOf(
-                "Platão",
-                "Nicolau Maquiavel",
-                "Thomas Hobbes",
-                "John Locke"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual gás é essencial para a respiração humana?",
-            options = listOf(
-                "Oxigênio",
-                "Dióxido de carbono",
-                "Hidrogênio",
-                "Nitrogênio"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Qual planeta é conhecido como o Planeta Vermelho?",
-            options = listOf(
-                "Marte",
-                "Vênus",
-                "Saturno",
-                "Júpiter"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Quem pintou o teto da Capela Sistina?",
-            options = listOf(
-                "Michelangelo",
-                "Leonardo da Vinci",
-                "Rafael",
-                "Donatello"
-            ),
-            correctAnswerIndex = 0
         ),
         Question(
             questionText = "Em que ano caiu o Muro de Berlim?",
-            options = listOf(
-                "1987",
-                "1989",
-                "1991",
-                "1993"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Qual substância é mais abundante no corpo humano?",
-            options = listOf(
-                "Proteína",
-                "Água",
-                "Cálcio",
-                "Oxigênio"
-            ),
+            options = listOf("1987", "1989", "1991", "1993"),
             correctAnswerIndex = 1
         ),
 
-
-        // Novas perguntas intermediárias adicionais:
-
+        // Língua Portuguesa / Literatura (EM)
         Question(
-            questionText = "Qual organela celular é responsável pela produção de energia na forma de ATP?",
+            questionText = "Em figuras de linguagem, metáfora é:",
             options = listOf(
-                "Mitocôndria",
-                "Lisossomo",
-                "Retículo endoplasmático",
-                "Complexo de Golgi"
+                "Repetição de sons",
+                "Comparação explícita com 'como'",
+                "Comparação implícita sem 'como'",
+                "Exagero intencional"
             ),
-            correctAnswerIndex = 0
+            correctAnswerIndex = 2
         ),
-
         Question(
-            questionText = "Qual é a maior cordilheira do mundo?",
-            options = listOf("Himalaia", "Andes", "Alpes", "Rockies"),
-            correctAnswerIndex = 1
+            questionText = "Machado de Assis é um autor associado principalmente ao:",
+            options = listOf("Barroco", "Arcadismo", "Realismo", "Romantismo"),
+            correctAnswerIndex = 2
         ),
 
+        // Atualidades / Tecnologia (EM)
         Question(
             questionText = "Em computação, o que significa a sigla HTTP?",
             options = listOf(
@@ -1364,591 +876,260 @@ class QuestionManager (private val languageCode: String) {
             ),
             correctAnswerIndex = 0
         ),
-
         Question(
-            questionText = "Na economia, como se define inflação?",
+            questionText = "Na economia, inflação é definida como:",
             options = listOf(
-                "Aumento geral de preços",
+                "Aumento geral e contínuo dos preços",
                 "Queda do PIB",
-                "Alta taxa de desemprego",
-                "Crescimento da taxa de juros"
+                "Aumento do desemprego",
+                "Redução da taxa de juros"
             ),
             correctAnswerIndex = 0
         ),
 
-        Question(
-            questionText = "Qual é a maior língua em número de falantes nativos?",
-            options = listOf("Inglês", "Mandarim", "Espanhol", "Hindi"),
-            correctAnswerIndex = 1
-        ),
-
+        // Artes / Cultura geral (EM)
         Question(
             questionText = "Quem pintou o mural 'Guernica'?",
             options = listOf("Pablo Picasso", "Salvador Dalí", "Henri Matisse", "Joan Miró"),
             correctAnswerIndex = 0
         ),
-
         Question(
-            questionText = "Qual é o maior órgão do corpo humano?",
-            options = listOf("Fígado", "Pele", "Coração", "Pulmão"),
+            questionText = "Quem pintou a obra 'A Última Ceia'?",
+            options = listOf("Michelangelo", "Leonardo da Vinci", "Rafael", "Donatello"),
             correctAnswerIndex = 1
         ),
-
         Question(
-            questionText = "Qual time conquistou mais Copas do Mundo de Futebol?",
-            options = listOf("Argentina", "Alemanha", "Brasil", "Itália"),
-            correctAnswerIndex = 2
-        ),
-
-        Question(
-            questionText = "Que rocha ígnea se forma a partir do resfriamento rápido de lava na superfície?",
-            options = listOf("Granito", "Basalto", "Mármore", "Quartzito"),
-            correctAnswerIndex = 1
-        ),
-
-        Question(
-            questionText = "Qual compositor escreveu a 'Quinta Sinfonia' em C menor?",
-            options = listOf(
-                "Ludwig van Beethoven",
-                "Johann Sebastian Bach",
-                "Wolfgang Amadeus Mozart",
-                "Franz Schubert"
-            ),
+            questionText = "Qual compositor escreveu a 'Quinta Sinfonia' em dó menor?",
+            options = listOf("Ludwig van Beethoven", "J.S. Bach", "W.A. Mozart", "Franz Schubert"),
             correctAnswerIndex = 0
         )
     )
 
+    // Intermediate level questions (High School) - EN
     private val intermediateQuestionsEn = listOf(
 
+        // Math (High School)
         Question(
-            questionText = "What is the capital of France?",
-            options = listOf("Paris", "London", "Rome", "Berlin"),
+            questionText = "If f(x) = 2x - 3, what is f(5)?",
+            options = listOf("7", "10", "13", "17"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "What is the largest planet in the Solar System?",
-            options = listOf("Earth", "Jupiter", "Mars", "Saturn"),
+            questionText = "What is the solution to the equation 3x + 2 = 17?",
+            options = listOf("3", "5", "6", "7"),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Who wrote 'Dom Casmurro'?",
+            questionText = "What is the value of √49 + √16?",
+            options = listOf("9", "10", "11", "12"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "In a quadratic equation, what does the discriminant (Δ) indicate?",
             options = listOf(
-                "Machado de Assis",
-                "José de Alencar",
-                "Monteiro Lobato",
-                "Clarice Lispector"
+                "The number of terms in the polynomial",
+                "The number and nature of real roots",
+                "The maximum value of the function",
+                "The slope of the tangent line"
             ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "A right triangle has legs 6 and 8. The hypotenuse is:",
+            options = listOf("10", "12", "14", "16"),
             correctAnswerIndex = 0
         ),
-
         Question(
-            questionText = "What is the chemical formula of water?",
-            options = listOf(
-                "H2O",
-                "CO2",
-                "H2O2",
-                "CH4"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Which is the main gas responsible for the greenhouse effect?",
-            options = listOf(
-                "Oxygen",
-                "Carbon dioxide",
-                "Nitrogen",
-                "Hydrogen"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is the process by which plants produce their own food?",
-            options = listOf(
-                "Cellular respiration",
-                "Photosynthesis",
-                "Fermentation",
-                "Digestion"
-            ),
-            correctAnswerIndex = 1
-        ),
-
-        // Math questions
-        Question(
-            questionText = "What is the value of the square root of 144?",
-            options = listOf(
-                "10",
-                "12",
-                "14",
-                "16"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is 15% of 200?",
-            options = listOf(
-                "20",
-                "25",
-                "30",
-                "35"
-            ),
+            questionText = "What is 15% of 240?",
+            options = listOf("24", "30", "36", "40"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "What is the result of (3² + 4²)?",
-            options = listOf(
-                "12",
-                "16",
-                "25",
-                "29"
-            ),
-            correctAnswerIndex = 3
+            questionText = "If log10(x) = 2, then x equals:",
+            options = listOf("10", "50", "100", "1000"),
+            correctAnswerIndex = 2
         ),
 
-        // History questions
+        // Physics (High School)
         Question(
-            questionText = "Which event marked the beginning of World War II?",
-            options = listOf(
-                "Attack on Pearl Harbor",
-                "Invasion of Poland by Germany",
-                "New York Stock Market Crash",
-                "Russian Revolution"
-            ),
+            questionText = "What is the correct expression of Newton’s Second Law?",
+            options = listOf("F = m·a", "E = m·c²", "P = m·g", "v = d/t"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "A car increases its speed from 10 m/s to 30 m/s in 10 s. The average acceleration is:",
+            options = listOf("1 m/s²", "2 m/s²", "3 m/s²", "4 m/s²"),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "Which ancient Egyptian ruler is known for building the Great Sphinx?",
-            options = listOf(
-                "Ramesses II",
-                "Tutankhamun",
-                "Khufu",
-                "Amenhotep"
-            ),
+            questionText = "What is the SI unit of electrical resistance?",
+            options = listOf("Ampere", "Ohm", "Volt", "Watt"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which type of energy is associated with the motion of an object?",
+            options = listOf("Potential", "Thermal", "Kinetic", "Elastic"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "In what year was Brazil's independence proclaimed?",
+            questionText = "Ohm’s Law relates:",
             options = listOf(
-                "1808",
-                "1822",
-                "1889",
-                "1900"
+                "Power and time",
+                "Voltage, current, and resistance",
+                "Force and mass",
+                "Heat and temperature"
             ),
             correctAnswerIndex = 1
         ),
 
-        // Geography questions
+        // Chemistry (High School)
         Question(
-            questionText = "Which country has the largest number of time zones?",
+            questionText = "What is the chemical formula of sulfuric acid?",
+            options = listOf("HCl", "H2SO4", "HNO3", "NaOH"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "An element’s atomic number represents the number of:",
             options = listOf(
-                "United States",
-                "China",
-                "Russia",
-                "France"
+                "Neutrons",
+                "Protons",
+                "Atomic mass",
+                "Valence electrons"
             ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which type of bond involves sharing electrons?",
+            options = listOf("Ionic", "Covalent", "Metallic", "Hydrogen"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "What is the pH of a neutral solution at 25°C?",
+            options = listOf("0", "7", "10", "14"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Which substance is a hydrocarbon?",
+            options = listOf("NaCl", "CH4", "H2SO4", "NH3"),
+            correctAnswerIndex = 1
+        ),
+
+        // Biology (High School)
+        Question(
+            questionText = "Which cell organelle is responsible for producing ATP?",
+            options = listOf("Mitochondrion", "Lysosome", "Ribosome", "Golgi apparatus"),
+            correctAnswerIndex = 0
+        ),
+        Question(
+            questionText = "In photosynthesis, plants produce glucose mainly using:",
+            options = listOf("Oxygen and light", "CO₂ and water", "Nitrogen and water", "CO₂ and minerals"),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "What is the main function of DNA?",
+            options = listOf(
+                "Produce energy",
+                "Store genetic information",
+                "Transport oxygen",
+                "Control blood pH"
+            ),
+            correctAnswerIndex = 1
+        ),
+        Question(
+            questionText = "Meiosis is important because it:",
+            options = listOf(
+                "Produces identical cells",
+                "Creates gametes with half the number of chromosomes",
+                "Increases the number of chromosomes",
+                "Occurs only in bacteria"
+            ),
+            correctAnswerIndex = 1
+        ),
+
+        // Geography (High School)
+        Question(
+            questionText = "Which country has the most time zones when overseas territories are included?",
+            options = listOf("United States", "China", "Russia", "France"),
             correctAnswerIndex = 3
         ),
         Question(
             questionText = "Which is the deepest ocean in the world?",
-            options = listOf(
-                "Atlantic Ocean",
-                "Pacific Ocean",
-                "Indian Ocean",
-                "Arctic Ocean"
-            ),
+            options = listOf("Atlantic Ocean", "Pacific Ocean", "Indian Ocean", "Arctic Ocean"),
             correctAnswerIndex = 1
         ),
         Question(
             questionText = "What is the capital of Australia?",
-            options = listOf(
-                "Sydney",
-                "Melbourne",
-                "Canberra",
-                "Perth"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Astronomy questions
-        Question(
-            questionText = "How many planets are there in the Solar System?",
-            options = listOf(
-                "7",
-                "8",
-                "9",
-                "10"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is the name of Saturn's largest natural satellite?",
-            options = listOf(
-                "Ganymede",
-                "Io",
-                "Titan",
-                "Europa"
-            ),
+            options = listOf("Sydney", "Melbourne", "Canberra", "Perth"),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "Which astronomical unit is used to measure distances in the Solar System?",
+            questionText = "The El Niño phenomenon is mainly related to:",
             options = listOf(
-                "Light-years",
-                "Parsecs",
-                "Astronomical Unit (AU)",
-                "Kilometers"
-            ),
-            correctAnswerIndex = 2
-        ),
-
-        // Physics questions
-        Question(
-            questionText = "What is the formula of Newton's Second Law?",
-            options = listOf(
-                "F = m × a",
-                "E = mc²",
-                "P = m × g",
-                "v = d / t"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the SI unit of electrical resistance?",
-            options = listOf(
-                "Ampere",
-                "Ohm",
-                "Volt",
-                "Watt"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which phenomenon explains the propagation of sound in waves?",
-            options = listOf(
-                "Refraction",
-                "Diffraction",
-                "Resonance",
-                "Mechanical waves"
-            ),
-            correctAnswerIndex = 3
-        ),
-
-        // Chemistry questions
-        Question(
-            questionText = "Which chemical element is known as the \"liquid metal\"?",
-            options = listOf(
-                "Mercury",
-                "Silver",
-                "Gold",
-                "Copper"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the atomic number of carbon?",
-            options = listOf(
-                "6",
-                "12",
-                "8",
-                "14"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the chemical symbol for sodium?",
-            options = listOf(
-                "So",
-                "Na",
-                "S",
-                "N"
+                "Cooling of the North Atlantic",
+                "Abnormal warming of the Equatorial Pacific",
+                "An increase in earthquakes",
+                "Hurricanes in the Mediterranean"
             ),
             correctAnswerIndex = 1
         ),
 
-        // General culture questions
+        // History (High School)
         Question(
-            questionText = "Who painted the work \"The Last Supper\"?",
+            questionText = "Which event marked the start of World War II?",
             options = listOf(
-                "Michelangelo",
-                "Leonardo da Vinci",
-                "Raphael",
-                "Donatello"
+                "Attack on Pearl Harbor",
+                "Germany’s invasion of Poland",
+                "The Russian Revolution",
+                "The 1929 Great Depression"
             ),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "What is the best-selling book in the world?",
+            questionText = "The French Revolution began in 1789 and one of its causes was:",
             options = listOf(
-                "The Lord of the Rings",
-                "The Bible",
-                "Harry Potter",
-                "Don Quixote"
+                "The expansion of feudalism",
+                "Economic crisis and anger over noble privileges",
+                "The discovery of America",
+                "The unification of Germany"
             ),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "In which country was the United Nations (UN) founded?",
+            questionText = "The Cold War was mainly characterized by:",
             options = listOf(
-                "United States",
-                "Switzerland",
-                "United Kingdom",
-                "France"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the largest desert in the world?",
-            options = listOf(
-                "Sahara",
-                "Gobi",
-                "Atacama",
-                "Antarctica"
-            ),
-            correctAnswerIndex = 3
-        ),
-        Question(
-            questionText = "Which river runs through the city of London?",
-            options = listOf(
-                "Thames",
-                "Danube",
-                "Seine",
-                "Rhine"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the largest island in the world?",
-            options = listOf(
-                "Greenland",
-                "Madagascar",
-                "Borneo",
-                "New Guinea"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Who was the first emperor of Rome?",
-            options = listOf(
-                "Julius Caesar",
-                "Nero",
-                "Caligula",
-                "Augustus"
-            ),
-            correctAnswerIndex = 3
-        ),
-        Question(
-            questionText = "Which war was known as the \"Great War\"?",
-            options = listOf(
-                "World War II",
-                "World War I",
-                "Cold War",
-                "American Civil War"
+                "Direct wars between the USA and the USSR",
+                "Ideological rivalry and an arms race between the USA and the USSR",
+                "European control over Africa",
+                "A civil war in Japan"
             ),
             correctAnswerIndex = 1
         ),
         Question(
-            questionText = "What was the name of the ship that sank in 1912?",
-            options = listOf(
-                "Titanic",
-                "Lusitania",
-                "Queen Mary",
-                "Britannic"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Which country invented paper?",
-            options = listOf(
-                "China",
-                "Egypt",
-                "Greece",
-                "Babylonia"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Which civilization built Machu Picchu?",
-            options = listOf(
-                "Incas",
-                "Mayans",
-                "Aztecs",
-                "Olmecs"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Who was the first man to walk on the Moon?",
-            options = listOf(
-                "Neil Armstrong",
-                "Buzz Aldrin",
-                "Yuri Gagarin",
-                "John Glenn"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "In what year did the French Revolution begin?",
-            options = listOf(
-                "1776",
-                "1789",
-                "1804",
-                "1812"
-            ),
+            questionText = "In which year did the Berlin Wall fall?",
+            options = listOf("1987", "1989", "1991", "1993"),
             correctAnswerIndex = 1
         ),
+
+        // Language / Literature (High School - adapted)
         Question(
-            questionText = "Who was known as the \"Sun King\" of France?",
+            questionText = "In figurative language, a metaphor is:",
             options = listOf(
-                "Louis XIV",
-                "Louis XVI",
-                "Napoleon Bonaparte",
-                "Charlemagne"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Which invention is attributed to Alexander Graham Bell?",
-            options = listOf(
-                "Telephone",
-                "Light bulb",
-                "Radio",
-                "Television"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the highest mountain in the world?",
-            options = listOf(
-                "K2",
-                "Everest",
-                "Kangchenjunga",
-                "Lhotse"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which country is known as the birthplace of the Olympics?",
-            options = listOf(
-                "Italy",
-                "Greece",
-                "Egypt",
-                "China"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "What is the name of the gas layer that protects Earth from UV rays?",
-            options = listOf(
-                "Ozone",
-                "Nitrogen",
-                "Oxygen",
-                "Hydrogen"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the smallest country in the world by area?",
-            options = listOf(
-                "Monaco",
-                "Malta",
-                "Vatican City",
-                "San Marino"
+                "The repetition of sounds",
+                "An explicit comparison using 'like' or 'as'",
+                "An implied comparison without using 'like' or 'as'",
+                "An intentional exaggeration"
             ),
             correctAnswerIndex = 2
         ),
         Question(
-            questionText = "What is the capital of Canada?",
-            options = listOf(
-                "Toronto",
-                "Ottawa",
-                "Vancouver",
-                "Montreal"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Who was the author of 'The Prince'?",
-            options = listOf(
-                "Plato",
-                "Niccolò Machiavelli",
-                "Thomas Hobbes",
-                "John Locke"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which gas is essential for human breathing?",
-            options = listOf(
-                "Oxygen",
-                "Carbon dioxide",
-                "Hydrogen",
-                "Nitrogen"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Which planet is known as the Red Planet?",
-            options = listOf(
-                "Mars",
-                "Venus",
-                "Saturn",
-                "Jupiter"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "Who painted the ceiling of the Sistine Chapel?",
-            options = listOf(
-                "Michelangelo",
-                "Leonardo da Vinci",
-                "Raphael",
-                "Donatello"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "In what year did the Berlin Wall fall?",
-            options = listOf(
-                "1987",
-                "1989",
-                "1991",
-                "1993"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which substance is most abundant in the human body?",
-            options = listOf(
-                "Protein",
-                "Water",
-                "Calcium",
-                "Oxygen"
-            ),
-            correctAnswerIndex = 1
+            questionText = "Machado de Assis is most commonly associated with the literary movement:",
+            options = listOf("Baroque", "Arcadianism", "Realism", "Romanticism"),
+            correctAnswerIndex = 2
         ),
 
-        // Additional intermediate questions
+        // Tech / Economics
         Question(
-            questionText = "Which cell organelle is responsible for producing energy in the form of ATP?",
-            options = listOf(
-                "Mitochondrion",
-                "Lysosome",
-                "Endoplasmic reticulum",
-                "Golgi complex"
-            ),
-            correctAnswerIndex = 0
-        ),
-        Question(
-            questionText = "What is the longest mountain range in the world?",
-            options = listOf(
-                "Himalayas",
-                "Andes",
-                "Alps",
-                "Rocky Mountains"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "In computing, what does the acronym HTTP stand for?",
+            questionText = "In computing, what does HTTP stand for?",
             options = listOf(
                 "HyperText Transfer Protocol",
                 "High Throughput Transmission Protocol",
@@ -1958,73 +1139,30 @@ class QuestionManager (private val languageCode: String) {
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "In economics, how is inflation defined?",
+            questionText = "In economics, inflation is defined as:",
             options = listOf(
-                "General increase in prices",
-                "Drop in GDP",
-                "High unemployment rate",
-                "Increase in interest rates"
+                "A general and continuous increase in prices",
+                "A drop in GDP",
+                "An increase in unemployment",
+                "A reduction in interest rates"
             ),
             correctAnswerIndex = 0
         ),
-        Question(
-            questionText = "Which language has the largest number of native speakers?",
-            options = listOf(
-                "English",
-                "Mandarin Chinese",
-                "Spanish",
-                "Hindi"
-            ),
-            correctAnswerIndex = 1
-        ),
+
+        // Arts / General Culture
         Question(
             questionText = "Who painted the mural 'Guernica'?",
-            options = listOf(
-                "Pablo Picasso",
-                "Salvador Dalí",
-                "Henri Matisse",
-                "Joan Miró"
-            ),
+            options = listOf("Pablo Picasso", "Salvador Dalí", "Henri Matisse", "Joan Miró"),
             correctAnswerIndex = 0
         ),
         Question(
-            questionText = "What is the largest organ in the human body?",
-            options = listOf(
-                "Liver",
-                "Skin",
-                "Heart",
-                "Lung"
-            ),
-            correctAnswerIndex = 1
-        ),
-        Question(
-            questionText = "Which national team has won the most FIFA World Cups?",
-            options = listOf(
-                "Argentina",
-                "Germany",
-                "Brazil",
-                "Italy"
-            ),
-            correctAnswerIndex = 2
-        ),
-        Question(
-            questionText = "Which igneous rock is formed from the rapid cooling of lava at the surface?",
-            options = listOf(
-                "Granite",
-                "Basalt",
-                "Marble",
-                "Quartzite"
-            ),
+            questionText = "Who painted 'The Last Supper'?",
+            options = listOf("Michelangelo", "Leonardo da Vinci", "Raphael", "Donatello"),
             correctAnswerIndex = 1
         ),
         Question(
             questionText = "Which composer wrote the 'Fifth Symphony' in C minor?",
-            options = listOf(
-                "Ludwig van Beethoven",
-                "Johann Sebastian Bach",
-                "Wolfgang Amadeus Mozart",
-                "Franz Schubert"
-            ),
+            options = listOf("Ludwig van Beethoven", "J.S. Bach", "W.A. Mozart", "Franz Schubert"),
             correctAnswerIndex = 0
         )
     )

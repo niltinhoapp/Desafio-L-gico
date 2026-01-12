@@ -21,6 +21,31 @@
     <!-- Accent legado (se ainda usa em alguns lugares) -->
     <color name="colorAccent">#FF4081</color>
 
+    <!-- Portal (dark premium) -->
+    <color name="portal_text">#FFFFFF</color>
+    <color name="portal_text_dim">#B3FFFFFF</color>
+
+    <color name="portal_bg_top">#0B1020</color>
+    <color name="portal_bg_bottom">#15224A</color>
+
+    <!-- superfícies (cards) -->
+    <color name="portal_surface">#1A2440</color>
+    <color name="portal_surface_70">#B31A2440</color>  <!-- 70% -->
+    <color name="portal_surface_55">#8C1A2440</color>  <!-- 55% -->
+
+
+
+    <!-- strokes / detalhes -->
+    <color name="portal_stroke">#3A4A7A</color>
+    <color name="portal_gold">#FFD54F</color>
+    <color name="portal_red">#FF6B6B</color>
+
+
+    <color name="portal_amber">#FFB74D</color>
+
+    <!-- progress -->
+    <color name="portal_track">#334A7A</color>
+
     <!-- ===================== -->
     <!-- Game / UI Tokens      -->
     <!-- ===================== -->

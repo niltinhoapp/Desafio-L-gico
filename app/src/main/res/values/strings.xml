@@ -4,6 +4,15 @@
     <string name="slogan_app_login">Desafie a sua mente, divirta-se aprendendo!</string>
     <string name="app_logo">Logo do Aplicativo</string>
 
+    <string name="exit_confirm_title">Sair do jogo?</string>
+    <string name="exit_confirm_message">Tem certeza que deseja sair agora?</string>
+    <string name="exit_confirm_yes">Sim, sair</string>
+    <string name="exit_confirm_no">Cancelar</string>
+
+    <string name="daily_done_label">Concluído hoje ✅</string>
+    <string name="daily_available_label">Disponível hoje 🎯</string>
+
+
     <string name="continuar">Continuar</string>
     <string name="sair">Sair</string>
     <string name="voltar">Voltar</string>

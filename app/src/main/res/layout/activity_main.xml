@@ -12,57 +12,53 @@
     android:paddingBottom="@dimen/padding_screen_bottom"
     android:animateLayoutChanges="true">
 
-    <!-- Lottie Intro (some depois no Kotlin) -->
+    <!-- Lottie Intro -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
         android:layout_width="0dp"
         android:layout_height="170dp"
+        android:layout_marginTop="50dp"
         android:contentDescription="@string/app_name"
         android:scaleType="fitCenter"
         app:lottie_loop="false"
-        android:layout_marginTop="50dp"
         app:lottie_rawRes="@raw/airplane_explosion1"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-    <!-- ⚙️ Configurações (Main) -->
+
+    <!-- ⚙️ Configurações -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSettingsMain"
         android:layout_width="46dp"
         android:layout_height="46dp"
+        android:layout_marginTop="20dp"
         android:text="⚙️"
         android:textSize="22sp"
         android:textColor="@android:color/white"
-android:layout_marginTop="20dp"
         android:background="@android:color/transparent"
         app:backgroundTint="@android:color/transparent"
         app:strokeWidth="0dp"
         app:rippleColor="@color/white_20"
         app:cornerRadius="999dp"
-
         android:insetLeft="0dp"
         android:insetRight="0dp"
         android:insetTop="0dp"
         android:insetBottom="0dp"
         android:padding="0dp"
-
         android:elevation="8dp"
         android:outlineProvider="none"
-
         android:visibility="gone"
         android:contentDescription="@string/settings_title"
-
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
 
     <!-- Título -->
     <TextView
         android:id="@+id/txtTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
         android:text="@string/app_name"
-
         android:textColor="@android:color/white"
         android:textSize="@dimen/text_title"
         android:textStyle="bold"
@@ -70,14 +66,14 @@ android:layout_marginTop="20dp"
         android:alpha="0.95"
         app:layout_constraintTop_toBottomOf="@id/lottieAnimationView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="50dp" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Subtítulo -->
     <TextView
         android:id="@+id/txtSubtitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_xsmall"
         android:text="@string/subtitle_text"
         android:textColor="@android:color/white"
         android:textSize="@dimen/text_body"
@@ -85,69 +81,39 @@ android:layout_marginTop="20dp"
         android:alpha="0.78"
         app:layout_constraintTop_toBottomOf="@id/txtTitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="@dimen/spacing_xsmall" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- DAILY CHALLENGE NO RODAPÉ (sem moldura) -->
-    <LinearLayout
-        android:id="@+id/dailyChallengeCard"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <!-- 🏆 Recordes (APENAS UM BOTÃO/LINHA) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRecordsMain"
+        android:layout_width="0dp"
+        android:layout_height="46dp"
+        android:layout_marginTop="14dp"
+        android:text="🏆 Recordes"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        app:cornerRadius="18dp"
+        app:backgroundTint="#1E233A"
+        app:strokeWidth="1dp"
+        app:strokeColor="#33FFFFFF"
         android:visibility="gone"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="@android:color/transparent"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?attr/selectableItemBackgroundBorderless"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="@dimen/spacing_medium">
+        app:layout_constraintTop_toBottomOf="@id/txtSubtitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <com.airbnb.lottie.LottieAnimationView
-            android:id="@+id/btnDailyChallenge"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:background="@android:color/transparent"
-            android:scaleType="fitCenter"
-            app:lottie_rawRes="@raw/ic_animationcerebro"
-            app:lottie_autoPlay="true"
-            app:lottie_loop="true"
-            android:contentDescription="@string/daily_label" />
-
-        <!-- Label travado para não “empurrar” layout -->
-        <TextView
-            android:id="@+id/txtDailyLabel"
-            android:layout_width="132dp"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:includeFontPadding="false"
-            android:text="@string/daily_label"
-            android:textColor="@android:color/white"
-            android:textSize="@dimen/text_small"
-            android:alpha="0.9"
-            android:layout_marginTop="@dimen/spacing_xsmall"
-
-            android:paddingHorizontal="@dimen/padding_label_horizontal"
-            android:paddingVertical="@dimen/padding_label_vertical" />
-
-    </LinearLayout>
-
-    <!-- MENU (Scroll) - nunca vai sobrepor o Daily -->
+    <!-- MENU (Scroll) -->
     <ScrollView
         android:id="@+id/menuCard"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"
         android:fillViewport="true"
-        app:layout_constraintTop_toBottomOf="@id/txtSubtitle"
+        android:layout_marginTop="@dimen/spacing_medium"
+        android:layout_marginBottom="@dimen/spacing_small"
+        app:layout_constraintTop_toBottomOf="@id/btnRecordsMain"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/dailyChallengeCard"
-        android:layout_marginTop="@dimen/spacing_medium"
-        android:layout_marginBottom="@dimen/spacing_small">
+        app:layout_constraintBottom_toTopOf="@id/dailyChallengeCard">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -176,6 +142,12 @@ android:layout_marginTop="20dp"
                 android:text="@string/level_expert" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/mapButton"
+                style="@style/LevelButton"
+                android:text="🗺️ Mapa" />
+
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/exitButton"
                 style="@style/ExitButton"
                 android:text="@string/sair"
@@ -183,5 +155,49 @@ android:layout_marginTop="20dp"
 
         </LinearLayout>
     </ScrollView>
+
+    <!-- DAILY CHALLENGE -->
+    <LinearLayout
+        android:id="@+id/dailyChallengeCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        android:layout_marginBottom="@dimen/spacing_medium"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/btnDailyChallenge"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:background="@android:color/transparent"
+            android:scaleType="fitCenter"
+            app:lottie_rawRes="@raw/ic_animationcerebro"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="true"
+            android:contentDescription="@string/daily_label" />
+
+        <TextView
+            android:id="@+id/txtDailyLabel"
+            android:layout_width="132dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:text="@string/daily_label"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/text_small"
+            android:alpha="0.9"
+            android:layout_marginTop="@dimen/spacing_xsmall"
+            android:paddingHorizontal="@dimen/padding_label_horizontal"
+            android:paddingVertical="@dimen/padding_label_vertical" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
