@@ -24,7 +24,11 @@ keystore/
 *.jks
 *.keystore
 
-# Pacotes de build (NUNCA versionar)
+# Pacotes de build
 *.aab
 *.apk
+
+# Saídas de release locais (opcional, mas bom)
+app/release/
+
 
