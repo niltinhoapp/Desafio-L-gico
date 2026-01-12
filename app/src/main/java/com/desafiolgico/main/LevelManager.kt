@@ -10,41 +10,58 @@ import com.desafiolgico.R
 import com.desafiolgico.utils.GameDataManager
 import com.google.android.material.button.MaterialButton
 
-class LevelManager(
-    private val context: Context
-) {
+class LevelManager(private val context: Context) {
 
     companion object {
-        private const val THRESHOLD_INTERMEDIATE = 3500
-        private const val THRESHOLD_ADVANCED = 6000
-        private const val THRESHOLD_EXPERT = 10000
-
+        const val THRESHOLD_INTERMEDIATE = 3500
+        const val THRESHOLD_ADVANCED = 6000
+        const val THRESHOLD_EXPERT = 10000
         private const val VIBRATION_MS = 300L
     }
 
     /**
-     * ✅ Verifica e salva os desbloqueios de níveis com base na pontuação total ACUMULADA.
-     * ✅ Retorna uma lista com os níveis que foram desbloqueados AGORA (somente 1x).
-     * ⚠️ Não mostra Toast aqui (a Activity decide o "AAA").
+     * ✅ Lógica oficial de unlock.
+     * Retorna a lista de levels que foram destravados AGORA.
+     * showToast=true: use no menu (MainActivity)
+     * showToast=false: use in-game (TestActivity) pra você mostrar chip/confetti.
      */
-    fun checkAndSaveLevelUnlocks(): List<String> {
-        val totalScoreAcumulado = GameDataManager.getOverallTotalScore(context)
-        val newlyUnlocked = mutableListOf<String>()
+    fun checkAndSaveLevelUnlocks(showToast: Boolean = true): List<String> {
+        val total = GameDataManager.getOverallTotalScore(context)
+        val unlockedNow = mutableListOf<String>()
 
-        fun unlockIfNeeded(level: String, threshold: Int) {
-            if (totalScoreAcumulado >= threshold &&
-                !GameDataManager.isLevelUnlocked(context, level)
-            ) {
+        fun unlockIfNeeded(level: String, threshold: Int, nameRes: Int, emoji: String) {
+            if (total >= threshold && !GameDataManager.isLevelUnlocked(context, level)) {
                 GameDataManager.unlockLevel(context, level)
-                newlyUnlocked.add(level)
+                unlockedNow.add(level)
+
+                if (showToast) {
+                    val levelName = context.getString(nameRes)
+                    val message = context.getString(R.string.level_unlocked_format, levelName)
+                    Toast.makeText(context, "$emoji $message", Toast.LENGTH_LONG).show()
+                }
             }
         }
 
-        unlockIfNeeded(GameDataManager.Levels.INTERMEDIARIO, THRESHOLD_INTERMEDIATE)
-        unlockIfNeeded(GameDataManager.Levels.AVANCADO, THRESHOLD_ADVANCED)
-        unlockIfNeeded(GameDataManager.Levels.EXPERIENTE, THRESHOLD_EXPERT)
+        unlockIfNeeded(
+            GameDataManager.Levels.INTERMEDIARIO,
+            THRESHOLD_INTERMEDIATE,
+            R.string.level_intermediate,
+            "🎉"
+        )
+        unlockIfNeeded(
+            GameDataManager.Levels.AVANCADO,
+            THRESHOLD_ADVANCED,
+            R.string.level_advanced,
+            "🌟"
+        )
+        unlockIfNeeded(
+            GameDataManager.Levels.EXPERIENTE,
+            THRESHOLD_EXPERT,
+            R.string.level_expert,
+            "🔥"
+        )
 
-        return newlyUnlocked
+        return unlockedNow
     }
 
     fun setupButtons(
@@ -61,36 +78,30 @@ class LevelManager(
         setupLevelButton(intermediateButton, GameDataManager.Levels.INTERMEDIARIO, onLevelClick, onLocked)
         setupLevelButton(advancedButton, GameDataManager.Levels.AVANCADO, onLevelClick, onLocked)
         setupLevelButton(expertButton, GameDataManager.Levels.EXPERIENTE, onLevelClick, onLocked)
-
         exitButton.setOnClickListener { onExitConfirm() }
     }
 
-    /**
-     * ✅ Atualiza os estados visuais dos botões.
-     * ✅ Também recalcula desbloqueios e retorna os níveis que liberaram agora.
-     */
     fun updateButtonStates(
         intermediateButton: MaterialButton,
         advancedButton: MaterialButton,
         expertButton: MaterialButton
-    ): List<String> {
-        val unlockedNow = checkAndSaveLevelUnlocks()
+    ) {
+        // ✅ garante persistência coerente
+        checkAndSaveLevelUnlocks(showToast = true)
 
         updateSingleButtonState(intermediateButton, GameDataManager.Levels.INTERMEDIARIO)
         updateSingleButtonState(advancedButton, GameDataManager.Levels.AVANCADO)
         updateSingleButtonState(expertButton, GameDataManager.Levels.EXPERIENTE)
-
-        return unlockedNow
     }
 
     private fun updateSingleButtonState(button: MaterialButton, level: String) {
-        if (GameDataManager.isLevelUnlocked(context, level)) {
-            button.isEnabled = true
+        val unlocked = GameDataManager.isLevelUnlocked(context, level)
+        button.isEnabled = true
+
+        if (unlocked) {
             button.alpha = 1f
             button.icon = null
         } else {
-            // ✅ continua clicável para mostrar mensagem
-            button.isEnabled = true
             button.alpha = 0.6f
             button.setIconResource(R.drawable.ic_lock)
         }
@@ -105,32 +116,33 @@ class LevelManager(
         val vibrator = context.getSystemService<Vibrator>()
 
         button.setOnClickListener {
-            // ✅ se está liberado, entra no nível
             if (GameDataManager.isLevelUnlocked(context, level)) {
                 onClick(button, level)
                 return@setOnClickListener
             }
 
-            // ✅ se está bloqueado, mostra msg e vibra
-            val threshold = thresholdFor(level)
-            val levelName = context.getString(levelNameRes(level))
+            val threshold = when (level) {
+                GameDataManager.Levels.INTERMEDIARIO -> THRESHOLD_INTERMEDIATE
+                GameDataManager.Levels.AVANCADO -> THRESHOLD_ADVANCED
+                GameDataManager.Levels.EXPERIENTE -> THRESHOLD_EXPERT
+                else -> THRESHOLD_INTERMEDIATE
+            }
 
-            val message = context.getString(
-                R.string.level_locked_format,
-                levelName,
-                threshold
-            )
+            val levelNameResId = when (level) {
+                GameDataManager.Levels.INTERMEDIARIO -> R.string.level_intermediate
+                GameDataManager.Levels.AVANCADO -> R.string.level_advanced
+                GameDataManager.Levels.EXPERIENTE -> R.string.level_expert
+                else -> R.string.level_beginner
+            }
+
+            val levelName = context.getString(levelNameResId)
+            val message = context.getString(R.string.level_locked_format, levelName, threshold)
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
 
             vibrator?.let { v ->
                 if (v.hasVibrator()) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        v.vibrate(
-                            VibrationEffect.createOneShot(
-                                VIBRATION_MS,
-                                VibrationEffect.DEFAULT_AMPLITUDE
-                            )
-                        )
+                        v.vibrate(VibrationEffect.createOneShot(VIBRATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
                     } else {
                         @Suppress("DEPRECATION")
                         v.vibrate(VIBRATION_MS)
@@ -140,19 +152,5 @@ class LevelManager(
 
             onLocked(level)
         }
-    }
-
-    private fun thresholdFor(level: String): Int = when (level) {
-        GameDataManager.Levels.INTERMEDIARIO -> THRESHOLD_INTERMEDIATE
-        GameDataManager.Levels.AVANCADO -> THRESHOLD_ADVANCED
-        GameDataManager.Levels.EXPERIENTE -> THRESHOLD_EXPERT
-        else -> THRESHOLD_INTERMEDIATE
-    }
-
-    private fun levelNameRes(level: String): Int = when (level) {
-        GameDataManager.Levels.INTERMEDIARIO -> R.string.level_intermediate
-        GameDataManager.Levels.AVANCADO -> R.string.level_advanced
-        GameDataManager.Levels.EXPERIENTE -> R.string.level_expert
-        else -> R.string.level_beginner
     }
 }

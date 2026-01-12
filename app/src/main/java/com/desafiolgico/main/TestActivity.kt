@@ -1139,27 +1139,50 @@ class TestActivity : AppCompatActivity() {
 
 
     /** chama e avisa in-game quando liberar nível (sem sair da fase) */
-    private fun checkUnlocksAndNotifyInGame() {
-        val total = GameDataManager.getOverallTotalScore(this)
+        private fun checkUnlocksAndNotifyInGame() {
+            val total = GameDataManager.getOverallTotalScore(this)
+            val unlockedNow = mutableListOf<String>()
 
-        val unlockedNow = mutableListOf<String>()
-
-        fun unlockIfNeeded(level: String, threshold: Int) {
-            if (total >= threshold && !GameDataManager.isLevelUnlocked(this, level)) {
-                GameDataManager.unlockLevel(this, level)
-                unlockedNow.add(level)
+            fun unlockIfNeeded(levelRaw: String, threshold: Int) {
+                val level = canonicalLevelKey(levelRaw) // ✅ garante chave estável
+                if (total >= threshold && !GameDataManager.isLevelUnlocked(this, level)) {
+                    GameDataManager.unlockLevel(this, level)
+                    unlockedNow.add(level)
+                }
             }
+
+            unlockIfNeeded(GameDataManager.Levels.INTERMEDIARIO, THRESHOLD_INTERMEDIATE)
+            unlockIfNeeded(GameDataManager.Levels.AVANCADO, THRESHOLD_ADVANCED)
+            unlockIfNeeded(GameDataManager.Levels.EXPERIENTE, THRESHOLD_EXPERT)
+
+            if (unlockedNow.isEmpty()) return
+
+            // ✅ Atualiza UI dependente de unlocks na hora (sem sair da Activity)
+            // Se você tiver botões/ícones aqui, atualize eles AGORA.
+            // Exemplo (se existir no layout desta tela):
+            // levelManager.updateButtonStates(binding.btnInter, binding.btnAvanc, binding.btnExp)
+            // ou updateMapUi()
+
+            // ✅ AAA: 1 chip + 1 confetti (sem spam)
+            val labels = unlockedNow.joinToString(", ") { level ->
+                when (canonicalLevelKey(level)) {
+                    GameDataManager.Levels.INTERMEDIARIO -> "INTERMEDIÁRIO"
+                    GameDataManager.Levels.AVANCADO -> "AVANÇADO"
+                    GameDataManager.Levels.EXPERIENTE -> "EXPERIENTE"
+                    else -> "NOVO NÍVEL"
+                }
+            }
+
+            val msg = if (unlockedNow.size == 1) {
+                "🔓 Nível desbloqueado: $labels"
+            } else {
+                "🔓 Níveis desbloqueados: $labels"
+            }
+
+            showFloatingChip(msg, R.drawable.ic_check_circle, true)
+            microCelebrate()
         }
 
-        unlockIfNeeded(GameDataManager.Levels.INTERMEDIARIO, THRESHOLD_INTERMEDIATE)
-        unlockIfNeeded(GameDataManager.Levels.AVANCADO, THRESHOLD_ADVANCED)
-        unlockIfNeeded(GameDataManager.Levels.EXPERIENTE, THRESHOLD_EXPERT)
-
-        if (unlockedNow.isEmpty()) return
-
-        // AAA: chip + confetti (você já tem showFloatingChip e microCelebrate)
-        unlockedNow.forEach { showUnlockedInGame(it) }
-    }
 
     private fun showUnlockedInGame(level: String) {
         val label = when (canonicalLevelKey(level)) {

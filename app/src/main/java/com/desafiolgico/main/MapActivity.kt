@@ -1,5 +1,7 @@
 package com.desafiolgico.main
 
+import android.animation.ValueAnimator
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
@@ -9,29 +11,25 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.updateLayoutParams
 import com.desafiolgico.R
-import com.desafiolgico.utils.GameDataManager
-import com.google.android.material.appbar.MaterialToolbar
-import kotlin.math.hypot
-import android.animation.ValueAnimator
-import android.content.Intent
-import android.widget.Toast
-import com.desafiolgico.utils.ScoreManager
-import kotlin.math.floor
 import com.desafiolgico.utils.EnigmaPortalGate
-
+import com.desafiolgico.utils.GameDataManager
+import com.desafiolgico.utils.ScoreManager
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.card.MaterialCardView
+import kotlin.math.floor
+import kotlin.math.hypot
 
 class MapActivity : AppCompatActivity() {
 
     private data class Pt(val x: Float, val y: Float)
     private data class Anchor(val fx: Float, val fy: Float)
+
     private val milestoneStars = mutableListOf<ImageView>()
     private var travelAnimator: ValueAnimator? = null
-    private var firstOpen = true
-
-
 
     private val levelOrder = listOf(
         GameDataManager.Levels.INICIANTE,
@@ -80,8 +78,11 @@ class MapActivity : AppCompatActivity() {
     private lateinit var glow: View
     private lateinit var ping: View
     private lateinit var txtProgress: TextView
-    private lateinit var scoreManager: ScoreManager
+    private lateinit var portalBadgeCard: MaterialCardView
+    private lateinit var txtPortalBadge: TextView
 
+
+    private lateinit var scoreManager: ScoreManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,11 +91,13 @@ class MapActivity : AppCompatActivity() {
         GameDataManager.init(this)
 
         scoreManager = ScoreManager(this)
-
         scoreManager.overallScoreLive.observe(this) { score ->
-            maybeOpenEnigmaPortal(score)
-        }
+                EnigmaPortalGate.touchToday(this)
+                updatePortalBadge(score)
+                maybeOpenEnigmaPortal(score)
 
+
+        }
 
         toolbar = findViewById(R.id.toolbarMap)
         imgMap = findViewById(R.id.imgMap)
@@ -103,32 +106,54 @@ class MapActivity : AppCompatActivity() {
         glow = findViewById(R.id.starGlow)
         ping = findViewById(R.id.starPing)
         txtProgress = findViewById(R.id.txtMapProgress)
+        portalBadgeCard = findViewById(R.id.portalBadgeCard)
+        txtPortalBadge = findViewById(R.id.txtPortalBadge)
+
+// opcional: tocar abre o portal (se tiver tentativa)
+        portalBadgeCard.setOnClickListener {
+            val score = GameDataManager.getOverallTotalScore(this)
+            val req = EnigmaPortalGate.requiredScore()
+
+            if (score < req) return@setOnClickListener
+
+            if (!EnigmaPortalGate.canPlayToday(this)) {
+                Toast.makeText(this, "Sem tentativas hoje. Volte amanhã!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            startActivity(
+                Intent(this, EnigmaPortalActivity::class.java)
+                    .putExtra(EnigmaPortalActivity.EXTRA_SCORE, score)
+            )
+        }
+
 
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
-
-        // Primeiro desenho
-        }
+    }
 
     override fun onResume() {
         super.onResume()
 
+        // ✅ IMPORTANTÍSSIMO: força reset diário do Portal também no Mapa
+        EnigmaPortalGate.touchToday(this)
+
         val scoreGlobal = GameDataManager.getOverallTotalScore(this)
+
+        // ✅ atualiza badge (Portal: 3/3 etc.)
+        updatePortalBadge(scoreGlobal)
         maybeOpenEnigmaPortal(scoreGlobal)
 
         imgMap.post {
+            // você disse que quer sempre começar do 0 pra ver a estrela “viajando”
             refreshMap(animated = true, startFromZero = true)
         }
-
-
     }
-
 
     // ---------------------------
     // Atualiza tudo (texto + estrela)
     // ---------------------------
     private fun refreshMap(animated: Boolean, startFromZero: Boolean) {
-
         travelAnimator?.cancel()
 
         val (curLevel, curCorrect) = currentLevelAndCorrect()
@@ -155,53 +180,42 @@ class MapActivity : AppCompatActivity() {
             drawableToViewPoint(imgMap, pImg.x, pImg.y)
         }
 
-        // t do marco atual
         val tNow = currentIndex.toFloat() / (milestoneCount - 1).toFloat()
 
-        // t do marco anterior (pra voltar de fase)
         val prevIndex = (currentIndex - 1).coerceAtLeast(0)
         val tPrev = prevIndex.toFloat() / (milestoneCount - 1).toFloat()
 
-        // ✅ cria/garante as estrelas apagadas
         ensureMilestoneStars(milestoneCount)
 
-        // ✅ posiciona todas as estrelas nos pontos fixos (marcos)
         for (i in 0 until milestoneCount) {
             val t = i.toFloat() / (milestoneCount - 1).toFloat()
             val p = pointAtT(screenPoly, t)
             placeMilestoneAt(i, p)
         }
 
-        // ✅ estrela móvel sempre visível e na frente
         star.visibility = View.VISIBLE
         star.alpha = 1f
         star.bringToFront()
         glow.bringToFront()
         ping.bringToFront()
 
-        // Visual premium da estrela móvel (tamanho + brilho por estágio)
         applyPremiumStarStyle(star, glow, stageInLevel)
 
-        // Medir tudo antes de posicionar (evita width/height = 0)
         ensureMeasured(star)
         ensureMeasured(glow)
         ensureMeasured(ping)
 
-        // ✅ ponto inicial: 0 se abriu agora; senão começa do marco anterior
         val tStart = if (startFromZero) 0f else tPrev
         val pStart = pointAtT(screenPoly, tStart)
         placeOn(star, glow, ping, pStart)
 
-        // ✅ se não animar: só posiciona e acende até o índice atual
         if (!animated) {
             val pEnd = pointAtT(screenPoly, tNow)
             placeOn(star, glow, ping, pEnd)
-
             for (i in 0..currentIndex) setMilestoneLit(i, lit = true)
             return
         }
 
-        // ✅ animado: percorre o caminho e vai acendendo as estrelas
         animateAlongPath(
             poly = screenPoly,
             tStart = tStart,
@@ -213,7 +227,6 @@ class MapActivity : AppCompatActivity() {
         )
     }
 
-
     private fun maybeOpenEnigmaPortal(score: Int) {
         if (!EnigmaPortalGate.shouldAutoOpen(this, score)) return
 
@@ -224,9 +237,6 @@ class MapActivity : AppCompatActivity() {
                 .putExtra(EnigmaPortalActivity.EXTRA_SCORE, score)
         )
     }
-
-
-
 
     // ---------------------------
     // Progresso: 0..30 por nível, marcos 0/10/20/30
@@ -274,12 +284,7 @@ class MapActivity : AppCompatActivity() {
     private fun drawableToViewPoint(img: ImageView, xPx: Float, yPx: Float): Pt {
         val pts = floatArrayOf(xPx, yPx)
         img.imageMatrix.mapPoints(pts)
-
-        // padding (se tiver)
-        return Pt(
-            pts[0] + img.paddingLeft,
-            pts[1] + img.paddingTop
-        )
+        return Pt(pts[0] + img.paddingLeft, pts[1] + img.paddingTop)
     }
 
     // ---------------------------
@@ -318,7 +323,7 @@ class MapActivity : AppCompatActivity() {
     }
 
     // ---------------------------
-    // UI: posicionamento / animação
+    // UI helpers
     // ---------------------------
     private fun ensureMeasured(v: View) {
         if (v.measuredWidth > 0 && v.measuredHeight > 0) return
@@ -339,37 +344,6 @@ class MapActivity : AppCompatActivity() {
         ping.y = p.y - ping.measuredHeight / 2f
     }
 
-    private fun animateTo(star: View, glow: View, ping: View, p: Pt) {
-        val sx = p.x - star.measuredWidth / 2f
-        val sy = p.y - star.measuredHeight / 2f
-
-        star.animate().cancel()
-        star.animate()
-            .x(sx).y(sy)
-            .setDuration(720)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
-
-        glow.animate().cancel()
-        glow.animate()
-            .x(p.x - glow.measuredWidth / 2f)
-            .y(p.y - glow.measuredHeight / 2f)
-            .setDuration(720)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
-
-        ping.animate().cancel()
-        ping.animate()
-            .x(p.x - ping.measuredWidth / 2f)
-            .y(p.y - ping.measuredHeight / 2f)
-            .setDuration(720)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
-    }
-
-    // ---------------------------
-    // PREMIUM MAX: visual por estágio (0..3)
-    // ---------------------------
     private fun applyPremiumStarStyle(star: ImageView, glow: View, stage: Int) {
         val sizeDp = when (stage) {
             0 -> 22
@@ -384,7 +358,6 @@ class MapActivity : AppCompatActivity() {
             else R.drawable.star_outline_layer
         )
 
-        // ⭐ sempre dourado
         val tint = Color.argb(245, 255, 226, 0)
         star.setColorFilter(tint)
         star.imageTintList = ColorStateList.valueOf(tint)
@@ -413,7 +386,6 @@ class MapActivity : AppCompatActivity() {
             }
         }
 
-        // breathing
         star.animate().cancel()
         star.scaleX = 1f
         star.scaleY = 1f
@@ -447,27 +419,25 @@ class MapActivity : AppCompatActivity() {
             }
             .start()
     }
+
     private fun ensureMilestoneStars(count: Int) {
         if (milestoneStars.size == count) return
 
-        // remove antigas
         milestoneStars.forEach { overlay.removeView(it) }
         milestoneStars.clear()
 
         repeat(count) {
             val iv = ImageView(this).apply {
                 setImageResource(R.drawable.star_outline_layer)
-                // apagada (cinza)
                 setColorFilter(Color.argb(150, 255, 255, 255))
                 imageTintList = ColorStateList.valueOf(Color.argb(150, 255, 255, 255))
                 alpha = 0.75f
                 layoutParams = FrameLayout.LayoutParams(dp(18), dp(18))
             }
-            overlay.addView(iv)          // entra atrás
+            overlay.addView(iv)
             milestoneStars.add(iv)
         }
 
-        // garante ordem: marcos atrás, efeitos e estrela móvel na frente
         glow.bringToFront()
         ping.bringToFront()
         star.bringToFront()
@@ -477,13 +447,13 @@ class MapActivity : AppCompatActivity() {
         val v = milestoneStars.getOrNull(i) ?: return
         if (lit) {
             v.setImageResource(R.drawable.star_filled_layer)
-            val tint = Color.argb(245, 255, 226, 0) // amarelo
+            val tint = Color.argb(245, 255, 226, 0)
             v.setColorFilter(tint)
             v.imageTintList = ColorStateList.valueOf(tint)
             v.alpha = 1f
         } else {
             v.setImageResource(R.drawable.star_outline_layer)
-            val tint = Color.argb(140, 255, 255, 255) // apagada
+            val tint = Color.argb(140, 255, 255, 255)
             v.setColorFilter(tint)
             v.imageTintList = ColorStateList.valueOf(tint)
             v.alpha = 0.7f
@@ -496,6 +466,7 @@ class MapActivity : AppCompatActivity() {
         v.x = p.x - v.measuredWidth / 2f
         v.y = p.y - v.measuredHeight / 2f
     }
+
     private fun animateAlongPath(
         poly: List<Pt>,
         tStart: Float,
@@ -507,7 +478,6 @@ class MapActivity : AppCompatActivity() {
     ) {
         travelAnimator?.cancel()
 
-        // tudo apagado no começo, e vai acendendo conforme passa
         for (i in 0 until milestoneCount) setMilestoneLit(i, lit = false)
         setMilestoneLit(0, lit = true)
 
@@ -522,8 +492,8 @@ class MapActivity : AppCompatActivity() {
                 val p = pointAtT(poly, t)
                 placeOn(star, glow, ping, p)
 
-                // acende marcos conforme t avança
-                val idxByT = floor(t * (milestoneCount - 1)).toInt().coerceIn(0, milestoneCount - 1)
+                val idxByT = floor(t * (milestoneCount - 1)).toInt()
+                    .coerceIn(0, milestoneCount - 1)
                 val shouldLitUpTo = minOf(idxByT, currentIndex)
 
                 if (shouldLitUpTo > lastLit) {
@@ -533,7 +503,6 @@ class MapActivity : AppCompatActivity() {
             }
 
             doOnEnd {
-                // garante final
                 for (i in 0..currentIndex) setMilestoneLit(i, lit = true)
                 if (stageInLevel >= 1) playPing(ping)
             }
@@ -542,13 +511,34 @@ class MapActivity : AppCompatActivity() {
         }
     }
 
-    // helper simples
     private fun ValueAnimator.doOnEnd(block: () -> Unit) {
         addListener(object : android.animation.AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: android.animation.Animator) = block()
         })
     }
+    private fun updatePortalBadge(score: Int) {
+        val req = EnigmaPortalGate.requiredScore()
 
+        // Só mostra quando o portal “existe” (depois do threshold)
+        if (score < req) {
+            portalBadgeCard.visibility = View.GONE
+            return
+        }
+
+        portalBadgeCard.visibility = View.VISIBLE
+
+        val left = EnigmaPortalGate.attemptsLeftToday(this)
+        val total = 3
+
+        txtPortalBadge.text = if (left > 0) {
+            "🌀 Portal: $left/$total"
+        } else {
+            "🌀 Portal: 0/$total • Amanhã"
+        }
+
+        // dá um “visual lock” quando acabou
+        portalBadgeCard.alpha = if (left > 0) 1f else 0.6f
+    }
 
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
