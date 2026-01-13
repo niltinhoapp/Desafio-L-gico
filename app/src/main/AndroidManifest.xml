@@ -40,6 +40,30 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- 🚫 Evita o AdMob iniciar sozinho no cold start (Provider das libs) -->
+        <provider
+            android:name="com.google.android.gms.ads.MobileAdsInitProvider"
+            android:authorities="${applicationId}.mobileadsinitprovider"
+            tools:node="remove" />
+        <!-- 🚫 Impede o WorkManager de inicializar no cold start via AndroidX Startup -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
+        <!-- 🚫 Evita Firebase iniciar sozinho no cold start (Provider das libs) -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
+
+
+
+
+
 
 
         <!-- 🚀 Entrada do app (Launcher) -->

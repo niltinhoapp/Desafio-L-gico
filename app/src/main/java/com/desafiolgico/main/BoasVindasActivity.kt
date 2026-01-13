@@ -66,8 +66,6 @@ class BoasVindasActivity : AppCompatActivity() {
         applyEdgeToEdge()
         setContentView(R.layout.activity_boas_vindas)
 
-        CrashlyticsHelper.setupCrashlytics(this)
-
         // Onboarding (somente se NÃO completou)
         val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
@@ -80,7 +78,10 @@ class BoasVindasActivity : AppCompatActivity() {
             return
         }
 
-        // Views (layout limpo)
+        // ✅ agora sim, estamos ficando nessa tela
+        Thread { CrashlyticsHelper.setGameState(applicationContext) }.start()
+
+        // Views...
         userNameText = findViewById(R.id.userNameText)
         userAvatarImage = findViewById(R.id.userAvatarImage)
         btnNewGame = findViewById(R.id.btnNewGame)
@@ -88,7 +89,6 @@ class BoasVindasActivity : AppCompatActivity() {
 
         loadWelcomeUI()
 
-        // Se não tiver foto e não tiver avatar desbloqueado → abre seleção (opcional)
         val (_, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
         val hasPhoto = !photoUrl.isNullOrBlank()
         val hasUnlockedAvatar = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
@@ -101,7 +101,6 @@ class BoasVindasActivity : AppCompatActivity() {
             goToMain()
         }
 
-        // ⚙️ abre o menu
         btnSettings.setOnClickListener { anchor ->
             showSettingsMenu(anchor)
         }

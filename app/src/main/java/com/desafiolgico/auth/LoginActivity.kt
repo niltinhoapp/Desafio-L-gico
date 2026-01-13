@@ -1,48 +1,50 @@
 package com.desafiolgico.auth
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.SpannableString
 import android.text.style.UnderlineSpan
 import android.util.Log
+import android.view.Choreographer
 import android.widget.Toast
-import androidx.core.view.isVisible
-
-
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.net.toUri
+import androidx.core.view.isVisible
+import androidx.credentials.Credential
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.lifecycleScope
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityLoginBinding
-import com.desafiolgico.main.BoasVindasActivity
-import com.desafiolgico.utils.CoinManager
+import com.desafiolgico.utils.AdMobInitializer
+import com.desafiolgico.utils.CrashlyticsHelper
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.UserManager
-import com.google.android.gms.ads.MobileAds
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.GetCredentialResponse
-import androidx.credentials.Credential
-import androidx.credentials.CustomCredential
-import androidx.credentials.exceptions.GetCredentialException
+import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.core.content.edit
-import androidx.core.net.toUri
-import com.desafiolgico.information.OnboardingActivity
-import com.desafiolgico.utils.applyEdgeToEdge
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 
 class LoginActivity : AppCompatActivity() {
 
-    private lateinit var auth: FirebaseAuth
     private lateinit var binding: ActivityLoginBinding
-    private lateinit var credentialManager: CredentialManager
+
+    // ✅ Lazy: só cria quando realmente precisar (clique no login / uso do auth)
+    private val auth: FirebaseAuth by lazy(LazyThreadSafetyMode.NONE) {
+        FirebaseApp.initializeApp(applicationContext)
+        FirebaseAuth.getInstance()
+    }
+    private val credentialManager: CredentialManager by lazy(LazyThreadSafetyMode.NONE) { CredentialManager.create(this) }
 
     companion object {
         private const val TAG = "LoginActivity"
@@ -51,88 +53,85 @@ class LoginActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val t0 = SystemClock.elapsedRealtime()
         super.onCreate(savedInstanceState)
+
         applyEdgeToEdge()
+
+        val tInflate = SystemClock.elapsedRealtime()
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        Log.d(TAG, "⏱ inflate+setContentView: ${SystemClock.elapsedRealtime() - tInflate}ms")
+
+        // ✅ segura a animação no primeiro frame (melhora abertura)
+        binding.lottieAnimationView.cancelAnimation()
+        binding.lottieAnimationView.progress = 0f
+        binding.lottieAnimationView.isVisible = false
+
+        Choreographer.getInstance().postFrameCallback {
+            binding.lottieAnimationView.isVisible = true
+            binding.lottieAnimationView.playAnimation()
+        }
+
 
         binding.guestButton.isVisible = resources.getBoolean(R.bool.show_guest)
 
+        // ✅ mede o tempo real até o 1º frame (bem útil pra cold start)
+        Choreographer.getInstance().postFrameCallback {
+            Log.d(TAG, "🎬 first frame: ${SystemClock.elapsedRealtime() - t0}ms desde onCreate()")
+        }
 
+        // ✅ Links legais fora do caminho crítico do 1º frame
+        binding.root.post {
+            val tLinks = SystemClock.elapsedRealtime()
+            setupLegalLinks()
+            Log.d(TAG, "⏱ setupLegalLinks(post): ${SystemClock.elapsedRealtime() - tLinks}ms")
+        }
 
-
-        // AdMob
-        MobileAds.initialize(this) { Log.i(TAG, "✅ AdMob inicializado.") }
-
-        // Game managers
-        GameDataManager.init(this)
-        auth = FirebaseAuth.getInstance()
-
-        // Credential Manager
-        credentialManager = CredentialManager.create(this)
-
-        // Botão principal
+        // ✅ clique: aqui sim faz lazy init do CredentialManager
         binding.signInButton.setOnClickListener { signInWithCredentialManager() }
 
         binding.guestButton.setOnClickListener {
             Toast.makeText(this, "Entrando como convidado...", Toast.LENGTH_SHORT).show()
 
-            GameDataManager.setActiveUserId(this, "guest_mode")
-
-            GameDataManager.saveUserData(
-                context = this,
-                username = "Convidado",
-                photoUrl = null,
-                avatarId = R.drawable.avatar1
-            )
-
-            UserManager.salvarDadosUsuario(
-                context = this,
-                nome = "Convidado",
-                email = "guest@desafiologico.com",
-                photoUrl = null,
-                avatarId = R.drawable.avatar1
-            )
-
-            // prefs
-            getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
-                .putBoolean("is_guest_mode", true)
-                // deixa onboarding_completed como false (primeira vez)
-                .apply()
-
+            // troca de tela primeiro (percepção melhor)
             goToNextAfterLogin()
+
+            // gravações em background depois
+            Thread {
+                ensureGameData()
+                GameDataManager.setActiveUserId(this, "guest_mode")
+
+                GameDataManager.saveUserData(
+                    context = this,
+                    username = "Convidado",
+                    photoUrl = null,
+                    avatarId = R.drawable.avatar1
+                )
+
+                UserManager.salvarDadosUsuario(
+                    context = this,
+                    nome = "Convidado",
+                    email = "guest@desafiologico.com",
+                    photoUrl = null,
+                    avatarId = R.drawable.avatar1
+                )
+
+                getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
+                    .putBoolean("is_guest_mode", true)
+                    .apply()
+
+                AdMobInitializer.ensureInitialized(applicationContext)
+            }.start()
         }
-            // Links legais
-        setupLegalLinks()
+
     }
 
-    private fun loginComoConvidado() {
-        Toast.makeText(this, "Entrando como convidado...", Toast.LENGTH_SHORT).show()
-
-        GameDataManager.setActiveUserId(this, "guest_mode")
-
-        GameDataManager.saveUserData(
-            context = this,
-            username = "Convidado",
-            photoUrl = null,
-            avatarId = R.drawable.avatar1
-        )
-
-        UserManager.salvarDadosUsuario(
-            context = this,
-            nome = "Convidado",
-            email = "guest@desafiologico.com",
-            photoUrl = null,
-            avatarId = R.drawable.avatar1
-        )
-
-        getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
-            .putBoolean("is_guest_mode", true)
-            .apply()
-
-        goToNextAfterLogin()
+    private fun ensureGameData() {
+        val t = SystemClock.elapsedRealtime()
+        GameDataManager.init(applicationContext)
+        Log.d(TAG, "⏱ GameDataManager.init(lazy): ${SystemClock.elapsedRealtime() - t}ms")
     }
-
 
     /** --------- UI util --------- **/
     private fun setupLegalLinks() {
@@ -159,13 +158,16 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    /** --------- NOVO: Credential Manager Google Sign-In --------- **/
+    /** --------- Credential Manager Google Sign-In --------- **/
     private fun signInWithCredentialManager() {
-        // Opção GoogleId (One Tap / Autopreenchimento moderno)
+        val tCM = SystemClock.elapsedRealtime()
+        val cm = credentialManager // ✅ força lazy init aqui
+        Log.d(TAG, "⏱ CredentialManager.create(lazy): ${SystemClock.elapsedRealtime() - tCM}ms")
+
         val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)                 // mostra também contas não-autorizadas previamente
-            .setAutoSelectEnabled(false)                          // se quiser login 1-toque, pode true
-            .setServerClientId(getString(R.string.default_web_client_id)) // do google-services.json
+            .setFilterByAuthorizedAccounts(false)
+            .setAutoSelectEnabled(false)
+            .setServerClientId(getString(R.string.default_web_client_id))
             .build()
 
         val request = GetCredentialRequest.Builder()
@@ -174,13 +176,11 @@ class LoginActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // Chamada suspensa
                 val response: GetCredentialResponse = withContext(Dispatchers.IO) {
-                    credentialManager.getCredential(this@LoginActivity, request)
+                    cm.getCredential(this@LoginActivity, request)
                 }
                 handleCredentialResponse(response)
             } catch (e: GetCredentialException) {
-                // Usuário cancelou, não há provedores, etc.
                 Log.w(TAG, "GetCredential falhou: ${e::class.simpleName} / ${e.message}")
                 showError("Não foi possível continuar com o login.")
             } catch (t: Throwable) {
@@ -198,14 +198,13 @@ class LoginActivity : AppCompatActivity() {
         if (!completed || alwaysShow) {
             startActivity(
                 Intent(this, com.desafiolgico.information.OnboardingActivity::class.java)
-                    .putExtra("FROM_SETTINGS", false) // veio do Login
+                    .putExtra("FROM_SETTINGS", false)
             )
         } else {
             startActivity(Intent(this, com.desafiolgico.main.BoasVindasActivity::class.java))
         }
         finish()
     }
-
 
     private fun handleCredentialResponse(response: GetCredentialResponse) {
         val credential: Credential = response.credential
@@ -221,7 +220,6 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
             else -> {
-                // (Opcional) tratar PasswordCredential etc., se quiser suportar.
                 Log.w(TAG, "Credential não suportada: ${credential::class.java.simpleName}")
                 showError("Provedor não suportado.")
             }
@@ -229,76 +227,83 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun signInWithFirebase(idToken: String, googleCred: GoogleIdTokenCredential) {
+        val tAuth = SystemClock.elapsedRealtime()
+        val firebase = auth // ✅ força lazy init aqui
+        Log.d(TAG, "⏱ FirebaseAuth.getInstance(lazy): ${SystemClock.elapsedRealtime() - tAuth}ms")
+
         val credential = GoogleAuthProvider.getCredential(idToken, null)
 
-        auth.signInWithCredential(credential).addOnCompleteListener(this) { task ->
-            if (task.isSuccessful) {
-                val user = task.result.user
-                GameDataManager.setActiveUserId(this, user?.uid)
-
-                Log.d(TAG, "✅ Firebase login OK. UID=${user?.uid}")
-
-                val username = googleCred.displayName
-                    ?: user?.displayName
-                    ?: user?.email
-                    ?: "Jogador"
-
-                val photoUrl = googleCred.profilePictureUri?.toString()
-                    ?: user?.photoUrl?.toString()
-
-                // 🔹 Carrega avatar salvo (se existir)
-                val (_, _, savedAvatar) = GameDataManager.loadUserData(this)
-                val avatarToUse = savedAvatar ?: R.drawable.avatar1
-
-                // 🔹 Salva dados SEM sobrescrever avatar existente
-                GameDataManager.saveUserData(
-                    context = this,
-                    username = username,
-                    photoUrl = photoUrl,
-                    avatarId = avatarToUse
-                )
-
-                UserManager.salvarDadosUsuario(
-                    context = this,
-                    nome = username,
-                    email = user?.email,
-                    photoUrl = photoUrl,
-                    avatarId = avatarToUse
-                )
-
-
-
-                Toast.makeText(this, "Bem-vindo, $username!", Toast.LENGTH_SHORT).show()
-
-                getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
-                    .putBoolean("is_guest_mode", false)
-
-                    .apply()
-
-                goToNextAfterLogin()
-
-            }
-            else {
+        firebase.signInWithCredential(credential).addOnCompleteListener(this) { task ->
+            if (!task.isSuccessful) {
                 Log.e(TAG, "FirebaseAuth falhou", task.exception)
                 showError("Falha na autenticação: ${task.exception?.localizedMessage}")
+                return@addOnCompleteListener
             }
+
+            val user = task.result.user
+
+            // 1) Garante dados de jogo e define o userId ativo
+            ensureGameData()
+            GameDataManager.setActiveUserId(this, user?.uid)
+
+            Log.d(TAG, "✅ Firebase login OK. UID=${user?.uid}")
+
+            // 2) Dados do usuário
+            val username = googleCred.displayName
+                ?: user?.displayName
+                ?: user?.email
+                ?: "Jogador"
+
+            val photoUrl = googleCred.profilePictureUri?.toString()
+                ?: user?.photoUrl?.toString()
+
+            // 3) Mantém avatar salvo (se existir)
+            val (_, _, savedAvatar) = GameDataManager.loadUserData(this)
+            val avatarToUse = savedAvatar ?: R.drawable.avatar1
+
+            // 4) Persiste dados
+            GameDataManager.saveUserData(
+                context = this,
+                username = username,
+                photoUrl = photoUrl,
+                avatarId = avatarToUse
+            )
+
+            UserManager.salvarDadosUsuario(
+                context = this,
+                nome = username,
+                email = user?.email,
+                photoUrl = photoUrl,
+                avatarId = avatarToUse
+            )
+
+            getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
+                .putBoolean("is_guest_mode", false)
+                .apply()
+
+            // 5) Crashlytics: contexto do usuário (após login, fora do cold start)
+            CrashlyticsHelper.setUserContext(
+                context = applicationContext,
+                userId = GameDataManager.currentUserId,
+                email = user?.email,
+                username = username
+            )
+
+            // Estado do jogo em background (não trava UI)
+
+            Thread { CrashlyticsHelper.setGameState(applicationContext) }.start()
+            Thread { CrashlyticsHelper.enrichWithUmp(applicationContext) }.start() // só se Ads inicializou
+
+
+            // 6) AdMob só depois do login
+            AdMobInitializer.ensureInitialized(applicationContext)
+
+            // 7) UMP só junto com Ads (também fora da UI thread)
+            Thread { CrashlyticsHelper.enrichWithUmp(applicationContext) }.start()
+
+            Toast.makeText(this, "Bem-vindo, $username!", Toast.LENGTH_SHORT).show()
+            goToNextAfterLogin()
         }
-    }
-
-
-
-    /** --------- Logout seguro --------- **/
-    private fun signOut(onSignedOut: () -> Unit) {
-        // Limpa sessão do Firebase
-        auth.signOut()
-
-        // (Opcional) Você pode também limpar estado de credenciais se necessário:
-        // No fluxo do Google ID Token geralmente não é estritamente necessário.
-
-        GameDataManager.setActiveUserId(this, "guest")
-
-        Log.d(TAG, "Usuário deslogado. Sessão limpa.")
-        onSignedOut()
     }
 
     private fun showError(message: String) {
