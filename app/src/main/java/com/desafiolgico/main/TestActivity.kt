@@ -11,6 +11,9 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
+import com.desafiolgico.utils.PremiumItem
+import android.widget.ImageView
+
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.HapticFeedbackConstants
@@ -36,7 +39,12 @@ import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
+import com.desafiolgico.utils.PremiumCatalog
+import com.desafiolgico.utils.PremiumManager
+import com.desafiolgico.utils.PremiumPets
+import com.desafiolgico.utils.PremiumUi
 import com.desafiolgico.utils.ScoreManager
+import com.desafiolgico.utils.VictoryFx
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdListener
@@ -79,6 +87,8 @@ class TestActivity : AppCompatActivity() {
     private var faseFinalizada = false
     private var runScoreLevel = 0
 
+    private var lastPremiumEvalScore = -1
+    private var lastPremiumEvalStreak = -1
 
 
     // --- Baralho de PERGUNTAS (100% sem repetir) ---
@@ -326,6 +336,8 @@ class TestActivity : AppCompatActivity() {
         if (isTimerPaused && remainingTimeInMillis > 0L && !binding.lottieAnimationView.isAnimating) {
             resumeTimer()
         }
+        PremiumPets.applyPet(this, binding.petView)
+
 
         updateCoinsUI()
         loadUserHeader()
@@ -346,6 +358,7 @@ class TestActivity : AppCompatActivity() {
         introSound = null
         countDownTimer?.cancel()
         scoreAnimator?.cancel()
+        VictoryFx.release()
         super.onDestroy()
     }
 
@@ -583,12 +596,7 @@ class TestActivity : AppCompatActivity() {
 
             showFloatingChip("✔ +$gained pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
 
-            if (streakNow == 5 || streakNow == 10) {
-                val coinsReward = 1
-                CoinManager.addCoins(this, coinsReward, reason = "StreakBonus")
-                updateCoinsUI()
-                animateCoinToCounter(selectedBtn, coinsReward)
-            }
+
 
             glowQuestionCard(success = true)
             flashFx(success = true)
@@ -1084,29 +1092,51 @@ class TestActivity : AppCompatActivity() {
             if (username.isNullOrBlank()) getString(R.string.default_username) else username
         binding.welcomeUsername.text = displayName
 
-        val canUseAvatar = (avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId))
+        val preferAvatar = GameDataManager.isPreferAvatar(this)
+        val avatarUnlocked = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
+
         when {
-            canUseAvatar -> binding.logoImageView.setImageResource(avatarResId!!)
-            !photoUrl.isNullOrEmpty() ->
+            // ✅ se NÃO prefere avatar e tem foto -> usa foto do Google
+            !preferAvatar && !photoUrl.isNullOrEmpty() -> {
                 Glide.with(this).load(photoUrl).circleCrop().into(binding.logoImageView)
+            }
+
+            // ✅ se prefere avatar e tem avatar desbloqueado -> usa avatar
+            preferAvatar && avatarUnlocked -> {
+                binding.logoImageView.setImageResource(avatarResId!!)
+            }
+
+            // fallback: foto se existir
+            !photoUrl.isNullOrEmpty() -> {
+                Glide.with(this).load(photoUrl).circleCrop().into(binding.logoImageView)
+            }
+
+            // fallback final
             else -> binding.logoImageView.setImageResource(R.drawable.avatar1)
         }
+
+        PremiumUi.applyFrameToAvatar(binding.logoImageView, this)
+        PremiumUi.applyThemeToRoot(findViewById(android.R.id.content), this)
+        PremiumUi.applyTitleToUsername(binding.welcomeUsername, this, displayName)
     }
+
 
     private fun observeScoreManager() {
         scoreManager.overallScoreLive.observe(this) {
             configurarPontuacao()
 
-            // ✅ aqui é o momento perfeito: o total acumulado já foi atualizado no GameDataManager
-            checkUnlocksAndNotifyInGame()
+            checkUnlocksAndNotifyInGame()   // níveis (fase)
+            checkPremiumUnlocksInGame()     // premium (tema/moldura/título/pet/vfx)
         }
 
         scoreManager.currentStreakLive.observe(this) { streak ->
             configurarPontuacao()
             updateSecretProgressUi(streak)
 
-            // ✅ salva o melhor streak do dia
-            com.desafiolgico.utils.LocalRecordsManager.updateBestStreakOfDay(this, streak)
+            LocalRecordsManager.updateBestStreakOfDay(this, streak)
+            GameDataManager.updateHighestStreakIfNeeded(this, streak)
+
+            checkPremiumUnlocksInGame()
 
             if ((streak == 5 || streak == 10) && streak != lastCelebratedStreak) {
                 lastCelebratedStreak = streak
@@ -1114,6 +1144,56 @@ class TestActivity : AppCompatActivity() {
             }
         }
     }
+
+
+
+    private fun checkPremiumUnlocksInGame() {
+        val ctx = applicationContext
+        val newlyUnlocked = mutableListOf<PremiumItem>()
+
+        PremiumCatalog.all().forEach { item ->
+            val wasUnlocked = PremiumManager.isUnlocked(ctx, item)
+            val isUnlockedNow = PremiumManager.unlockByAchievementIfPossible(ctx, item)
+
+            if (!wasUnlocked && isUnlockedNow) {
+                newlyUnlocked.add(item)
+            }
+        }
+
+        if (newlyUnlocked.isEmpty()) return
+
+        // mensagem compacta (pra não estourar)
+        val names = newlyUnlocked.take(3).joinToString(", ") { it.name }
+        val more = if (newlyUnlocked.size > 3) " +${newlyUnlocked.size - 3}" else ""
+        val msg = "🎁 Premium liberado: $names$more"
+
+        showFloatingChip(msg, R.drawable.ic_check_circle, true)
+        microCelebrate()
+    }
+
+
+
+
+
+    private fun checkPremiumUnlocksIfAny() {
+        val scoreNow = GameDataManager.getOverallTotalScore(this)
+        val streakNow = scoreManager.currentStreakLive.value ?: 0
+
+        // evita rodar “igual” 50x
+        if (scoreNow == lastPremiumEvalScore && streakNow == lastPremiumEvalStreak) return
+        lastPremiumEvalScore = scoreNow
+        lastPremiumEvalStreak = streakNow
+
+        PremiumCatalog.all().forEach { item ->
+            val unlockedNow = PremiumManager.unlockByAchievementIfPossible(applicationContext, item)
+            if (unlockedNow) {
+                // opcional: feedback visual quando liberar algo premium
+                showFloatingChip("🎁 Recompensa premium liberada!", R.drawable.ic_check_circle, true)
+                microCelebrate()
+            }
+        }
+    }
+
 
 
 
@@ -1359,6 +1439,9 @@ class TestActivity : AppCompatActivity() {
             putExtra("MAX_WRONG_ANSWERS", maxWrongAnswers)
             putExtra("TOTAL_QUESTIONS", totalQuestions)
             putExtra("AVERAGE_TIME", avgTimeSeconds())
+
+            // ✅ ADD
+            putExtra("LEVEL_KEY", levelKey)
         }
 
         val onAdDismissed = {

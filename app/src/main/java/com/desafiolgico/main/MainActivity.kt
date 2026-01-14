@@ -28,6 +28,7 @@ import com.desafiolgico.settings.SettingsActivity
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
+import com.desafiolgico.utils.PremiumThemes
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
 
@@ -74,8 +75,11 @@ class MainActivity : AppCompatActivity() {
         applyEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+
         // ✅ init primeiro
         GameDataManager.init(this)
+
+
 
         // ✅ Launchers primeiro (pra não esquecer)
         setupActivityResultLauncher()
@@ -98,6 +102,9 @@ class MainActivity : AppCompatActivity() {
         expertButton = findViewById(R.id.expertButton)
         exitButton = findViewById(R.id.exitButton)
         mapButton = findViewById(R.id.mapButton)
+
+        PremiumThemes.apply(this, root = findViewById(android.R.id.content), cardViews = listOf(menuCard, dailyCard))
+
 
         levelManager = LevelManager(this)
 
@@ -222,54 +229,56 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences("unlock_notifs", MODE_PRIVATE)
 
     private fun notifyNewUnlocksIfAny() {
+        // ✅ Mostra aviso APENAS quando houve transição (bloqueado -> desbloqueado),
+        // e não apenas por estar habilitado ao abrir a tela.
         val p = unlockNotifPrefs()
 
-        // 👇 Se o LevelManager usa outro comportamento visual, a forma MAIS segura
-        // é basear no "isEnabled" (ou "alpha") depois do updateButtonStates()
-        checkAndNotifyUnlock(
-            key = "unlock_intermediate_notified",
-            isUnlockedNow = intermediateButton.isEnabled,
-            message = "🔥 NOVO NÍVEL DESBLOQUEADO: INTERMEDIÁRIO!",
-            targetView = intermediateButton
-        )
+        // chave por usuário (pra não vazar aviso entre contas/guest)
+        val snapshotKey = "last_unlocked_levels_snapshot_${GameDataManager.currentUserId}"
 
-        checkAndNotifyUnlock(
-            key = "unlock_advanced_notified",
-            isUnlockedNow = advancedButton.isEnabled,
-            message = "⭐ NOVO NÍVEL DESBLOQUEADO: AVANÇADO!",
-            targetView = advancedButton
-        )
+        // conjunto atual (cópia defensiva)
+        val now = GameDataManager.getUnlockedLevels(this).toSet()
 
-        checkAndNotifyUnlock(
-            key = "unlock_expert_notified",
-            isUnlockedNow = expertButton.isEnabled,
-            message = "👑 NOVO NÍVEL DESBLOQUEADO: EXPERIENTE!",
-            targetView = expertButton
-        )
+        val last = p.getStringSet(snapshotKey, null)?.toSet()
+
+        // primeira vez que abre: apenas salva o estado atual (não notifica)
+        if (last == null) {
+            p.edit().putStringSet(snapshotKey, HashSet(now)).apply()
+            return
+        }
+
+        val newLevels = now - last
+        if (newLevels.isEmpty()) return
+
+        // atualiza snapshot primeiro (evita repetição se algo falhar depois)
+        p.edit().putStringSet(snapshotKey, HashSet(now)).apply()
+
+        // Notifica somente níveis "principais"
+        newLevels.forEach { lvl ->
+            when (lvl) {
+                GameDataManager.Levels.INTERMEDIARIO -> {
+                    Toast.makeText(this, "🔥 NOVO NÍVEL DESBLOQUEADO: INTERMEDIÁRIO!", Toast.LENGTH_LONG).show()
+                    bounceUnlock(intermediateButton)
+                    glowUnlock(intermediateButton)
+                }
+                GameDataManager.Levels.AVANCADO -> {
+                    Toast.makeText(this, "⚡ NOVO NÍVEL DESBLOQUEADO: AVANÇADO!", Toast.LENGTH_LONG).show()
+                    bounceUnlock(advancedButton)
+                    glowUnlock(advancedButton)
+                }
+                GameDataManager.Levels.EXPERIENTE -> {
+                    Toast.makeText(this, "👑 NOVO NÍVEL DESBLOQUEADO: EXPERIENTE!", Toast.LENGTH_LONG).show()
+                    bounceUnlock(expertButton)
+                    glowUnlock(expertButton)
+                }
+                else -> {
+                    // INICIANTE / secretos / outros -> não notifica aqui
+                }
+            }
+        }
     }
 
-    private fun checkAndNotifyUnlock(
-        key: String,
-        isUnlockedNow: Boolean,
-        message: String,
-        targetView: View
-    ) {
-        if (!isUnlockedNow) return
 
-        val p = unlockNotifPrefs()
-        val alreadyNotified = p.getBoolean(key, false)
-        if (alreadyNotified) return
-
-        // marca que já avisou
-        p.edit().putBoolean(key, true).apply()
-
-        // ✅ aviso
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-
-        // ✅ animação “AAA” simples e bonita no botão
-        bounceUnlock(targetView)
-        glowUnlock(targetView)
-    }
 
     private fun bounceUnlock(v: View) {
         v.animate().cancel()

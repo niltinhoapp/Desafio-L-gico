@@ -33,6 +33,57 @@
     <color name="portal_surface_70">#B31A2440</color>  <!-- 70% -->
     <color name="portal_surface_55">#8C1A2440</color>  <!-- 55% -->
 
+    <!-- THEME DEFAULT -->
+    <color name="theme_default_bg_start">#0B1220</color>
+    <color name="theme_default_bg_end">#111B2E</color>
+    <color name="theme_default_card">#1A2640</color>
+    <color name="theme_default_accent">#7C4DFF</color>
+
+    <!-- THEME NEON -->
+    <color name="theme_neon_bg_start">#061018</color>
+    <color name="theme_neon_bg_end">#0A1B2A</color>
+    <color name="theme_neon_card">#0F2336</color>
+    <color name="theme_neon_accent">#00E5FF</color>
+
+    <!-- THEME ROYAL -->
+    <color name="theme_royal_bg_start">#120A24</color>
+    <color name="theme_royal_bg_end">#2A144D</color>
+    <color name="theme_royal_card">#22103D</color>
+    <color name="theme_royal_accent">#FFD54F</color>
+
+    <!-- THEME SHADOW (só conquista) -->
+    <color name="theme_shadow_bg_start">#050508</color>
+    <color name="theme_shadow_bg_end">#0C0C12</color>
+    <color name="theme_shadow_card">#12121A</color>
+    <color name="theme_shadow_accent">#FF1744</color>
+
+     <!-- Settings -->
+        <color name="settings_chevron_tint">#CCFFFFFF</color>
+        <color name="settings_card_bg">#1AFFFFFF</color>
+        <color name="settings_card_stroke">#33FFFFFF</color>
+
+        <!-- Ícones (você pode ajustar depois) -->
+        <color name="settings_icon_language">#FFFFFF</color>
+        <color name="settings_icon_avatar">#7C4DFF</color>
+        <color name="settings_icon_premium">#FFD54F</color>
+        <color name="settings_icon_tutorial">#4DD0E1</color>
+        <color name="settings_icon_switch">#81C784</color>
+
+        <!-- Danger -->
+        <color name="settings_danger_bg">#14FF5252</color>
+        <color name="settings_danger_stroke">#44FF5252</color>
+        <color name="settings_danger_icon_bg">#22FF5252</color>
+        <color name="settings_danger_title">#FFCDD2</color>
+
+
+
+    <color name="frame_bronze">#CD7F32</color>
+    <color name="frame_silver">#C0C0C0</color>
+    <color name="frame_gold">#FFD700</color>
+    <color name="frame_diamond">#7DF9FF</color>
+    <color name="frame_neon_1">#00E5FF</color>
+    <color name="frame_neon_2">#FF00E5</color>
+
 
 
     <!-- strokes / detalhes -->

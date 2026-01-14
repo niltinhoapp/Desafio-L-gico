@@ -18,7 +18,9 @@ import com.desafiolgico.databinding.ContainerGameOverBinding
 import com.desafiolgico.databinding.ContainerResultBinding
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.VictoryFx
 import com.desafiolgico.utils.applyEdgeToEdge
+import nl.dionsegijn.konfetti.xml.KonfettiView
 
 class ResultOrGameOverActivity : AppCompatActivity() {
 
@@ -26,14 +28,15 @@ class ResultOrGameOverActivity : AppCompatActivity() {
     private lateinit var resultBinding: ContainerResultBinding
     private lateinit var gameOverBinding: ContainerGameOverBinding
 
-    private var mediaPlayer: MediaPlayer? = null
     private lateinit var levelManager: LevelManager
+    private lateinit var konfettiView: KonfettiView
+
+    private var mediaPlayer: MediaPlayer? = null
 
     private val wrongAnswers by lazy { intent.getIntExtra(EXTRA_WRONG_ANSWERS, 0) }
     private val maxWrongAnswers by lazy { intent.getIntExtra(EXTRA_MAX_WRONG_ANSWERS, 3) }
     private val totalQuestions by lazy { intent.getIntExtra(EXTRA_TOTAL_QUESTIONS, 48) }
 
-    // Indica se estamos voltando de um nível secreto
     private val returnToActiveGame by lazy {
         intent.getBooleanExtra(EXTRA_RETURN_TO_ACTIVE_GAME, false)
     }
@@ -59,19 +62,20 @@ class ResultOrGameOverActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyEdgeToEdge()
+
         binding = ActivityResultOrGameOverBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        resultBinding = ContainerResultBinding.bind(binding.root.findViewById(R.id.resultContainer))
-        gameOverBinding = ContainerGameOverBinding.bind(binding.root.findViewById(R.id.gameOverContainer))
+        // ✅ includes já vêm como bindings (no seu caso)
+        resultBinding = binding.resultContainer
+        gameOverBinding = binding.gameOverContainer
 
-        // ✅ LevelManager não precisa de ScoreManager
+        konfettiView = findViewById(R.id.konfettiView)
         levelManager = LevelManager(this)
-
-        setupScreen()
 
         Log.d("ResultDBG", "returnToActiveGame=$returnToActiveGame level=${intent.getStringExtra(EXTRA_LEVEL)}")
 
+        setupScreen()
     }
 
     private fun setupScreen() {
@@ -86,14 +90,15 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         }
     }
 
+    // ========================= RESULT =========================
+
     @SuppressLint("SetTextI18n")
     private fun showResultScreen(score: Int, averageTime: Double) {
+        resultBinding.root.visibility = View.VISIBLE
         gameOverBinding.root.visibility = View.GONE
-        resultBinding.resultContainer.visibility = View.VISIBLE
+        konfettiView.visibility = View.GONE
 
-        // ✅ desbloqueio de níveis por score total acumulado (já persistido durante o jogo)
         levelManager.checkAndSaveLevelUnlocks()
-
 
         val performance = calculatePerformance()
         val (baseFeedbackText, baseSoundResId, medalResId) = getFeedbackResources(performance)
@@ -103,49 +108,44 @@ class ResultOrGameOverActivity : AppCompatActivity() {
 
         val currentLevelName = intent.getStringExtra(EXTRA_LEVEL)
 
-        // ✅ Regras: moedas só vêm de anúncio → NÃO dar moedas aqui
         if (returnToActiveGame) {
             if (performance >= 75.0) {
-                finalFeedbackText =
-                    getString(R.string.fase_secreta_sucesso_prefix) + "\n" + baseFeedbackText
+                finalFeedbackText = getString(R.string.fase_secreta_sucesso_prefix) + "\n" + baseFeedbackText
             } else {
                 finalFeedbackText = getString(R.string.fase_secreta_falha_prefix)
                 finalSoundResId = R.raw.game_over_sound1
             }
-
-            // limpa progresso da fase secreta
-            currentLevelName?.let {
-                GameDataManager.clearLastQuestionIndex(this, it)
-            }
+            currentLevelName?.let { GameDataManager.clearLastQuestionIndex(this, it) }
         }
 
-        // score da fase
         resultBinding.scoreTextView.text =
             getString(R.string.result_points_format, score, totalQuestions)
 
-        // feedback
         resultBinding.feedbackTextView.text = finalFeedbackText
 
-        // stats
         resultBinding.statsTextView.text = getString(
             R.string.result_stats_format,
             averageTime,
             performance
         )
 
-        // medalha/troféu
         medalResId?.let {
-            Glide.with(this)
-                .load(it)
-                .into(resultBinding.medalImageView)
+            Glide.with(this).load(it).into(resultBinding.medalImageView)
         }
 
         animateResultViews()
         playFeedbackSound(finalSoundResId)
 
-        // celebração apenas em nível normal com bom desempenho
         if (performance >= 75.0 && !returnToActiveGame) {
-            showVictoryCelebration()
+            val level = currentLevelName.orEmpty()
+            val isEnigma = level == GameDataManager.SecretLevels.ENIGMA
+            val isExperiente = level == GameDataManager.Levels.EXPERIENTE
+
+            if (isEnigma || isExperiente) {
+                VictoryFx.play(this, konfettiView)
+            } else {
+                showVictoryCelebration()
+            }
         }
 
         resultBinding.retryButton.setOnClickListener { navigateAfterResult() }
@@ -175,8 +175,8 @@ class ResultOrGameOverActivity : AppCompatActivity() {
 
     private fun showVictoryCelebration() {
         try {
-            val inspirationBox = findViewById<View>(R.id.inspirationBox)
-            val inspirationText = findViewById<TextView>(R.id.inspirationText)
+            val inspirationBox = resultBinding.root.findViewById<View>(R.id.inspirationBox)
+            val inspirationText = resultBinding.root.findViewById<TextView>(R.id.inspirationText)
 
             inspirationBox.visibility = View.VISIBLE
             inspirationBox.alpha = 0f
@@ -197,74 +197,36 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         }
     }
 
-    private fun getFeedbackResources(score: Int): Triple<String, Int, Int?> {
-        val percentage = if (totalQuestions > 0) score.toDouble() / totalQuestions else 0.0
-
-        return when {
-            percentage >= 1.0 -> Triple(
-                getString(R.string.incredible_all_correct),
-                R.raw.perfect_score,
-                R.drawable.gold_medal
-            )
-
-            percentage >= 0.75 -> Triple(
-                getString(R.string.great_performance),
-                R.raw.great_performance,
-                R.drawable.ic_trophy
-            )
-
-            percentage >= 0.50 -> Triple(
-                getString(R.string.good_performance),
-                R.raw.try_again,
-                R.drawable.silver_medal
-            )
-
-            else -> Triple(
-                getString(R.string.try_again),
-                R.raw.try_again,
-                null
-            )
-        }
-    }
-
-    private fun calculatePerformance(): Double {
-        val correct = (totalQuestions - wrongAnswers).coerceAtLeast(0)
-        return if (totalQuestions <= 0) 0.0 else (correct.toDouble() / totalQuestions * 100.0)
-    }
+    // ========================= GAME OVER =========================
 
     private fun showGameOverScreen(currentRoundScore: Int) {
-        resultBinding.resultContainer.visibility = View.GONE
+        resultBinding.root.visibility = View.GONE
         gameOverBinding.root.visibility = View.VISIBLE
-
-        // ✅ NÃO somar score aqui (já foi persistido durante a fase pelo ScoreManager)
-        val totalAcumulado = GameDataManager.getOverallTotalScore(this)
-
-        gameOverBinding.totalScoreTextView.text =
-            getString(R.string.pontuacao_total_format, totalAcumulado)
+        konfettiView.visibility = View.GONE
 
         val safeScore = currentRoundScore.coerceAtLeast(0)
+
+        val totalAcumulado = GameDataManager.getOverallTotalScore(this)
+        gameOverBinding.totalScoreTextView.text =
+            getString(R.string.pontuacao_total_format, totalAcumulado)
 
         gameOverBinding.gameOverFeedbackTextView.text =
             getFeedbackMessage(safeScore, wrongAnswers, maxWrongAnswers)
 
-        // ✅ desbloqueio também aqui
         levelManager.checkAndSaveLevelUnlocks()
 
-        // ✅ Lottie (somente animação)
         setupLottieAnimation(safeScore, wrongAnswers)
 
-        // ✅ Som separado (NUNCA usar arquivo de lottie aqui)
         val soundResId = when {
             wrongAnswers >= maxWrongAnswers && safeScore <= 10 -> R.raw.game_over_sound1
             wrongAnswers >= maxWrongAnswers && safeScore > 10  -> R.raw.game_over_sound2
-            else -> R.raw.try_again // ou outro áudio neutro seu
+            else -> R.raw.try_again
         }
         playFeedbackSound(soundResId)
 
         gameOverBinding.retryButton.setOnClickListener { navigateAfterResult() }
         gameOverBinding.exitButton.setOnClickListener { navigateAfterResult() }
     }
-
 
     private fun getFeedbackMessage(score: Int, currentWrong: Int, maxWrong: Int): String {
         return if (currentWrong >= maxWrong) {
@@ -274,10 +236,8 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         }
     }
 
-
     private fun setupLottieAnimation(score: Int, currentWrong: Int) {
         val animView = gameOverBinding.lottieAnimationView
-
         val animRes = when {
             currentWrong >= maxWrongAnswers && score <= 10 -> R.raw.ic_animationcerebro
             currentWrong >= maxWrongAnswers && score > 10  -> R.raw.ic_datafound
@@ -288,12 +248,17 @@ class ResultOrGameOverActivity : AppCompatActivity() {
             cancelAnimation()
             progress = 0f
             setAnimation(animRes)
-            repeatCount = 0   // sem loop (mude se quiser)
+            repeatCount = 0
             playAnimation()
         }
     }
 
+    // ========================= PERF / FEEDBACK =========================
 
+    private fun calculatePerformance(): Double {
+        val correct = (totalQuestions - wrongAnswers).coerceAtLeast(0)
+        return if (totalQuestions <= 0) 0.0 else (correct.toDouble() / totalQuestions * 100.0)
+    }
 
     private fun getFeedbackResources(performancePercent: Double): Triple<String, Int, Int?> {
         return when {
@@ -320,6 +285,7 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         }
     }
 
+    // ========================= AUDIO =========================
 
     private fun playFeedbackSound(soundResId: Int) {
         releaseMediaPlayer()
@@ -342,6 +308,8 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         }
         mediaPlayer = null
     }
+
+    // ========================= NAV =========================
 
     private fun navigateAfterResult() {
         if (returnToActiveGame) {

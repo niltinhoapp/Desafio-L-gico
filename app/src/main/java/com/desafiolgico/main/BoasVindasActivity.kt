@@ -21,6 +21,7 @@ import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.CrashlyticsHelper
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.PremiumFrames
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
@@ -65,6 +66,7 @@ class BoasVindasActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyEdgeToEdge()
         setContentView(R.layout.activity_boas_vindas)
+
 
         // Onboarding (somente se NÃO completou)
         val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)

@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.desafiolgico.R
 import com.desafiolgico.auth.LoginActivity
 import com.desafiolgico.information.OnboardingActivity
+import com.desafiolgico.premium.PremiumShopActivity
 import com.desafiolgico.profile.AvatarSelectionActivity
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
@@ -17,6 +18,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var rowLanguage: View
     private lateinit var rowAvatar: View
+    private lateinit var rowPremium: View
     private lateinit var rowTutorial: View
     private lateinit var rowSwitchAccount: View
     private lateinit var rowDeleteAccount: View
@@ -32,33 +34,38 @@ class SettingsActivity : AppCompatActivity() {
 
         rowLanguage = findViewById(R.id.rowLanguage)
         rowAvatar = findViewById(R.id.rowAvatar)
+        rowPremium = findViewById(R.id.rowPremium)
         rowTutorial = findViewById(R.id.rowTutorial)
         rowSwitchAccount = findViewById(R.id.rowSwitchAccount)
         rowDeleteAccount = findViewById(R.id.rowDeleteAccount)
 
-        // Trocar idioma
+        // ⭐ Loja Premium
+        rowPremium.setOnClickListener {
+            startActivity(Intent(this, PremiumShopActivity::class.java))
+        }
+
+        // Idioma
         rowLanguage.setOnClickListener {
-            val intent = Intent(this, LanguageSelectionActivity::class.java).apply {
-                putExtra(LanguageSelectionActivity.EXTRA_FROM_SETTINGS, true)
-            }
-            startActivity(intent)
-        }
-
-        // Trocar avatar
-        rowAvatar.setOnClickListener {
-            startActivity(Intent(this, AvatarSelectionActivity::class.java))
-        }
-
-        // Ver tutorial novamente
-        rowTutorial.setOnClickListener {
             startActivity(
-                Intent(this, OnboardingActivity::class.java).apply {
-                    putExtra("FROM_SETTINGS", true)
-
+                Intent(this, LanguageSelectionActivity::class.java).apply {
+                    putExtra(LanguageSelectionActivity.EXTRA_FROM_SETTINGS, true)
                 }
             )
         }
 
+        // Avatar
+        rowAvatar.setOnClickListener {
+            startActivity(Intent(this, AvatarSelectionActivity::class.java))
+        }
+
+        // Tutorial
+        rowTutorial.setOnClickListener {
+            startActivity(
+                Intent(this, OnboardingActivity::class.java).apply {
+                    putExtra("FROM_SETTINGS", true)
+                }
+            )
+        }
 
         // Trocar conta
         rowSwitchAccount.setOnClickListener {

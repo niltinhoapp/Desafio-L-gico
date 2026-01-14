@@ -150,11 +150,15 @@ object GameDataManager {
             }
 
             // avatar: opcional (0/null remove)
-            if (avatarId != null && avatarId > 0) {
+            // avatar: só salva se o usuário PREFERE avatar
+            val preferAvatar = isPreferAvatar(context)
+
+            if (preferAvatar && avatarId != null && avatarId > 0) {
                 putInt(getUserKey(KEY_USER_AVATAR), avatarId)
             } else {
                 remove(getUserKey(KEY_USER_AVATAR))
             }
+
 
             apply()
         }
@@ -168,7 +172,11 @@ object GameDataManager {
         val username = p.getString(getUserKey(KEY_USER_NAME), null)
         val photoUrl = p.getString(getUserKey(KEY_USER_PHOTO), null)
 
-        val avatarId = p.getInt(getUserKey(KEY_USER_AVATAR), 0).takeIf { it > 0 }
+        val preferAvatar = isPreferAvatar(context)
+        val avatarId = if (preferAvatar) {
+            p.getInt(getUserKey(KEY_USER_AVATAR), 0).takeIf { it > 0 }
+        } else null
+
         return Triple(username, photoUrl, avatarId)
     }
 
@@ -566,6 +574,91 @@ object GameDataManager {
     fun resetAll(context: Context) {
         resetUserLocalData(context)
     }
+
+    // =====================================================
+// 💎 Cosmetics Premium (Temas / Molduras / Títulos / Pets / VFX) - por usuário
+// =====================================================
+    private const val KEY_SELECTED_THEME = "selected_theme"
+    private const val KEY_SELECTED_FRAME = "selected_frame"
+    private const val KEY_SELECTED_TITLE = "selected_title"
+    private const val KEY_SELECTED_PET   = "selected_pet"
+    private const val KEY_SELECTED_VFX   = "selected_vfx"
+
+    private const val KEY_UNLOCKED_THEMES = "unlocked_themes"
+    private const val KEY_UNLOCKED_FRAMES = "unlocked_frames"
+    private const val KEY_UNLOCKED_TITLES = "unlocked_titles"
+    private const val KEY_UNLOCKED_PETS   = "unlocked_pets"
+    private const val KEY_UNLOCKED_VFX    = "unlocked_vfx"
+
+    private const val KEY_PET_LEVEL_PREFIX = "pet_level_" // ex: pet_level_pet_owl
+
+    private fun getUserStringSet(context: Context, key: String, def: Set<String> = emptySet()): MutableSet<String> {
+        val p = getPrefs(context)
+        val set = p.getStringSet(getUserKey(key), def) ?: def
+        return set.toMutableSet()
+    }
+
+    private fun putUserStringSet(context: Context, key: String, value: Set<String>) {
+        getPrefs(context).edit().putStringSet(getUserKey(key), value).apply()
+    }
+
+    fun trySpendCoins(context: Context, amount: Int): Boolean {
+        if (amount <= 0) return true
+        val current = getCoins(context)
+        if (current < amount) return false
+        addCoins(context, -amount)
+        return true
+    }
+
+    // ---- Unlock helpers ----
+    private fun unlockString(context: Context, setKey: String, id: String) {
+        val s = getUserStringSet(context, setKey)
+        if (s.add(id)) putUserStringSet(context, setKey, s)
+    }
+
+    private fun isStringUnlocked(context: Context, setKey: String, id: String): Boolean {
+        val s = getPrefs(context).getStringSet(getUserKey(setKey), emptySet()) ?: emptySet()
+        return s.contains(id)
+    }
+
+    // ---- Themes ----
+    fun unlockTheme(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_THEMES, id)
+    fun isThemeUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_THEMES, id)
+    fun setSelectedTheme(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_THEME), id).apply()
+    fun getSelectedTheme(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_THEME), "theme_default") ?: "theme_default"
+
+    // ---- Frames ----
+    fun unlockFrame(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_FRAMES, id)
+    fun isFrameUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_FRAMES, id)
+    fun setSelectedFrame(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_FRAME), id).apply()
+    fun getSelectedFrame(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_FRAME), "frame_none") ?: "frame_none"
+
+    // ---- Titles ----
+    fun unlockTitle(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_TITLES, id)
+    fun isTitleUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_TITLES, id)
+    fun setSelectedTitle(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_TITLE), id).apply()
+    fun getSelectedTitle(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_TITLE), "title_none") ?: "title_none"
+
+    // ---- Pets ----
+    fun unlockPet(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_PETS, id)
+    fun isPetUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_PETS, id)
+    fun setSelectedPet(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_PET), id).apply()
+    fun getSelectedPet(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_PET), "pet_none") ?: "pet_none"
+
+    fun getPetLevel(context: Context, petId: String): Int {
+        val k = getUserKey(KEY_PET_LEVEL_PREFIX + petId)
+        return getPrefs(context).getInt(k, 1).coerceIn(1, 3)
+    }
+    fun setPetLevel(context: Context, petId: String, lvl: Int) {
+        val k = getUserKey(KEY_PET_LEVEL_PREFIX + petId)
+        getPrefs(context).edit().putInt(k, lvl.coerceIn(1, 3)).apply()
+    }
+
+    // ---- VFX ----
+    fun unlockVfx(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_VFX, id)
+    fun isVfxUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_VFX, id)
+    fun setSelectedVfx(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_VFX), id).apply()
+    fun getSelectedVfx(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_VFX), "vfx_basic") ?: "vfx_basic"
 
 
 

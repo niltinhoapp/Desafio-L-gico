@@ -37,7 +37,38 @@ class AvatarSelectionActivity : AppCompatActivity() {
         setupConfirmButton()
         updateCoinBalance()
         loadCurrentAvatar()
+        setupUseEmailPhotoButton()
+
+
     }
+
+    private fun setupUseEmailPhotoButton() {
+        binding.btnUseEmailPhoto.setOnClickListener {
+            val user = UserManager.carregarDadosUsuario(this)
+
+            if (user.photoUrl.isNullOrBlank()) {
+                Toast.makeText(this, "Sem foto do Google disponível 😕", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // ✅ volta a priorizar foto do e-mail
+            GameDataManager.setPreferAvatar(this, false)
+
+            // opcional: limpa avatar salvo (deixa “limpo”)
+            GameDataManager.clearUserAvatar(this)
+
+            // atualiza preview
+            Glide.with(this)
+                .load(user.photoUrl)
+                .circleCrop()
+                .into(binding.previewImage)
+
+            selectedAvatarResId = null
+
+            Toast.makeText(this, "Foto do e-mail ativada ✅", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     /**
      * Exibe a lista de avatares disponíveis em uma grade.
@@ -87,6 +118,8 @@ class AvatarSelectionActivity : AppCompatActivity() {
                 ).show()
                 return@setOnClickListener
             }
+            GameDataManager.setPreferAvatar(this, true)
+
 
             val cost = CoinManager.AVATAR_COST
             val coins = CoinManager.getCoins(this)
@@ -138,6 +171,12 @@ class AvatarSelectionActivity : AppCompatActivity() {
 // Mantém em sincronia com o GameDataManager
             GameDataManager.saveUserData(this, user.name, user.photoUrl, avatarId)
 
+            // Mantém em sincronia com o GameDataManager
+            GameDataManager.saveUserData(this, user.name, user.photoUrl, avatarId)
+
+// ✅ usuário escolheu avatar -> preferir avatar
+            GameDataManager.setPreferAvatar(this, true)
+
 // 🔹 Atualiza saldo visualmente e anima
             updateCoinBalance()
 
@@ -184,47 +223,33 @@ class AvatarSelectionActivity : AppCompatActivity() {
      */
     private fun loadCurrentAvatar() {
         val currentUser = UserManager.carregarDadosUsuario(this)
+        val preferAvatar = GameDataManager.isPreferAvatar(this)
+
+        val hasPhoto = !currentUser.photoUrl.isNullOrBlank()
+        val hasAvatar = (currentUser.avatarId != null && currentUser.avatarId != 0)
+        val avatarUnlocked = hasAvatar && CoinManager.isAvatarUnlocked(this, currentUser.avatarId!!)
 
         when {
-            !currentUser.photoUrl.isNullOrBlank() -> {
-                // 🔹 PRIORIDADE 1: foto do Google
-                Glide.with(this)
-                    .load(currentUser.photoUrl)
-                    .circleCrop()
-                    .into(binding.previewImage)
+            // ✅ se preferiu avatar e tem um válido
+            preferAvatar && avatarUnlocked -> {
+                Glide.with(this).load(currentUser.avatarId).circleCrop().into(binding.previewImage)
+                selectedAvatarResId = currentUser.avatarId
+            }
 
+            // ✅ senão, foto do Google se existir
+            hasPhoto -> {
+                Glide.with(this).load(currentUser.photoUrl).circleCrop().into(binding.previewImage)
                 selectedAvatarResId = null
             }
 
-            currentUser.avatarId != null && currentUser.avatarId != 0 -> {
-                val avatarId = currentUser.avatarId
-
-                // ✅ NÃO mostrar avatar antigo se não estiver comprado/desbloqueado
-                if (CoinManager.isAvatarUnlocked(this, avatarId)) {
-                    Glide.with(this)
-                        .load(avatarId)
-                        .circleCrop()
-                        .into(binding.previewImage)
-
-                    selectedAvatarResId = avatarId
-                } else {
-                    // cai pro grátis
-                    Glide.with(this)
-                        .load(R.drawable.avatar1)
-                        .circleCrop()
-                        .into(binding.previewImage)
-
-                    selectedAvatarResId = null
-                }
+            // ✅ fallback: avatar desbloqueado
+            avatarUnlocked -> {
+                Glide.with(this).load(currentUser.avatarId).circleCrop().into(binding.previewImage)
+                selectedAvatarResId = currentUser.avatarId
             }
 
             else -> {
-                // 🔹 PRIORIDADE 3: avatar padrão (visual)
-                Glide.with(this)
-                    .load(R.drawable.avatar1)
-                    .circleCrop()
-                    .into(binding.previewImage)
-
+                Glide.with(this).load(R.drawable.avatar1).circleCrop().into(binding.previewImage)
                 selectedAvatarResId = null
             }
         }

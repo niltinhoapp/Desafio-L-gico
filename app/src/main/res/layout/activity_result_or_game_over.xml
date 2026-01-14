@@ -4,16 +4,20 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_result_gradient">
 
-    <!-- Tela de Resultado -->
     <include
         android:id="@+id/resultContainer"
         layout="@layout/container_result"
         android:visibility="visible" />
 
-    <!-- Tela de Game Over -->
     <include
         android:id="@+id/gameOverContainer"
         layout="@layout/container_game_over"
+        android:visibility="gone" />
+
+    <nl.dionsegijn.konfetti.xml.KonfettiView
+        android:id="@+id/konfettiView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:visibility="gone" />
 
 </FrameLayout>

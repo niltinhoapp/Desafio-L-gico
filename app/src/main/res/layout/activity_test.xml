@@ -9,6 +9,21 @@
     android:background="@drawable/bg_test_gradient"
     tools:context=".main.TestActivity">
 
+    <!-- 🐾 Pet ao lado do Avatar -->
+    <ImageView
+        android:id="@+id/petView"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="18dp"
+        android:elevation="10dp"
+        android:scaleType="fitCenter"
+        android:visibility="visible"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/logoImageView"
+        tools:srcCompat="@drawable/pet_owl_1" />
+
+
     <!-- 👤 Avatar do Usuário -->
     <ImageView
         android:id="@+id/logoImageView"
@@ -321,5 +336,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

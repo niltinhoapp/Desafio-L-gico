@@ -9,7 +9,7 @@
     android:background="@drawable/gradient_background"
     tools:context=".auth.LoginActivity">
 
-    <!-- ✅ Conteúdo rolável (evita cortar em telas pequenas) -->
+    <!-- ✅ Conteúdo rolável -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/loginScroll"
         android:layout_width="0dp"
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:paddingHorizontal="28dp">
 
-            <!-- 🔹 Guia pra limitar largura (AAA leitura) -->
+            <!-- 🔹 Guias -->
             <androidx.constraintlayout.widget.Guideline
                 android:id="@+id/guidelineStart"
                 android:layout_width="wrap_content"
@@ -44,7 +44,7 @@
                 android:orientation="vertical"
                 app:layout_constraintGuide_percent="0.98" />
 
-            <!-- 🧠 Animação Lottie -->
+            <!-- 🧠 Lottie -->
             <com.airbnb.lottie.LottieAnimationView
                 android:id="@+id/lottieAnimationView"
                 android:layout_width="220dp"
@@ -97,7 +97,7 @@
                 app:layout_constraintStart_toStartOf="@id/guidelineStart"
                 app:layout_constraintEnd_toEndOf="@id/guidelineEnd" />
 
-            <!-- Convidado (AAA: leve, sem “pesar”) -->
+            <!-- Convidado -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/guestButton"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -112,17 +112,14 @@
                 android:minWidth="0dp"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="10dp"
-
                 android:background="?attr/selectableItemBackgroundBorderless"
-
                 app:strokeWidth="0dp"
                 app:strokeColor="@android:color/transparent"
-
                 app:layout_constraintTop_toBottomOf="@id/infoTextView"
                 app:layout_constraintStart_toStartOf="@id/guidelineStart"
                 app:layout_constraintEnd_toEndOf="@id/guidelineEnd" />
 
-            <!-- Linha divisória -->
+            <!-- Linha -->
             <View
                 android:id="@+id/divider"
                 android:layout_width="0dp"
@@ -156,7 +153,6 @@
                     android:textColor="#E6FFFFFF"
                     android:textSize="18sp" />
 
-                <!-- Benefício 1 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -180,7 +176,6 @@
                         android:textSize="15sp" />
                 </LinearLayout>
 
-                <!-- Benefício 2 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -209,7 +204,7 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- ✅ Rodapé fixo (Termos / Privacidade) -->
+    <!-- ✅ Rodapé fixo -->
     <LinearLayout
         android:id="@+id/legalLinksLayout"
         android:layout_width="0dp"
@@ -231,7 +226,6 @@
             android:textSize="12sp"
             android:textStyle="bold"
             android:alpha="0.9"
-
             android:fontFamily="@font/roboto_mediu"
             android:padding="8dp" />
 
@@ -251,10 +245,202 @@
             android:textColor="#CCFFFFFF"
             android:textStyle="bold"
             android:alpha="0.9"
-
             android:textSize="12sp"
             android:fontFamily="@font/roboto_mediu"
             android:padding="8dp" />
     </LinearLayout>
+
+    <!-- ✅ Overlay Premium (cobre tela toda) -->
+    <FrameLayout
+        android:id="@+id/loginLoadingOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        android:background="@drawable/bg_loading_dim"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/loadingCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="28dp"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@android:color/transparent"
+            app:strokeWidth="1dp"
+            app:strokeColor="#33FFFFFF">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_glass_card">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:background="@drawable/bg_glow_top"
+                    android:alpha="0.9" />
+
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/loginLoadingLottie"
+                    android:layout_width="84dp"
+                    android:layout_height="84dp"
+                    android:layout_marginTop="14dp"
+                    app:lottie_rawRes="@raw/ic_datafound"
+                    app:lottie_autoPlay="true"
+                    app:lottie_loop="true" />
+
+                <TextView
+                    android:id="@+id/loginLoadingTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Conectando…"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/roboto_mediu" />
+
+                <TextView
+                    android:id="@+id/loginLoadingText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Aguarde um instante"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/roboto_mediu" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/loginLoadingBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="14dp"
+                    android:indeterminate="true"
+                    app:trackCornerRadius="999dp"
+                    app:indicatorColor="@color/theme_neon_accent"
+                    app:trackColor="#22FFFFFF" />
+
+                <!-- ✅ Steps -->
+                <LinearLayout
+                    android:id="@+id/loginSteps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="2dp"
+                    android:orientation="vertical">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:layout_marginBottom="10dp"
+                        android:background="@drawable/bg_steps_track"
+                        android:alpha="0.75" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal">
+
+                            <View
+                                android:id="@+id/stepGoogleDot"
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:background="@drawable/bg_step_dot_inactive" />
+
+                            <TextView
+                                android:id="@+id/stepGoogleText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Google"
+                                android:textSize="11sp"
+                                android:textColor="#B3FFFFFF"
+                                android:fontFamily="@font/roboto_mediu" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal">
+
+                            <View
+                                android:id="@+id/stepFirebaseDot"
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:background="@drawable/bg_step_dot_inactive" />
+
+                            <TextView
+                                android:id="@+id/stepFirebaseText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Firebase"
+                                android:textSize="11sp"
+                                android:textColor="#B3FFFFFF"
+                                android:fontFamily="@font/roboto_mediu" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal">
+
+                            <View
+                                android:id="@+id/stepReadyDot"
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:background="@drawable/bg_step_dot_inactive" />
+
+                            <TextView
+                                android:id="@+id/stepReadyText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Pronto"
+                                android:textSize="11sp"
+                                android:textColor="#B3FFFFFF"
+                                android:fontFamily="@font/roboto_mediu" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/loginLoadingHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="🔒 Seus dados ficam protegidos."
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/roboto_mediu" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
