@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -212,7 +213,8 @@ class RewardsActivity : AppCompatActivity() {
             konfettiView.postDelayed({
                 konfettiView.visibility = View.GONE
             }, 4000L)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("RewardsActivity", "Falha ao exibir celebração", e)
         }
     }
 

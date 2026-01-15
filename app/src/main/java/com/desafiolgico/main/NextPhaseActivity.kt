@@ -122,8 +122,16 @@ class NextPhaseActivity : AppCompatActivity() {
     }
 
     private fun stopPulse() {
-        try { pulseX?.cancel() } catch (_: Exception) {}
-        try { pulseY?.cancel() } catch (_: Exception) {}
+        try {
+            pulseX?.cancel()
+        } catch (e: Exception) {
+            Log.w("NextPhaseActivity", "Falha ao cancelar pulseX", e)
+        }
+        try {
+            pulseY?.cancel()
+        } catch (e: Exception) {
+            Log.w("NextPhaseActivity", "Falha ao cancelar pulseY", e)
+        }
         pulseX = null
         pulseY = null
     }
@@ -145,14 +153,18 @@ class NextPhaseActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        try { mediaPlayer?.let { if (it.isPlaying) it.pause() } } catch (_: Exception) {}
+        try { mediaPlayer?.let { if (it.isPlaying) it.pause() } } catch (e: Exception) {
+            Log.w("NextPhaseActivity", "Falha ao pausar MediaPlayer", e)
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(autoCloseRunnable)
         stopPulse()
-        try { mediaPlayer?.release() } catch (_: Exception) {}
+        try { mediaPlayer?.release() } catch (e: Exception) {
+            Log.w("NextPhaseActivity", "Falha ao liberar MediaPlayer", e)
+        }
         mediaPlayer = null
     }
 }

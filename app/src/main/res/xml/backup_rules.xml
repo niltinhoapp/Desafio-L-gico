@@ -6,8 +6,11 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Evita backup de estado sensível/volátil -->
+    <exclude domain="sharedpref" path="DesafioLogicoPrefs.xml" />
+    <exclude domain="sharedpref" path="AppPrefs.xml" />
+    <exclude domain="sharedpref" path="local_records.xml" />
+    <exclude domain="sharedpref" path="local_records_daily.xml" />
+    <exclude domain="sharedpref" path="enigma_portal_gate.xml" />
+    <exclude domain="sharedpref" path="unlock_notifs.xml" />
 </full-backup-content>

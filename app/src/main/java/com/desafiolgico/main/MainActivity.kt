@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -221,7 +222,10 @@ class MainActivity : AppCompatActivity() {
                 mediaPlayer.stop()
                 mediaPlayer.release()
             }
-        } catch (_: Exception) {}
+
+    } catch (e: Exception) {
+        Log.w("MainActivity", "Falha ao liberar o MediaPlayer", e)
+    }
         super.onDestroy()
     }
 
@@ -488,7 +492,9 @@ class MainActivity : AppCompatActivity() {
             val mp = MediaPlayer.create(this, R.raw.click_sound)
             mp.setOnCompletionListener { it.release() }
             mp.start()
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Falha ao tocar som de clique", e)
+        }
     }
 
     // util opcional (caso use em algum lugar)

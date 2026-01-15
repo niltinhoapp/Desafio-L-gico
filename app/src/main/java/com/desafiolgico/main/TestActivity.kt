@@ -16,6 +16,7 @@ import android.widget.ImageView
 
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
@@ -352,9 +353,15 @@ class TestActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         if (::adView.isInitialized) adView.destroy()
-        try { correctSound.release() } catch (_: Exception) {}
-        try { wrongSound.release() } catch (_: Exception) {}
-        try { introSound?.stop(); introSound?.release() } catch (_: Exception) {}
+        try { correctSound.release() } catch (e: Exception) {
+            Log.w("TestActivity", "Falha ao liberar correctSound", e)
+        }
+        try { wrongSound.release() } catch (e: Exception) {
+            Log.w("TestActivity", "Falha ao liberar wrongSound", e)
+        }
+        try { introSound?.stop(); introSound?.release() } catch (e: Exception) {
+            Log.w("TestActivity", "Falha ao liberar introSound", e)
+        }
         introSound = null
         countDownTimer?.cancel()
         scoreAnimator?.cancel()
