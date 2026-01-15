@@ -11,9 +11,6 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
-import com.desafiolgico.utils.PremiumItem
-import android.widget.ImageView
-
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -41,6 +38,7 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.PremiumCatalog
+import com.desafiolgico.utils.PremiumItem
 import com.desafiolgico.utils.PremiumManager
 import com.desafiolgico.utils.PremiumPets
 import com.desafiolgico.utils.PremiumUi
@@ -91,8 +89,11 @@ class TestActivity : AppCompatActivity() {
     private var lastPremiumEvalScore = -1
     private var lastPremiumEvalStreak = -1
 
+    // --- Anti-farm / Anti-repeat (premium) ---
+    private val newThisRunKeys = HashSet<String>()            // “novas nesta rodada” (candidatas a pontuar)
+    private var initialSeenKeys: Set<String> = emptySet()     // snapshot do visto ANTES da rodada
 
-    // --- Baralho de PERGUNTAS (100% sem repetir) ---
+    // --- Baralho de perguntas ---
     private var shuffleSeed: Long = 0L
 
     // --- Curiosidades (fase secreta) ---
@@ -103,15 +104,27 @@ class TestActivity : AppCompatActivity() {
         "🌊 Sabia que o coração de um camarão fica na cabeça?",
         "🐘 O elefante é o único animal com quatro joelhos.",
         "🦋 As borboletas sentem o gosto com os pés!",
+        "🔥 O Sol representa 99,86% da massa do Sistema Solar.",
+        "💡 O cérebro humano gera eletricidade suficiente para acender uma lâmpada pequena.",
         "⚡ O relâmpago é mais quente que a superfície do Sol.",
-        "🌙 A Lua se afasta da Terra cerca de 3,8 cm por ano."
+        "🌎 A Terra não é perfeitamente redonda — é ligeiramente achatada nos polos.",
+        "💓 Seu coração bate cerca de 100 mil vezes por dia.",
+        "👀 Os olhos conseguem distinguir mais de 10 milhões de cores.",
+        "🦵 O fêmur humano é mais forte que concreto.",
+        "🧬 Cada célula do seu corpo contém cerca de 2 metros de DNA.",
+        "🌌 Existem mais estrelas no universo do que grãos de areia na Terra.",
+        "🐝 Abelhas reconhecem rostos humanos.",
+        "🧠 Seu cérebro pesa cerca de 1,4 kg.",
+        "🪶 O pinguim tem joelhos escondidos sob as penas.",
+        "🦈 Tubarões existem antes dos dinossauros.",
+        "🌧️ A chuva tem cheiro — chamado de petrichor.",
+        "🌙 A Lua se afasta da Terra cerca de 3,8 cm por ano.",
+        "🚀 Um foguete pode ultrapassar 28.000 km/h ao deixar a atmosfera.",
+        "🐢 As tartarugas podem respirar pela cloaca (parte traseira do corpo)."
     )
 
-    // Baralho (sem repetir até acabar)
     private val curiosityBag = ArrayDeque<String>()
     private var lastCuriosity: String? = null
-
-    // Overlay view atual (pra não empilhar)
     private var curiosityOverlayView: View? = null
 
     // --- Managers ---
@@ -125,7 +138,6 @@ class TestActivity : AppCompatActivity() {
     private var wrongAnswersCount = 0
     private var maxWrongAnswers = 5
     private var totalQuestions = 0
-
     private var questionsAnswered = 0
     private var totalTimeAccumulated: Long = 0L
 
@@ -165,12 +177,13 @@ class TestActivity : AppCompatActivity() {
         private const val GREEN_THRESHOLD_PERCENT = 50
         private const val YELLOW_THRESHOLD_PERCENT = 20
 
+        const val THRESHOLD_INTERMEDIATE = 3000
+        const val THRESHOLD_ADVANCED = 7000
+        const val THRESHOLD_EXPERT = 11000
 
-            private const val THRESHOLD_INTERMEDIATE = 3500
-            private const val THRESHOLD_ADVANCED = 6000
-            private const val THRESHOLD_EXPERT = 10000
-
-
+        private const val PREF_QSTATE = "QuestionState_v2"
+        private const val KEY_SEEN_PREFIX = "seen_"
+        private const val KEY_SCORED_PREFIX = "scored_"
 
         const val REWARD_AD_COINS = 5
 
@@ -289,32 +302,44 @@ class TestActivity : AppCompatActivity() {
         }
 
         setupSecretProgressUi()
-
         configurarNivel(levelToLoad)
         configurarTituloNivel(levelToLoad)
 
-        // ✅ se não veio seed do backup, cria um novo seed (ordem aleatória por partida)
+        // ✅ seed por partida (se não veio do backup)
         if (shuffleSeed == 0L) shuffleSeed = newSeed()
 
-        // ✅ 100% SEM REPETIR: dedup + shuffle por seed
-        questions = buildUniqueShuffledQuestions(levelToLoad, shuffleSeed)
+        // ✅ snapshot do visto ANTES da rodada (base para “novas primeiro”)
+        initialSeenKeys = getSeenSet(levelToLoad).toSet()
+
+        // ✅ Perguntas:
+        // - Backup => lista única inteira na mesma seed
+        // - Normal => 30: novas primeiro, completa com revisão (+0 pts)
+        questions = if (isRestoringBackup) {
+            buildUniqueShuffledQuestions(levelToLoad, shuffleSeed)
+        } else {
+            buildPremiumRunQuestions(levelToLoad, shuffleSeed)
+        }
+
         totalQuestions = questions.size
 
-        // se deduplicou e o startIndex ficou fora, encerra com resultado (evita crash)
-        if (startIndex >= totalQuestions && totalQuestions > 0) {
-            currentQuestionIndex = totalQuestions
-        } else {
-            currentQuestionIndex = startIndex
+        // ✅ Aviso premium quando não houver “novas” nesta rodada
+        if (!isRestoringBackup && !isSecretLevel(currentLevelLoaded) && newThisRunKeys.isEmpty()) {
+            Toast.makeText(
+                this,
+                "✅ Você já respondeu todas as perguntas novas deste nível. Modo revisão ativado (+0 pts).",
+                Toast.LENGTH_LONG
+            ).show()
         }
-        if (!isRestoringBackup) runScoreLevel = 0
 
+        // start index seguro
+        currentQuestionIndex = if (startIndex >= totalQuestions && totalQuestions > 0) totalQuestions else startIndex
+        if (!isRestoringBackup) runScoreLevel = 0
 
         updateQuestionsRemaining()
         updateCoinsUI()
 
         if (questions.isEmpty()) {
-            binding.questionTextView.text =
-                getString(R.string.nenhuma_pergunta_dispon_vel_para_este_n_vel)
+            binding.questionTextView.text = getString(R.string.nenhuma_pergunta_dispon_vel_para_este_n_vel)
             setOptionsEnabled(false)
             return
         }
@@ -337,9 +362,8 @@ class TestActivity : AppCompatActivity() {
         if (isTimerPaused && remainingTimeInMillis > 0L && !binding.lottieAnimationView.isAnimating) {
             resumeTimer()
         }
+
         PremiumPets.applyPet(this, binding.petView)
-
-
         updateCoinsUI()
         loadUserHeader()
     }
@@ -353,6 +377,7 @@ class TestActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         if (::adView.isInitialized) adView.destroy()
+
         try { correctSound.release() } catch (e: Exception) {
             Log.w("TestActivity", "Falha ao liberar correctSound", e)
         }
@@ -363,6 +388,7 @@ class TestActivity : AppCompatActivity() {
             Log.w("TestActivity", "Falha ao liberar introSound", e)
         }
         introSound = null
+
         countDownTimer?.cancel()
         scoreAnimator?.cancel()
         VictoryFx.release()
@@ -370,42 +396,73 @@ class TestActivity : AppCompatActivity() {
     }
 
     // =============================================================================================
-    // PERGUNTAS: 100% SEM REPETIR (dedup agressivo por chave normalizada)
+    // PERGUNTAS: dedup + shuffle + premium run (30)
     // =============================================================================================
 
-    private fun newSeed(): Long =
-        System.currentTimeMillis() xor (System.nanoTime() shl 1)
-
-    private fun seedToInt(seed: Long): Int =
-        (seed xor (seed ushr 32)).toInt()
+    private fun newSeed(): Long = System.currentTimeMillis() xor (System.nanoTime() shl 1)
+    private fun seedToInt(seed: Long): Int = (seed xor (seed ushr 32)).toInt()
 
     private fun normalizeKey(input: String): String {
         val trimmed = input.trim().lowercase()
         if (trimmed.isBlank()) return ""
-        val noAccents = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
-            .replace("\\p{Mn}+".toRegex(), "")
-        // remove tudo que não for letra/número (fica “uma chave” estável)
+        val noAccents = Normalizer.normalize(trimmed, Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(), "")
         return noAccents.replace("[^a-z0-9]+".toRegex(), "")
     }
 
     private fun questionKey(q: Question): String {
         val base = normalizeKey(q.questionText)
-        // se vier vazio por algum motivo, usa fallback bem estável
         return if (base.isNotBlank()) base else "fallback_${q.hashCode()}"
     }
 
     private fun buildUniqueShuffledQuestions(level: String, seed: Long): List<Question> {
         val raw = questionManager.getQuestionsByLevel(level)
 
-        // ✅ remove duplicadas (mesma pergunta, mesmo com espaços/acentos/pontuação diferentes)
         val map = LinkedHashMap<String, Question>()
         for (q in raw) {
             val key = questionKey(q)
             if (!map.containsKey(key)) map[key] = q
         }
 
-        val unique = map.values.toList()
-        return unique.shuffled(Random(seedToInt(seed)))
+        return map.values.toList().shuffled(Random(seedToInt(seed)))
+    }
+
+    /**
+     * PREMIUM RUN (30):
+     * - pega “novas” (não vistas no snapshot inicial) primeiro
+     * - completa com revisão (vistas) se faltar
+     * - newThisRunKeys marca exatamente o que é “novo desta rodada”
+     */
+    private fun buildPremiumRunQuestions(level: String, seed: Long): List<Question> {
+        val allUnique = buildUniqueShuffledQuestions(level, seed)
+
+        newThisRunKeys.clear()
+
+        val newOnes = ArrayList<Question>()
+        val review = ArrayList<Question>()
+
+        for (q in allUnique) {
+            val k = questionKey(q)
+            if (k in initialSeenKeys) review.add(q) else newOnes.add(q)
+        }
+
+        val selected = ArrayList<Question>(30)
+
+        // novas primeiro
+        for (q in newOnes) {
+            if (selected.size >= 30) break
+            selected.add(q)
+            newThisRunKeys.add(questionKey(q))
+        }
+
+        // completa com revisão
+        if (selected.size < 30) {
+            for (q in review) {
+                if (selected.size >= 30) break
+                selected.add(q)
+            }
+        }
+
+        return selected
     }
 
     // =============================================================================================
@@ -450,7 +507,6 @@ class TestActivity : AppCompatActivity() {
         optionButtons.clear()
         binding.gameElements.removeAllViews()
 
-        // mantém o card da pergunta (já existe no XML via binding)
         binding.gameElements.addView(binding.questionCard)
 
         repeat(4) {
@@ -526,6 +582,9 @@ class TestActivity : AppCompatActivity() {
 
         val q = questions[currentQuestionIndex]
 
+        // ✅ marca como vista assim que aparece (anti-exploit fechar/voltar)
+        markSeen(currentLevel(), questionKey(q))
+
         resetButtonStyles()
 
         if (withEnterAnim) binding.questionTextView.text = q.questionText
@@ -562,6 +621,13 @@ class TestActivity : AppCompatActivity() {
         updateQuestionsRemaining()
     }
 
+    /**
+     * PREMIUM RULES:
+     * - Se for fase secreta: sempre pontua.
+     * - Se for normal:
+     *   - só pontua se for “nova desta rodada” E for a primeira vez na vida (markScoredIfFirstTime).
+     *   - revisão: +streak (feedback premium), +0 pts.
+     */
     private fun checkAnswer(selectedIndex: Int) {
         if (currentQuestionIndex >= questions.size) return
         if (answerLocked) return
@@ -577,9 +643,11 @@ class TestActivity : AppCompatActivity() {
         val isCorrect = selectedIndex == q.correctAnswerIndex
 
         val oldScore = scoreManager.getOverallScore()
-
         val levelNow = currentLevel()
-        secretHitsInRow = if (isSecretLevel(levelNow)) {
+        val isSecretNow = isSecretLevel(levelNow)
+        val qKey = questionKey(q)
+
+        secretHitsInRow = if (isSecretNow) {
             if (isCorrect) secretHitsInRow + 1 else 0
         } else 0
 
@@ -590,20 +658,35 @@ class TestActivity : AppCompatActivity() {
         totalTimeAccumulated += spent
 
         if (isCorrect) {
-            handleCorrectAnswer()
-            if (isFinishing) return
-
-            val newScore = scoreManager.getOverallScore()
-            val gained = (newScore - oldScore).coerceAtLeast(0)
-            if (!isSecretLevel(levelNow)) {
-                runScoreLevel += gained
+            val totalDaQuestao = when (levelNow) {
+                GameDataManager.Levels.INTERMEDIARIO -> 20_000L
+                GameDataManager.Levels.AVANCADO -> 15_000L
+                else -> 30_000L
             }
 
-            val streakNow = scoreManager.currentStreakLive.value ?: 0
+            val eligibleForPoints = isSecretNow || (
+                newThisRunKeys.contains(qKey) && markScoredIfFirstTime(levelNow, qKey)
+                )
 
-            showFloatingChip("✔ +$gained pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+            if (eligibleForPoints) {
+                // ✅ PONTUA (addScore já incrementa streak)
+                handleCorrectAnswerAward(levelNow, totalDaQuestao)
+                if (isFinishing) return
 
+                val newScore = scoreManager.getOverallScore()
+                val gained = (newScore - oldScore).coerceAtLeast(0)
+                if (!isSecretNow) runScoreLevel += gained
 
+                val streakNow = scoreManager.currentStreakLive.value ?: 0
+                showFloatingChip("✔ +$gained pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+            } else {
+                // ✅ REVISÃO: +streak, +0 pts
+                scoreManager.onCorrectAnswer()
+                playCorrectSfx()
+
+                val streakNow = scoreManager.currentStreakLive.value ?: 0
+                showFloatingChip("✔ Revisão • +0 pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+            }
 
             glowQuestionCard(success = true)
             flashFx(success = true)
@@ -622,23 +705,20 @@ class TestActivity : AppCompatActivity() {
         advanceToNextQuestionWithDelayOrCuriosity(isCorrect)
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun handleCorrectAnswer() {
-        if (faseFinalizada) return
-
+    private fun playCorrectSfx() {
         try {
             correctSound.seekTo(0)
             correctSound.start()
         } catch (_: Exception) {}
+    }
 
-        val nivelAtual = currentLevel()
-        val totalDaQuestao = when (nivelAtual) {
-            GameDataManager.Levels.INTERMEDIARIO -> 20_000L
-            GameDataManager.Levels.AVANCADO -> 15_000L
-            else -> 30_000L
-        }
+    @SuppressLint("SetTextI18n")
+    private fun handleCorrectAnswerAward(nivelAtual: String, totalDaQuestao: Long) {
+        if (faseFinalizada) return
 
-        // score
+        playCorrectSfx()
+
+        // ✅ soma pontos (addScore incrementa streak + globais/marcos)
         scoreManager.addScore(remainingTimeInMillis, totalDaQuestao)
 
         // ✅ conta 1 acerto POR NÍVEL (somente níveis normais)
@@ -646,22 +726,25 @@ class TestActivity : AppCompatActivity() {
             GameDataManager.addCorrectForLevel(this, nivelAtual, 1)
         }
 
+        // ✅ modo secreto (só quando pontuou de verdade)
         val streakCalculo = scoreManager.currentStreakLive.value ?: 0
         val nenhumPausado = GameDataManager.getUltimoNivelNormal(this) == null
 
         when (nivelAtual) {
-            GameDataManager.Levels.INICIANTE -> if (streakCalculo == 10 && nenhumPausado) {
-                iniciarModoSecreto(GameDataManager.SecretLevels.RELAMPAGO); return
-            }
-            GameDataManager.Levels.INTERMEDIARIO -> if (streakCalculo == 10 && nenhumPausado) {
-                iniciarModoSecreto(GameDataManager.SecretLevels.PERFEICAO); return
-            }
-            GameDataManager.Levels.AVANCADO -> if (streakCalculo == 8 && nenhumPausado) {
-                iniciarModoSecreto(GameDataManager.SecretLevels.ENIGMA); return
-            }
+            GameDataManager.Levels.INICIANTE ->
+                if (streakCalculo == 10 && nenhumPausado) {
+                    iniciarModoSecreto(GameDataManager.SecretLevels.RELAMPAGO); return
+                }
+            GameDataManager.Levels.INTERMEDIARIO ->
+                if (streakCalculo == 10 && nenhumPausado) {
+                    iniciarModoSecreto(GameDataManager.SecretLevels.PERFEICAO); return
+                }
+            GameDataManager.Levels.AVANCADO ->
+                if (streakCalculo == 8 && nenhumPausado) {
+                    iniciarModoSecreto(GameDataManager.SecretLevels.ENIGMA); return
+                }
         }
     }
-
 
     private fun handleWrongAnswer() {
         try {
@@ -671,6 +754,8 @@ class TestActivity : AppCompatActivity() {
 
         secretHitsInRow = 0
         vibrateWrong()
+
+        // seu comportamento atual (zera streak + aplica onWrong)
         scoreManager.resetStreak()
         wrongAnswersCount++
         scoreManager.onWrongAnswer()
@@ -693,13 +778,11 @@ class TestActivity : AppCompatActivity() {
             }
 
             val isSecretNow = isSecretLevel(currentLevel())
-
             if (isSecretNow && wasCorrect) {
                 secretCorrectCounter++
-
                 if (secretCorrectCounter % 2 == 0) {
                     showCuriosityOverlay(
-                        text = nextCuriosity(), // ✅ SEM REPETIR
+                        text = nextCuriosity(),
                         durationMs = 3000L
                     ) { goNext() }
                     return@launch
@@ -735,8 +818,7 @@ class TestActivity : AppCompatActivity() {
             ((duration.toDouble() / baseTime.toDouble()) * 100.0).roundToInt().coerceIn(0, 100)
 
         currentTimerColorRes = R.drawable.progress_green
-        binding.timerProgressBar.progressDrawable =
-            ContextCompat.getDrawable(this, currentTimerColorRes)
+        binding.timerProgressBar.progressDrawable = ContextCompat.getDrawable(this, currentTimerColorRes)
 
         countDownTimer = object : CountDownTimer(duration, timerIntervalMillis) {
             override fun onTick(millisUntilFinished: Long) {
@@ -821,6 +903,58 @@ class TestActivity : AppCompatActivity() {
     }
 
     // =============================================================================================
+    // PERSISTÊNCIA ANTI-FARM (seen + scored) - por usuário + por nível
+    // =============================================================================================
+
+    private fun qStatePrefs() = getSharedPreferences(PREF_QSTATE, Context.MODE_PRIVATE)
+
+    private fun userScopeKey(): String {
+        val uid = GameDataManager.currentUserId
+        return if (uid.isNullOrBlank()) "anon" else uid
+    }
+
+    private fun levelScopeKey(level: String): String = canonicalLevelKey(level).trim().lowercase()
+
+    private fun seenStorageKey(level: String): String =
+        "${KEY_SEEN_PREFIX}${userScopeKey()}_${levelScopeKey(level)}"
+
+    private fun scoredStorageKey(level: String): String =
+        "${KEY_SCORED_PREFIX}${userScopeKey()}_${levelScopeKey(level)}"
+
+    private fun getSeenSet(level: String): MutableSet<String> {
+        val raw = qStatePrefs().getStringSet(seenStorageKey(level), emptySet()) ?: emptySet()
+        return HashSet(raw)
+    }
+
+    private fun getScoredSet(level: String): MutableSet<String> {
+        val raw = qStatePrefs().getStringSet(scoredStorageKey(level), emptySet()) ?: emptySet()
+        return HashSet(raw)
+    }
+
+    private fun markSeen(level: String, qKey: String) {
+        if (qKey.isBlank()) return
+        val set = getSeenSet(level)
+        if (set.add(qKey)) {
+            qStatePrefs().edit().putStringSet(seenStorageKey(level), HashSet(set)).apply()
+        }
+    }
+
+    /**
+     * Marca como "pontuada" apenas 1 vez na vida.
+     * true = primeira vez (pode dar pontos)
+     * false = já pontuada antes (revisão => +0 pts)
+     */
+    private fun markScoredIfFirstTime(level: String, qKey: String): Boolean {
+        if (qKey.isBlank()) return false
+        val set = getScoredSet(level)
+        val first = set.add(qKey)
+        if (first) {
+            qStatePrefs().edit().putStringSet(scoredStorageKey(level), HashSet(set)).apply()
+        }
+        return first
+    }
+
+    // =============================================================================================
     // UI / FX
     // =============================================================================================
 
@@ -897,7 +1031,7 @@ class TestActivity : AppCompatActivity() {
             b.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .setStartDelay((i * 55L))
+                .setStartDelay(i * 55L)
                 .setDuration(170)
                 .setInterpolator(AccelerateDecelerateInterpolator())
                 .start()
@@ -995,7 +1129,6 @@ class TestActivity : AppCompatActivity() {
 
         optionButtons.forEachIndexed { i, b ->
             if (b.visibility != View.VISIBLE) return@forEachIndexed
-
             when {
                 i == correctIndex -> {
                     b.backgroundTintList = correctTint
@@ -1024,7 +1157,6 @@ class TestActivity : AppCompatActivity() {
                 b.alpha = 0f
                 return@forEach
             }
-
             b.isEnabled = true
             b.alpha = 1f
             b.setTextColor(defaultText)
@@ -1095,30 +1227,22 @@ class TestActivity : AppCompatActivity() {
 
     private fun loadUserHeader() {
         val (username, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
-        val displayName =
-            if (username.isNullOrBlank()) getString(R.string.default_username) else username
+        val displayName = if (username.isNullOrBlank()) getString(R.string.default_username) else username
         binding.welcomeUsername.text = displayName
 
         val preferAvatar = GameDataManager.isPreferAvatar(this)
         val avatarUnlocked = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
 
         when {
-            // ✅ se NÃO prefere avatar e tem foto -> usa foto do Google
             !preferAvatar && !photoUrl.isNullOrEmpty() -> {
                 Glide.with(this).load(photoUrl).circleCrop().into(binding.logoImageView)
             }
-
-            // ✅ se prefere avatar e tem avatar desbloqueado -> usa avatar
             preferAvatar && avatarUnlocked -> {
                 binding.logoImageView.setImageResource(avatarResId!!)
             }
-
-            // fallback: foto se existir
             !photoUrl.isNullOrEmpty() -> {
                 Glide.with(this).load(photoUrl).circleCrop().into(binding.logoImageView)
             }
-
-            // fallback final
             else -> binding.logoImageView.setImageResource(R.drawable.avatar1)
         }
 
@@ -1127,13 +1251,11 @@ class TestActivity : AppCompatActivity() {
         PremiumUi.applyTitleToUsername(binding.welcomeUsername, this, displayName)
     }
 
-
     private fun observeScoreManager() {
         scoreManager.overallScoreLive.observe(this) {
             configurarPontuacao()
-
-            checkUnlocksAndNotifyInGame()   // níveis (fase)
-            checkPremiumUnlocksInGame()     // premium (tema/moldura/título/pet/vfx)
+            checkUnlocksAndNotifyInGame()
+            checkPremiumUnlocksInGame()
         }
 
         scoreManager.currentStreakLive.observe(this) { streak ->
@@ -1152,8 +1274,6 @@ class TestActivity : AppCompatActivity() {
         }
     }
 
-
-
     private fun checkPremiumUnlocksInGame() {
         val ctx = applicationContext
         val newlyUnlocked = mutableListOf<PremiumItem>()
@@ -1161,15 +1281,11 @@ class TestActivity : AppCompatActivity() {
         PremiumCatalog.all().forEach { item ->
             val wasUnlocked = PremiumManager.isUnlocked(ctx, item)
             val isUnlockedNow = PremiumManager.unlockByAchievementIfPossible(ctx, item)
-
-            if (!wasUnlocked && isUnlockedNow) {
-                newlyUnlocked.add(item)
-            }
+            if (!wasUnlocked && isUnlockedNow) newlyUnlocked.add(item)
         }
 
         if (newlyUnlocked.isEmpty()) return
 
-        // mensagem compacta (pra não estourar)
         val names = newlyUnlocked.take(3).joinToString(", ") { it.name }
         val more = if (newlyUnlocked.size > 3) " +${newlyUnlocked.size - 3}" else ""
         val msg = "🎁 Premium liberado: $names$more"
@@ -1178,15 +1294,10 @@ class TestActivity : AppCompatActivity() {
         microCelebrate()
     }
 
-
-
-
-
     private fun checkPremiumUnlocksIfAny() {
         val scoreNow = GameDataManager.getOverallTotalScore(this)
         val streakNow = scoreManager.currentStreakLive.value ?: 0
 
-        // evita rodar “igual” 50x
         if (scoreNow == lastPremiumEvalScore && streakNow == lastPremiumEvalStreak) return
         lastPremiumEvalScore = scoreNow
         lastPremiumEvalStreak = streakNow
@@ -1194,16 +1305,11 @@ class TestActivity : AppCompatActivity() {
         PremiumCatalog.all().forEach { item ->
             val unlockedNow = PremiumManager.unlockByAchievementIfPossible(applicationContext, item)
             if (unlockedNow) {
-                // opcional: feedback visual quando liberar algo premium
                 showFloatingChip("🎁 Recompensa premium liberada!", R.drawable.ic_check_circle, true)
                 microCelebrate()
             }
         }
     }
-
-
-
-
 
     private fun microCelebrate() {
         konfettiView.visibility = View.VISIBLE
@@ -1223,67 +1329,40 @@ class TestActivity : AppCompatActivity() {
         konfettiView.postDelayed({ konfettiView.visibility = View.GONE }, 900L)
     }
 
+    private fun checkUnlocksAndNotifyInGame() {
+        val total = GameDataManager.getOverallTotalScore(this)
+        val unlockedNow = mutableListOf<String>()
 
-
-    /** chama e avisa in-game quando liberar nível (sem sair da fase) */
-        private fun checkUnlocksAndNotifyInGame() {
-            val total = GameDataManager.getOverallTotalScore(this)
-            val unlockedNow = mutableListOf<String>()
-
-            fun unlockIfNeeded(levelRaw: String, threshold: Int) {
-                val level = canonicalLevelKey(levelRaw) // ✅ garante chave estável
-                if (total >= threshold && !GameDataManager.isLevelUnlocked(this, level)) {
-                    GameDataManager.unlockLevel(this, level)
-                    unlockedNow.add(level)
-                }
+        fun unlockIfNeeded(levelRaw: String, threshold: Int) {
+            val level = canonicalLevelKey(levelRaw)
+            if (total >= threshold && !GameDataManager.isLevelUnlocked(this, level)) {
+                GameDataManager.unlockLevel(this, level)
+                unlockedNow.add(level)
             }
-
-            unlockIfNeeded(GameDataManager.Levels.INTERMEDIARIO, THRESHOLD_INTERMEDIATE)
-            unlockIfNeeded(GameDataManager.Levels.AVANCADO, THRESHOLD_ADVANCED)
-            unlockIfNeeded(GameDataManager.Levels.EXPERIENTE, THRESHOLD_EXPERT)
-
-            if (unlockedNow.isEmpty()) return
-
-            // ✅ Atualiza UI dependente de unlocks na hora (sem sair da Activity)
-            // Se você tiver botões/ícones aqui, atualize eles AGORA.
-            // Exemplo (se existir no layout desta tela):
-            // levelManager.updateButtonStates(binding.btnInter, binding.btnAvanc, binding.btnExp)
-            // ou updateMapUi()
-
-            // ✅ AAA: 1 chip + 1 confetti (sem spam)
-            val labels = unlockedNow.joinToString(", ") { level ->
-                when (canonicalLevelKey(level)) {
-                    GameDataManager.Levels.INTERMEDIARIO -> "INTERMEDIÁRIO"
-                    GameDataManager.Levels.AVANCADO -> "AVANÇADO"
-                    GameDataManager.Levels.EXPERIENTE -> "EXPERIENTE"
-                    else -> "NOVO NÍVEL"
-                }
-            }
-
-            val msg = if (unlockedNow.size == 1) {
-                "🔓 Nível desbloqueado: $labels"
-            } else {
-                "🔓 Níveis desbloqueados: $labels"
-            }
-
-            showFloatingChip(msg, R.drawable.ic_check_circle, true)
-            microCelebrate()
         }
 
+        unlockIfNeeded(GameDataManager.Levels.INTERMEDIARIO, THRESHOLD_INTERMEDIATE)
+        unlockIfNeeded(GameDataManager.Levels.AVANCADO, THRESHOLD_ADVANCED)
+        unlockIfNeeded(GameDataManager.Levels.EXPERIENTE, THRESHOLD_EXPERT)
 
-    private fun showUnlockedInGame(level: String) {
-        val label = when (canonicalLevelKey(level)) {
-            GameDataManager.Levels.INTERMEDIARIO -> "INTERMEDIÁRIO"
-            GameDataManager.Levels.AVANCADO -> "AVANÇADO"
-            GameDataManager.Levels.EXPERIENTE -> "EXPERIENTE"
-            else -> "NOVO NÍVEL"
+        if (unlockedNow.isEmpty()) return
+
+        val labels = unlockedNow.joinToString(", ") { level ->
+            when (canonicalLevelKey(level)) {
+                GameDataManager.Levels.INTERMEDIARIO -> "INTERMEDIÁRIO"
+                GameDataManager.Levels.AVANCADO -> "AVANÇADO"
+                GameDataManager.Levels.EXPERIENTE -> "EXPERIENTE"
+                else -> "NOVO NÍVEL"
+            }
         }
 
-        showFloatingChip("🔓 Nível desbloqueado: $label", R.drawable.ic_check_circle, true)
+        val msg = if (unlockedNow.size == 1) "🔓 Nível desbloqueado: $labels"
+        else "🔓 Níveis desbloqueados: $labels"
+
+        showFloatingChip(msg, R.drawable.ic_check_circle, true)
         microCelebrate()
     }
 
-    /** garante chave estável mesmo com acento/variação */
     private fun canonicalLevelKey(level: String): String {
         val t = level.trim().lowercase()
         return when (t) {
@@ -1295,9 +1374,8 @@ class TestActivity : AppCompatActivity() {
         }
     }
 
-
     // =============================================================================================
-    // GAME OVER
+    // GAME OVER / RESTART / RESULT / SECRET
     // =============================================================================================
 
     private fun showEndOfGameDialog() {
@@ -1367,9 +1445,12 @@ class TestActivity : AppCompatActivity() {
         GameDataManager.currentStreak = 0
         scoreManager.reset()
 
-        // ✅ nova ordem aleatória (continua 100% sem repetir)
         shuffleSeed = newSeed()
-        questions = buildUniqueShuffledQuestions(currentLevelLoaded, shuffleSeed)
+
+        // snapshot do visto antes do restart
+        initialSeenKeys = getSeenSet(currentLevelLoaded).toSet()
+
+        questions = buildPremiumRunQuestions(currentLevelLoaded, shuffleSeed)
         totalQuestions = questions.size
 
         configurarPontuacao()
@@ -1380,10 +1461,6 @@ class TestActivity : AppCompatActivity() {
 
     private fun avgTimeSeconds(): Double =
         if (questionsAnswered > 0) totalTimeAccumulated.toDouble() / questionsAnswered / 1000.0 else 0.0
-
-    // =============================================================================================
-    // MODO SECRETO / RESULT
-    // =============================================================================================
 
     private fun iniciarModoSecreto(secretLevel: String) {
         countDownTimer?.cancel()
@@ -1402,12 +1479,7 @@ class TestActivity : AppCompatActivity() {
             putInt("streak_backup", currentStreak)
             putBoolean("is_backup_available", true)
             putInt("run_score_backup", runScoreLevel)
-
-
-
-            // ✅ salva a seed da ordem das perguntas (volta sem bagunçar)
             putLong(KEY_SEED_BACKUP, shuffleSeed)
-
             apply()
         }
 
@@ -1446,8 +1518,6 @@ class TestActivity : AppCompatActivity() {
             putExtra("MAX_WRONG_ANSWERS", maxWrongAnswers)
             putExtra("TOTAL_QUESTIONS", totalQuestions)
             putExtra("AVERAGE_TIME", avgTimeSeconds())
-
-            // ✅ ADD
             putExtra("LEVEL_KEY", levelKey)
         }
 
@@ -1513,24 +1583,16 @@ class TestActivity : AppCompatActivity() {
     // ADMOB
     // =============================================================================================
 
-    private fun rewardedUnitId(): String =
-        if (BuildConfig.DEBUG) TEST_REWARDED_ID else PROD_REWARDED_ID
-
-    private fun bannerUnitId(): String =
-        if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
+    private fun rewardedUnitId(): String = if (BuildConfig.DEBUG) TEST_REWARDED_ID else PROD_REWARDED_ID
+    private fun bannerUnitId(): String = if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
 
     private fun setupBanner() {
         adView = binding.adView
         adView.visibility = View.INVISIBLE
 
         adView.adListener = object : AdListener() {
-            override fun onAdLoaded() {
-                adView.visibility = View.VISIBLE
-            }
-
-            override fun onAdFailedToLoad(error: LoadAdError) {
-                adView.visibility = View.INVISIBLE
-            }
+            override fun onAdLoaded() { adView.visibility = View.VISIBLE }
+            override fun onAdFailedToLoad(error: LoadAdError) { adView.visibility = View.INVISIBLE }
         }
 
         adView.loadAd(AdRequest.Builder().build())
@@ -1611,8 +1673,7 @@ class TestActivity : AppCompatActivity() {
         }
     }
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).roundToInt()
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
     // =============================================================================================
     // CHIPS / MOEDAS / OVERLAY CURIOSIDADE
@@ -1648,66 +1709,6 @@ class TestActivity : AppCompatActivity() {
                     .setDuration(180)
                     .withEndAction { overlayContainer.removeView(chip) }
                     .start()
-            }
-            .start()
-    }
-
-    private fun animateCoinToCounter(fromView: android.view.View?, amount: Int) {
-        val coin = android.widget.ImageView(this).apply {
-            setImageResource(R.drawable.ic_coin_small)
-            imageTintList = android.content.res.ColorStateList.valueOf(0xFFFFD54F.toInt())
-            layoutParams = android.widget.FrameLayout.LayoutParams(dp(22), dp(22))
-            alpha = 0f
-            scaleX = 0.7f
-            scaleY = 0.7f
-        }
-        overlayContainer.addView(coin)
-
-        fun locInWindow(v: android.view.View): IntArray {
-            val a = IntArray(2)
-            v.getLocationInWindow(a)
-            return a
-        }
-
-        val startXY = if (fromView != null) locInWindow(fromView) else locInWindow(binding.questionCard)
-        val endXY = locInWindow(binding.coinsTextView)
-
-        val startX = startXY[0] + (fromView?.width ?: binding.questionCard.width) / 2f
-        val startY = startXY[1] + (fromView?.height ?: binding.questionCard.height) / 2f
-        val endX = endXY[0] + binding.coinsTextView.width * 0.8f
-        val endY = endXY[1] + binding.coinsTextView.height / 2f
-
-        val overlayXY = locInWindow(overlayContainer)
-        coin.translationX = (startX - overlayXY[0])
-        coin.translationY = (startY - overlayXY[1])
-
-        coin.animate()
-            .alpha(1f)
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(120)
-            .start()
-
-        coin.animate()
-            .translationX(endX - overlayXY[0])
-            .translationY(endY - overlayXY[1])
-            .setDuration(520)
-            .setInterpolator(AccelerateDecelerateInterpolator())
-            .withEndAction {
-                overlayContainer.removeView(coin)
-
-                binding.coinsTextView.animate().cancel()
-                binding.coinsTextView.scaleX = 1f
-                binding.coinsTextView.scaleY = 1f
-                binding.coinsTextView.animate()
-                    .scaleX(1.08f)
-                    .scaleY(1.08f)
-                    .setDuration(120)
-                    .withEndAction {
-                        binding.coinsTextView.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
-                    }.start()
-
-                showFloatingChip("💰 +$amount moedas", android.R.drawable.ic_input_add, true)
             }
             .start()
     }
@@ -1774,9 +1775,7 @@ class TestActivity : AppCompatActivity() {
             overlay.animate()
                 .alpha(1f)
                 .setDuration(160)
-                .withEndAction {
-                    overlay.postDelayed({ finish() }, durationMs)
-                }
+                .withEndAction { overlay.postDelayed({ finish() }, durationMs) }
                 .start()
         }
     }

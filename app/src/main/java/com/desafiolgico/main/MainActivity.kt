@@ -343,15 +343,24 @@ class MainActivity : AppCompatActivity() {
     // Click handlers
     // =============================================================================================
 
+
     private fun handleButtonClick(btn: MaterialButton, level: String) {
         playClickSound()
         animateTap(btn)
+
+        val target = if (level == GameDataManager.Levels.EXPERIENTE) {
+            ExpertChallengeActivity::class.java
+        } else {
+            TestActivity::class.java
+        }
+
         startForResult.launch(
-            Intent(this, TestActivity::class.java).apply {
+            Intent(this, target).apply {
                 putExtra("level", level)
             }
         )
     }
+
 
     private fun onLevelLocked(level: String) {
         // opcional: analytics/feedback

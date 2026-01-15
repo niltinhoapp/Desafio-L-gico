@@ -16,6 +16,9 @@
         android:layout_height="wrap_content"
         android:padding="20dp">
 
+
+
+
         <!-- Título -->
         <TextView
             android:id="@+id/tvSettingsTitle"
@@ -505,6 +508,32 @@
                         android:contentDescription="@string/open" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBackSettings"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="14dp"
+                android:text="Voltar"
+                android:textAllCaps="false"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:fontFamily="@font/roboto_mediu"
+                android:textColor="#FFFFFF"
+
+                app:icon="@drawable/ic_chevron_left"
+                app:iconTint="#CCFFFFFF"
+                app:iconGravity="textStart"
+                app:iconPadding="10dp"
+
+                android:background="@drawable/bg_back_premium_ripple"
+                app:backgroundTint="@null"
+                app:rippleColor="#22FFFFFF"
+                app:strokeWidth="0dp"
+                android:elevation="0dp"
+                app:cornerRadius="18dp"
+                />
+
 
             <!-- Espaço final -->
             <View

@@ -135,17 +135,7 @@ class OnboardingActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnSkip.setOnClickListener {
-            it.animate()
-                .scaleX(0.9f)
-                .scaleY(0.9f)
-                .setDuration(100)
-                .withEndAction {
-                    it.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
-                    Toast.makeText(this, "Tutorial pulado", Toast.LENGTH_SHORT).show()
-                    savePreferencesAndFinish()
-                }.start()
-        }
+
 
         // Atualiza botão e barra de progresso conforme página
         binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {

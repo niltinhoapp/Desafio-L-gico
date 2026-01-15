@@ -119,6 +119,69 @@ class ScoreManager(private val context: Context) {
             "✅ ACERTO: streak=$newStreak, goldBonus=$goldBonus, total=$totalPointsEarned"
         )
     }
+    /**
+     * ✅ Soma pontos SEM mexer na streak.
+     * Use quando a streak já foi incrementada fora (ex: revisão / anti-farm).
+     *
+     * @param remainingTimeInMillis tempo restante
+     * @param totalTimeInMillis tempo total da questão
+     * @param streakNow streak atual (já incrementada)
+     */
+    fun addScoreNoStreak(remainingTimeInMillis: Long, totalTimeInMillis: Long, streakNow: Int) {
+        val streak = streakNow.coerceAtLeast(0)
+
+        val streakBonus = streak * STREAK_BONUS_INCREMENT
+        val timeBonus = calculateTimeBonus(remainingTimeInMillis, totalTimeInMillis)
+        val goldBonus = calculateGoldBonus(streak)
+
+        val totalPointsEarned = BASE_POINTS_PER_CORRECT + streakBonus + timeBonus + goldBonus
+
+        val updatedSessionScore = (_overallScoreLive.value ?: 0) + totalPointsEarned
+        _overallScoreLive.value = updatedSessionScore.coerceAtLeast(0)
+        overallScore = updatedSessionScore
+
+        // ✅ Atualiza recorde de streak, mas SEM alterar streak atual
+        val currentHighest = _highestStreakLive.value ?: 0
+        if (streak > currentHighest) {
+            _highestStreakLive.value = streak
+            GameDataManager.updateHighestStreakIfNeeded(context, streak)
+            onNewRecord?.invoke(streak)
+        }
+
+        // ✅ total global (para mapa / total geral) — só quando pontua de verdade
+        GameDataManager.addScoreToOverallTotal(context, totalPointsEarned.coerceAtLeast(0))
+
+        // ✅ recompensa por marco
+        if (updatedSessionScore / 500 > lastMilestoneCheck / 500) {
+            val numMilestones = updatedSessionScore / 500 - lastMilestoneCheck / 500
+            val rewardCoins = numMilestones * COINS_PER_MILESTONE
+            GameDataManager.addCoins(context, rewardCoins)
+            lastMilestoneCheck = updatedSessionScore
+        }
+
+        Log.d(
+            "ScoreManager",
+            "✅ addScoreNoStreak: streak=$streak, goldBonus=$goldBonus, total=$totalPointsEarned"
+        )
+    }
+
+
+
+    fun onCorrectAnswer() {
+        val old = _currentStreakLive.value ?: 0
+        val newStreak = old + 1
+        _currentStreakLive.value = newStreak
+
+        val currentHighest = _highestStreakLive.value ?: 0
+        if (newStreak > currentHighest) {
+            _highestStreakLive.value = newStreak
+            GameDataManager.updateHighestStreakIfNeeded(context, newStreak)
+            onNewRecord?.invoke(newStreak)
+        }
+
+        Log.d("ScoreManager", "✅ REVIEW HIT: streak=$newStreak (+0 pts)")
+    }
+
 
     private fun calculateGoldBonus(currentStreak: Int): Int {
         if (currentStreak < 7) {

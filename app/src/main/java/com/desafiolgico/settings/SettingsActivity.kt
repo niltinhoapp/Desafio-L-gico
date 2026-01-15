@@ -22,6 +22,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var rowTutorial: View
     private lateinit var rowSwitchAccount: View
     private lateinit var rowDeleteAccount: View
+    private lateinit var btnBackSettings: View
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
@@ -38,6 +39,12 @@ class SettingsActivity : AppCompatActivity() {
         rowTutorial = findViewById(R.id.rowTutorial)
         rowSwitchAccount = findViewById(R.id.rowSwitchAccount)
         rowDeleteAccount = findViewById(R.id.rowDeleteAccount)
+        btnBackSettings = findViewById(R.id.btnBackSettings)
+
+        findViewById<View>(R.id.btnBackSettings).setOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
+
 
         // ⭐ Loja Premium
         rowPremium.setOnClickListener {
