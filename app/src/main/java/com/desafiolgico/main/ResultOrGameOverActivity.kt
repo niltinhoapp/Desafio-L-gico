@@ -193,7 +193,8 @@ class ResultOrGameOverActivity : AppCompatActivity() {
                 inspirationText.clearAnimation()
                 inspirationBox.visibility = View.GONE
             }, 8000L)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("ResultOrGameOver", "Falha ao exibir celebração", e)
         }
     }
 

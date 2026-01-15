@@ -5,15 +5,17 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="DesafioLogicoPrefs.xml" />
+        <exclude domain="sharedpref" path="AppPrefs.xml" />
+        <exclude domain="sharedpref" path="local_records.xml" />
+        <exclude domain="sharedpref" path="local_records_daily.xml" />
+        <exclude domain="sharedpref" path="enigma_portal_gate.xml" />
+        <exclude domain="sharedpref" path="unlock_notifs.xml" />
     </cloud-backup>
-    <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
-    -->
+    <exclude domain="sharedpref" path="DesafioLogicoPrefs.xml" />
+    <exclude domain="sharedpref" path="AppPrefs.xml" />
+    <exclude domain="sharedpref" path="local_records.xml" />
+    <exclude domain="sharedpref" path="local_records_daily.xml" />
+    <exclude domain="sharedpref" path="enigma_portal_gate.xml" />
+    <exclude domain="sharedpref" path="unlock_notifs.xml" />
 </data-extraction-rules>
