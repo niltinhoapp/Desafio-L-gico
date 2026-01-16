@@ -168,6 +168,8 @@
 
     <string name="stats_text">🕒 Tempo médio por pergunta: %1$.2f segundos\n📊 Desempenho: %2$.2f%%</string>
     <string name="score_text">Você conquistou %1$d pontos em %2$d perguntas.</string>
+    <string name="interstitial_ad_unit_id" translatable="false">unused</string>
+
 
     <string name="dialog_title_default">Parabéns!</string>
     <string name="dialog_message_default">Você acertou 10 questões! Continue assim!</string>

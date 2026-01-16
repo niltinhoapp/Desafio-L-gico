@@ -340,8 +340,12 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         releaseMediaPlayer()
     }
 
+
     override fun onDestroy() {
-        super.onDestroy()
+        VictoryFx.cancel(binding.konfettiView)
+        VictoryFx.release()
         releaseMediaPlayer()
+        super.onDestroy()
     }
+
 }

@@ -32,36 +32,33 @@ import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.core.models.Shape
 import nl.dionsegijn.konfetti.core.models.Size
 import java.util.concurrent.TimeUnit
-import kotlin.math.min
 
 class RewardsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRewardsBinding
     private var rewardedAd: RewardedAd? = null
 
-    // Estado premium
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isBusy = false
     private var loadAttempts = 0
+
+    // ✅ Guardar referências para limpar no onDestroy
     private var loadingTimeoutRunnable: Runnable? = null
+    private var retryLoadRunnable: Runnable? = null
+    private var cooldownTickRunnable: Runnable? = null
 
     companion object {
         private const val TAG = "RewardsActivity"
         private const val GAME_REWARD_AMOUNT = 50
-
         private const val COOLDOWN_SECONDS = 3
         private const val LOAD_TIMEOUT_MS = 12_000L
 
-        // Test oficial do Google (usar somente em DEBUG)
         private const val TEST_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917"
-
-        // PROD (seu ID real)
         private const val PROD_REWARDED_ID = "ca-app-pub-4958622518589705/3051012274"
     }
 
-    private fun rewardedUnitId(): String {
-        return if (BuildConfig.DEBUG) TEST_REWARDED_ID else PROD_REWARDED_ID
-    }
+    private fun rewardedUnitId(): String =
+        if (BuildConfig.DEBUG) TEST_REWARDED_ID else PROD_REWARDED_ID
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,20 +82,20 @@ class RewardsActivity : AppCompatActivity() {
         loadRewardedAd()
     }
 
-    // -----------------------------
-    // LOAD / RETRY (premium)
-    // -----------------------------
     private fun loadRewardedAd() {
-        if (isFinishing) return
+        if (isFinishing || isDestroyed) return
+
+        // ✅ cancela timers antigos antes de iniciar outro load
+        cancelRetry()
+        cancelCooldown()
+        cancelTimeout()
 
         isBusy = true
         setButtonStateLoading("Carregando anúncio...")
 
-        // Timeout de segurança (evita “travado”)
-        loadingTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
         loadingTimeoutRunnable = Runnable {
-            if (rewardedAd == null) {
-                Log.w(TAG, "Timeout carregando anúncio. Tentando recarregar...")
+            if (rewardedAd == null && !(isFinishing || isDestroyed)) {
+                Log.w(TAG, "Timeout carregando anúncio. Liberando UI para retry.")
                 isBusy = false
                 setButtonStateRetry("Tentar novamente")
             }
@@ -114,7 +111,7 @@ class RewardsActivity : AppCompatActivity() {
                     rewardedAd = ad
                     loadAttempts = 0
                     isBusy = false
-                    loadingTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                    cancelTimeout()
 
                     setupAdCallbacks()
                     setButtonStateReady("🎁 Assistir e ganhar $GAME_REWARD_AMOUNT moedas")
@@ -122,7 +119,7 @@ class RewardsActivity : AppCompatActivity() {
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     rewardedAd = null
-                    loadingTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+                    cancelTimeout()
 
                     Log.w(TAG, "Falha no load: ${error.message}")
                     isBusy = false
@@ -135,7 +132,6 @@ class RewardsActivity : AppCompatActivity() {
     private fun scheduleRetryLoad() {
         loadAttempts++
 
-        // backoff: 1.5s, 3s, 6s (cap)
         val delay = when (loadAttempts) {
             1 -> 1500L
             2 -> 3000L
@@ -144,14 +140,14 @@ class RewardsActivity : AppCompatActivity() {
 
         setButtonStateLoading("Tentando novamente em ${delay / 1000}s...")
 
-        mainHandler.postDelayed({
-            if (!isFinishing) loadRewardedAd()
-        }, delay)
+        retryLoadRunnable = Runnable {
+            if (!(isFinishing || isDestroyed)) {
+                loadRewardedAd()
+            }
+        }
+        mainHandler.postDelayed(retryLoadRunnable!!, delay)
     }
 
-    // -----------------------------
-    // SHOW / CALLBACKS
-    // -----------------------------
     private fun setupAdCallbacks() {
         rewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
 
@@ -178,29 +174,33 @@ class RewardsActivity : AppCompatActivity() {
             return
         }
 
+        // ✅ enquanto exibe, cancelamos timers pendentes pra não rodar “por trás”
+        cancelRetry()
+        cancelCooldown()
+        cancelTimeout()
+
         isBusy = true
         setButtonStateLoading("Abrindo anúncio...")
 
         ad.show(this) {
-            // ✅ recompensa fixa e consistente
             CoinManager.addCoins(this, GAME_REWARD_AMOUNT, reason = "AdReward")
             atualizarSaldo()
             animateCoinUpdate()
             showCelebrationEffect()
-
             Toast.makeText(this, "💰 Você ganhou $GAME_REWARD_AMOUNT moedas!", Toast.LENGTH_LONG).show()
         }
     }
 
-    // -----------------------------
-    // COOLDOWN (3s) + reload
-    // -----------------------------
     private fun startCooldownThenLoad() {
+        cancelCooldown()
+
         var seconds = COOLDOWN_SECONDS
         setButtonStateLoading("Aguarde $seconds s...")
 
-        val tick = object : Runnable {
+        cooldownTickRunnable = object : Runnable {
             override fun run() {
+                if (isFinishing || isDestroyed) return
+
                 seconds--
                 if (seconds <= 0) {
                     setButtonStateLoading("Carregando anúncio...")
@@ -211,12 +211,10 @@ class RewardsActivity : AppCompatActivity() {
                 }
             }
         }
-        mainHandler.postDelayed(tick, 1000L)
+
+        mainHandler.postDelayed(cooldownTickRunnable!!, 1000L)
     }
 
-    // -----------------------------
-    // UI states
-    // -----------------------------
     private fun setButtonStateLoading(text: String) {
         binding.earnCoinsButton.isEnabled = false
         binding.earnCoinsButton.text = text
@@ -233,16 +231,12 @@ class RewardsActivity : AppCompatActivity() {
         binding.earnCoinsButton.isEnabled = true
         binding.earnCoinsButton.text = text
         binding.earnCoinsButton.alpha = 1f
-        // ao clicar, tenta carregar na hora
         binding.earnCoinsButton.setOnClickListener {
             if (isBusy) return@setOnClickListener
             loadRewardedAd()
         }
     }
 
-    // -----------------------------
-    // FUN (premium)
-    // -----------------------------
     private fun showCelebrationEffect() {
         try {
             val konfettiView = binding.konfettiView
@@ -310,7 +304,29 @@ class RewardsActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        loadingTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        // ✅ limpa tudo que pode segurar referência da Activity
+        cancelTimeout()
+        cancelRetry()
+        cancelCooldown()
+
+        // (opcional) se você quiser zerar tudo de uma vez:
+        // mainHandler.removeCallbacksAndMessages(null)
+
         super.onDestroy()
+    }
+
+    private fun cancelTimeout() {
+        loadingTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        loadingTimeoutRunnable = null
+    }
+
+    private fun cancelRetry() {
+        retryLoadRunnable?.let { mainHandler.removeCallbacks(it) }
+        retryLoadRunnable = null
+    }
+
+    private fun cancelCooldown() {
+        cooldownTickRunnable?.let { mainHandler.removeCallbacks(it) }
+        cooldownTickRunnable = null
     }
 }

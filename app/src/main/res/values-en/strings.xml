@@ -11,6 +11,10 @@
 
     <string name="daily_done_label">Completed today ✅</string>
     <string name="daily_available_label">Available today 🎯</string>
+    <string name="selected">Selected</string>
+
+    <string name="subtitle_text">Select your level and challenge your mind</string>
+
 
 
     <string name="continuar">Continue</string>

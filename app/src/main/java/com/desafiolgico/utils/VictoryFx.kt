@@ -29,11 +29,19 @@ object VictoryFx {
     // Mantém 1 player ativo (evita tocar 2 sons por cima e evita leak)
     private var currentMp: MediaPlayer? = null
 
+    // ✅ Tag key para guardar o Runnable de "hide" no KonfettiView
+    private const val TAG_HIDE_RUNNABLE = 0x6F11C0DE // qualquer int único
+
+    /**
+     * Toca confetti + som e esconde automaticamente após o tempo do preset.
+     * ✅ Seguro contra leak: cancela o Runnable pendente antes de postar outro.
+     */
     fun play(context: Context, konfetti: KonfettiView) {
         val appCtx = context.applicationContext
 
-        // garante visível e cancela qualquer animação anterior (sem crash)
+        // garante visível e cancela qualquer animação/runnable anterior (sem crash/leak)
         konfetti.visibility = View.VISIBLE
+        cancel(konfetti)
         stopKonfettiSafe(konfetti)
 
         val preset = when (GameDataManager.getSelectedVfx(appCtx)) {
@@ -85,11 +93,26 @@ object VictoryFx {
         konfetti.start(listOf(party))
         playSoundSafe(appCtx, preset.soundRes)
 
-        // some depois do efeito (sem “ficar sujo” na UI)
-        konfetti.postDelayed({
+        // ✅ some depois do efeito (com Runnable rastreável/cancelável)
+        val hideRunnable = Runnable {
             stopKonfettiSafe(konfetti)
             konfetti.visibility = View.GONE
-        }, preset.durationMs + 250L)
+            konfetti.setTag(TAG_HIDE_RUNNABLE, null)
+        }
+
+        konfetti.setTag(TAG_HIDE_RUNNABLE, hideRunnable)
+        konfetti.postDelayed(hideRunnable, preset.durationMs + 250L)
+    }
+
+    /**
+     * ✅ Cancela o Runnable pendente do Konfetti (chame no onDestroy da Activity que usa).
+     */
+    fun cancel(konfetti: KonfettiView) {
+        val r = konfetti.getTag(TAG_HIDE_RUNNABLE) as? Runnable
+        if (r != null) {
+            konfetti.removeCallbacks(r)
+            konfetti.setTag(TAG_HIDE_RUNNABLE, null)
+        }
     }
 
     private fun stopKonfettiSafe(konfetti: KonfettiView) {
