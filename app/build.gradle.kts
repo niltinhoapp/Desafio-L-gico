@@ -1,4 +1,5 @@
 import org.gradle.kotlin.dsl.libs
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -12,6 +13,17 @@ plugins {
     id("com.google.firebase.crashlytics")
 }
 
+
+
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun propOrEnv(name: String): String =
+    System.getenv(name)
+        ?: keystoreProps.getProperty(name)
+        ?: throw IllegalArgumentException("$name não definido")
 android {
     namespace = "com.desafiolgico"
     compileSdk = 35
@@ -29,13 +41,12 @@ android {
     }
     signingConfigs {
         create("release") {
-            storeFile = file("keystore/release.jks") // ajuste o caminho
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            storeFile = file("../keystore/desafio_lgico_25.jks")
+            storePassword = propOrEnv("KEYSTORE_PASSWORD")
+            keyAlias = propOrEnv("KEY_ALIAS")
+            keyPassword = propOrEnv("KEY_PASSWORD")
         }
     }
-
 
     buildTypes {
         debug {
