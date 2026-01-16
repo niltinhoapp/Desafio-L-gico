@@ -36,12 +36,16 @@ class AvatarSelectionActivity : AppCompatActivity() {
         setupRecyclerView()
         setupConfirmButton()
         updateCoinBalance()
-        loadCurrentAvatar()
-        setupUseEmailPhotoButton()
-
-
+        loadCurrentPreview()          // ✅ Foto > Avatar
+        setupUseEmailPhotoButton()    // ✅ limpa avatar e volta pra foto
     }
 
+    /**
+     * Botão: usar foto do Google (se existir).
+     * Como a regra é Foto > Avatar, aqui a ideia é:
+     * - limpar o avatar do perfil
+     * - mostrar preview da foto
+     */
     private fun setupUseEmailPhotoButton() {
         binding.btnUseEmailPhoto.setOnClickListener {
             val user = UserManager.carregarDadosUsuario(this)
@@ -51,13 +55,20 @@ class AvatarSelectionActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // ✅ volta a priorizar foto do e-mail
-            GameDataManager.setPreferAvatar(this, false)
+            // ✅ limpa avatar do perfil (pra não ter “override” visual)
+            UserManager.salvarDadosUsuario(
+                context = this,
+                nome = user.name,
+                email = user.email,
+                photoUrl = user.photoUrl,
+                avatarId = null
+            )
 
-            // opcional: limpa avatar salvo (deixa “limpo”)
-            GameDataManager.clearUserAvatar(this)
+            // Mantém GameDataManager em sincronia (ele só salva avatar se existir)
+            GameDataManager.saveUserData(this, user.name, user.photoUrl, null)
+            GameDataManager.clearUserAvatar(this) // opcional, mas deixa tudo coerente
 
-            // atualiza preview
+            // preview = foto
             Glide.with(this)
                 .load(user.photoUrl)
                 .circleCrop()
@@ -65,13 +76,12 @@ class AvatarSelectionActivity : AppCompatActivity() {
 
             selectedAvatarResId = null
 
-            Toast.makeText(this, "Foto do e-mail ativada ✅", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Foto do Google ativada ✅", Toast.LENGTH_SHORT).show()
         }
     }
 
-
     /**
-     * Exibe a lista de avatares disponíveis em uma grade.
+     * Exibe a lista de avatares disponíveis em grade.
      */
     private fun setupRecyclerView() {
         val recyclerView = binding.recyclerAvatars
@@ -97,29 +107,22 @@ class AvatarSelectionActivity : AppCompatActivity() {
         recyclerView.adapter = avatarAdapter
     }
 
-
-
     /**
      * Botão "Confirmar Avatar":
      * - compra se precisar
-     * - salva o avatar escolhido
+     * - salva avatar no perfil (UserManager)
+     * - sincroniza com GameDataManager
+     *
+     * ⚠️ OBS: Mesmo salvando avatar, a regra geral do app é:
+     * Foto > Avatar. Então se o usuário tem foto, ela continuará sendo usada no app.
      */
     private fun setupConfirmButton() {
-
-
-
         binding.btnConfirm.setOnClickListener {
             val avatarId = selectedAvatarResId
             if (avatarId == null) {
-                Toast.makeText(
-                    this,
-                    getString(R.string.select_avatar_first),
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this, getString(R.string.select_avatar_first), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            GameDataManager.setPreferAvatar(this, true)
-
 
             val cost = CoinManager.AVATAR_COST
             val coins = CoinManager.getCoins(this)
@@ -127,7 +130,6 @@ class AvatarSelectionActivity : AppCompatActivity() {
 
             // Se ainda não está desbloqueado, tenta comprar
             if (!alreadyUnlocked) {
-
                 if (coins < cost) {
                     Toast.makeText(
                         this,
@@ -147,58 +149,34 @@ class AvatarSelectionActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                Toast.makeText(
-                    this,
-                    getString(R.string.avatar_unlocked_coins, cost),
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this, getString(R.string.avatar_unlocked_coins, cost), Toast.LENGTH_SHORT).show()
             }
 
-            // Agora o avatar já está desbloqueado → salva como atual
-            // Atualiza perfil do usuário com o novo avatar
+            // Salva avatar no perfil
             val user = UserManager.carregarDadosUsuario(this)
             UserManager.salvarDadosUsuario(
                 context = this,
                 nome = user.name,
-                email = null,
+                email = user.email,
                 photoUrl = user.photoUrl,
                 avatarId = avatarId
             )
 
-// Salva avatar também no SharedPreferences usado pelo perfil
-
-
-// Mantém em sincronia com o GameDataManager
+            // Sincronia com GameDataManager (ele salva avatarId se não for nulo)
             GameDataManager.saveUserData(this, user.name, user.photoUrl, avatarId)
 
-            // Mantém em sincronia com o GameDataManager
-            GameDataManager.saveUserData(this, user.name, user.photoUrl, avatarId)
-
-// ✅ usuário escolheu avatar -> preferir avatar
-            GameDataManager.setPreferAvatar(this, true)
-
-// 🔹 Atualiza saldo visualmente e anima
             updateCoinBalance()
-
             animateCoinBalance()
 
-            Toast.makeText(
-                this,
-                getString(R.string.avatar_atualizado),
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(this, getString(R.string.avatar_atualizado), Toast.LENGTH_SHORT).show()
 
             setResult(RESULT_OK, Intent().apply {
                 putExtra("SELECTED_AVATAR", avatarId)
             })
-
             finish()
         }
     }
 
-    /**
-     * Atualiza a label de moedas (já usando string formatada).
-     */
     private fun updateCoinBalance() {
         val coins = CoinManager.getCoins(this)
         binding.coinBalanceText.text = getString(R.string.moedas_format, coins)
@@ -219,33 +197,25 @@ class AvatarSelectionActivity : AppCompatActivity() {
     }
 
     /**
-     * Carrega o avatar atual do usuário e mostra no preview.
+     * Preview seguindo a regra do app:
+     * ✅ Foto > Avatar > fallback avatar1
      */
-    private fun loadCurrentAvatar() {
-        val currentUser = UserManager.carregarDadosUsuario(this)
-        val preferAvatar = GameDataManager.isPreferAvatar(this)
+    private fun loadCurrentPreview() {
+        val user = UserManager.carregarDadosUsuario(this)
 
-        val hasPhoto = !currentUser.photoUrl.isNullOrBlank()
-        val hasAvatar = (currentUser.avatarId != null && currentUser.avatarId != 0)
-        val avatarUnlocked = hasAvatar && CoinManager.isAvatarUnlocked(this, currentUser.avatarId!!)
+        val hasPhoto = !user.photoUrl.isNullOrBlank()
+        val hasAvatar = user.avatarId > 0
+        val avatarUnlocked = hasAvatar && CoinManager.isAvatarUnlocked(this, user.avatarId)
 
         when {
-            // ✅ se preferiu avatar e tem um válido
-            preferAvatar && avatarUnlocked -> {
-                Glide.with(this).load(currentUser.avatarId).circleCrop().into(binding.previewImage)
-                selectedAvatarResId = currentUser.avatarId
-            }
-
-            // ✅ senão, foto do Google se existir
             hasPhoto -> {
-                Glide.with(this).load(currentUser.photoUrl).circleCrop().into(binding.previewImage)
+                Glide.with(this).load(user.photoUrl).circleCrop().into(binding.previewImage)
                 selectedAvatarResId = null
             }
 
-            // ✅ fallback: avatar desbloqueado
             avatarUnlocked -> {
-                Glide.with(this).load(currentUser.avatarId).circleCrop().into(binding.previewImage)
-                selectedAvatarResId = currentUser.avatarId
+                Glide.with(this).load(user.avatarId).circleCrop().into(binding.previewImage)
+                selectedAvatarResId = user.avatarId
             }
 
             else -> {
@@ -254,5 +224,4 @@ class AvatarSelectionActivity : AppCompatActivity() {
             }
         }
     }
-
 }

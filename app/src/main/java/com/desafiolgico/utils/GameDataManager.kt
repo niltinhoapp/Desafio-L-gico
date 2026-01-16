@@ -15,17 +15,13 @@ object GameDataManager {
     private const val KEY_MODO_SECRETO_ATIVO = "modo_secreto_ativo"
     private const val KEY_ULTIMO_NIVEL_NORMAL = "ultimo_nivel_normal"
 
-
     private const val KEY_CORRECT_BY_LEVEL = "correct_by_level_"
-
-
     private const val KEY_PREFER_AVATAR = "prefer_avatar_over_photo"
-
     private const val KEY_TOTAL_CORRECT = "total_correct"
 
     // =====================================================
-// 📅 Daily Challenge (por usuário)
-// =====================================================
+    // 📅 Daily Challenge (por usuário)
+    // =====================================================
     private const val KEY_DAILY_DATE = "daily_date"
     private const val KEY_DAILY_DONE = "daily_done"
     private const val KEY_DAILY_LAST_DONE_DATE = "daily_last_done_date"
@@ -44,7 +40,6 @@ object GameDataManager {
     private const val KEY_DAILY_XP_EARNED = "daily_xp_earned"
     private const val KEY_DAILY_RESULT_DATE = "daily_result_date"
 
-
     // ---- Isoladas por usuário (via getUserKey) ----
     private const val KEY_USER_NAME = "user_name"
     private const val KEY_USER_PHOTO = "user_photo"
@@ -59,6 +54,9 @@ object GameDataManager {
 
     private const val KEY_UNLOCKED_AVATARS = "unlocked_avatars"
 
+    // MIGRAÇÃO -> seguro
+    private const val KEY_SECURE_MIGRATION_DONE = "secure_migration_done_v1"
+
     private var prefs: SharedPreferences? = null
     private var contextGlobal: Context? = null
 
@@ -69,22 +67,33 @@ object GameDataManager {
     var currentUserId: String = "guest"
         private set
 
+    // =====================================================================
+    // PREFS
+    // =====================================================================
+
+    /** Prefs normal (somente sessão / flags globais) */
+    private fun getPrefs(context: Context): SharedPreferences =
+        prefs ?: context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /** Prefs seguro (perfil + progresso + tudo por usuário) */
+    private fun getSecurePrefs(context: Context): SharedPreferences =
+        SecurePrefs.get(context.applicationContext)
+
     fun init(context: Context) {
         if (prefs == null) {
-            prefs =
-                context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             contextGlobal = context.applicationContext
 
             // restaura usuário ativo (se existir)
             val saved = prefs?.getString(KEY_ACTIVE_USER_ID, null)
             currentUserId = saved?.takeIf { it.isNotBlank() } ?: "guest"
 
+            // ✅ migra dados antigos p/ seguro (1x)
+            migrateUserDataToSecureIfNeeded(context.applicationContext)
+
             Log.d("GameDataManager", "✅ Inicializado. activeUser=$currentUserId")
         }
     }
-
-    private fun getPrefs(context: Context): SharedPreferences =
-        prefs ?: context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private fun sanitizeUserId(raw: String?): String {
         val id = raw?.trim().takeUnless { it.isNullOrBlank() } ?: "guest"
@@ -100,7 +109,13 @@ object GameDataManager {
     fun setActiveUserId(context: Context, uid: String?) {
         val finalId = uid?.trim().takeUnless { it.isNullOrBlank() } ?: "guest"
         currentUserId = finalId
+
+        // salva somente a sessão global
         getPrefs(context).edit().putString(KEY_ACTIVE_USER_ID, finalId).apply()
+
+        // ✅ garante migração também ao trocar de usuário
+        migrateUserDataToSecureIfNeeded(context.applicationContext)
+
         Log.d("GameDataManager", "👤 activeUserId = $currentUserId")
     }
 
@@ -109,7 +124,7 @@ object GameDataManager {
     var totalErrors: Int = 0
 
     // =====================================================
-    // ⚙️ Flags de Sessão
+    // ⚙️ Flags de Sessão (mantém no prefs normal)
     // =====================================================
     var ultimoNivelNormal: String?
         get() = prefs?.getString(KEY_ULTIMO_NIVEL_NORMAL, null)
@@ -135,46 +150,43 @@ object GameDataManager {
     }
 
     // =====================================================
-    // 👤 Dados do Usuário (por UID)
+    // 👤 Dados do Usuário (por UID) - AGORA NO SECURE PREFS
     // =====================================================
     fun saveUserData(context: Context, username: String?, photoUrl: String?, avatarId: Int?) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
 
-        p.edit().apply {
-            // username por usuário (não global)
+        sp.edit().apply {
+            // username por usuário (seguro)
             putString(getUserKey(KEY_USER_NAME), username)
 
-            // foto: salva se vier
+            // foto (seguro)
             if (!photoUrl.isNullOrBlank()) {
                 putString(getUserKey(KEY_USER_PHOTO), photoUrl)
             }
 
-            // avatar: opcional (0/null remove)
             // avatar: só salva se o usuário PREFERE avatar
             val preferAvatar = isPreferAvatar(context)
-
             if (preferAvatar && avatarId != null && avatarId > 0) {
                 putInt(getUserKey(KEY_USER_AVATAR), avatarId)
             } else {
                 remove(getUserKey(KEY_USER_AVATAR))
             }
 
-
             apply()
         }
 
-        Log.d("GameDataManager", "💾 saveUserData OK (uid=$currentUserId)")
+        Log.d("GameDataManager", "💾 saveUserData OK (uid=$currentUserId) [SECURE]")
     }
 
     fun loadUserData(context: Context): Triple<String?, String?, Int?> {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
 
-        val username = p.getString(getUserKey(KEY_USER_NAME), null)
-        val photoUrl = p.getString(getUserKey(KEY_USER_PHOTO), null)
+        val username = sp.getString(getUserKey(KEY_USER_NAME), null)
+        val photoUrl = sp.getString(getUserKey(KEY_USER_PHOTO), null)
 
         val preferAvatar = isPreferAvatar(context)
         val avatarId = if (preferAvatar) {
-            p.getInt(getUserKey(KEY_USER_AVATAR), 0).takeIf { it > 0 }
+            sp.getInt(getUserKey(KEY_USER_AVATAR), 0).takeIf { it > 0 }
         } else null
 
         return Triple(username, photoUrl, avatarId)
@@ -182,96 +194,98 @@ object GameDataManager {
 
     /** Remove avatar escolhido (volta a usar a foto do Google) */
     fun clearUserAvatar(context: Context) {
-        getPrefs(context).edit().remove(getUserKey(KEY_USER_AVATAR)).apply()
+        getSecurePrefs(context).edit().remove(getUserKey(KEY_USER_AVATAR)).apply()
     }
 
     // =====================================================
-    // 🔓 Níveis desbloqueáveis
+    // 🔓 Níveis desbloqueáveis (SECURE)
     // =====================================================
     fun unlockLevel(context: Context, level: String) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_UNLOCKED_LEVELS)
-        val set = (p.getStringSet(key, mutableSetOf()) ?: mutableSetOf()).toMutableSet()
+        val set = (sp.getStringSet(key, mutableSetOf()) ?: mutableSetOf()).toMutableSet()
         if (set.add(level)) {
-            p.edit().putStringSet(key, set).apply()
-            Log.d("GameDataManager", "🔓 Nível desbloqueado: $level (uid=$currentUserId)")
+            sp.edit().putStringSet(key, set).apply()
+            Log.d("GameDataManager", "🔓 Nível desbloqueado: $level (uid=$currentUserId) [SECURE]")
         }
     }
 
     fun isLevelUnlocked(context: Context, level: String): Boolean {
         if (level == Levels.INICIANTE) return true
         val key = getUserKey(KEY_UNLOCKED_LEVELS)
-        val set = getPrefs(context).getStringSet(key, setOf(Levels.INICIANTE))
+        val set = getSecurePrefs(context).getStringSet(key, setOf(Levels.INICIANTE))
         return set?.contains(level) == true
     }
 
     fun getUnlockedLevels(context: Context): Set<String> {
         val key = getUserKey(KEY_UNLOCKED_LEVELS)
-        return getPrefs(context).getStringSet(key, setOf(Levels.INICIANTE))
+        return getSecurePrefs(context).getStringSet(key, setOf(Levels.INICIANTE))
             ?: setOf(Levels.INICIANTE)
     }
 
     // =====================================================
-    // 🏆 Recorde (Highest Streak)
+    // 🏆 Recorde (Highest Streak) (SECURE)
     // =====================================================
     fun getHighestStreak(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_HIGHEST_STREAK), 0)
+        getSecurePrefs(context).getInt(getUserKey(KEY_HIGHEST_STREAK), 0)
 
     fun updateHighestStreakIfNeeded(context: Context, newStreak: Int) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_HIGHEST_STREAK)
-        val current = p.getInt(key, 0)
-        if (newStreak > current) p.edit().putInt(key, newStreak).apply()
+        val current = sp.getInt(key, 0)
+        if (newStreak > current) sp.edit().putInt(key, newStreak).apply()
     }
 
     // =====================================================
-    // 💰 Moedas e XP
+    // 💰 Moedas e XP (SECURE)
     // =====================================================
     fun addCoins(context: Context, amount: Int) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_COINS)
-        val total = p.getInt(key, 0) + amount
-        p.edit().putInt(key, total.coerceAtLeast(0)).apply()
+        val total = sp.getInt(key, 0) + amount
+        sp.edit().putInt(key, total.coerceAtLeast(0)).apply()
     }
 
     fun getCoins(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_COINS), 0)
+        getSecurePrefs(context).getInt(getUserKey(KEY_COINS), 0)
 
     fun addXP(context: Context, amount: Int) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_XP)
-        val total = p.getInt(key, 0) + amount
-        p.edit().putInt(key, total.coerceAtLeast(0)).apply()
+        val total = sp.getInt(key, 0) + amount
+        sp.edit().putInt(key, total.coerceAtLeast(0)).apply()
     }
 
     fun getXP(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_XP), 0)
+        getSecurePrefs(context).getInt(getUserKey(KEY_XP), 0)
 
     // =====================================================
-    // 📊 Pontuação total
+    // 📊 Pontuação total (SECURE)
     // =====================================================
     fun addScoreToOverallTotal(context: Context, points: Int) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_TOTAL_SCORE)
-        val total = p.getInt(key, 0) + points
-
-        p.edit().putInt(key, total.coerceAtLeast(0)).apply()
+        val total = sp.getInt(key, 0) + points
+        sp.edit().putInt(key, total.coerceAtLeast(0)).apply()
     }
 
+    fun getOverallTotalScore(context: Context): Int =
+        getSecurePrefs(context).getInt(getUserKey(KEY_TOTAL_SCORE), 0)
+
     // =====================================================
-// 🗺️ Progresso do Mapa (por usuário)
-// - cada acerto soma +1 (persistente)
-// - step = total / 10
-// =====================================================
+    // 🗺️ Progresso do Mapa (por usuário) (SECURE)
+    // - cada acerto soma +1 (persistente)
+    // - step = total / 10
+    // =====================================================
     fun incrementTotalCorrectGlobal(context: Context, delta: Int = 1) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_TOTAL_CORRECT_GLOBAL)
-        val total = (p.getInt(key, 0) + delta).coerceAtLeast(0)
-        p.edit().putInt(key, total).apply()
+        val total = (sp.getInt(key, 0) + delta).coerceAtLeast(0)
+        sp.edit().putInt(key, total).apply()
     }
 
     fun getTotalCorrectGlobal(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_TOTAL_CORRECT_GLOBAL), 0)
+        getSecurePrefs(context).getInt(getUserKey(KEY_TOTAL_CORRECT_GLOBAL), 0)
 
     fun getMapStep(context: Context, stepSize: Int = 10): Int {
         if (stepSize <= 0) return 0
@@ -279,49 +293,45 @@ object GameDataManager {
     }
 
     fun resetMapProgress(context: Context) {
-        getPrefs(context).edit().remove(getUserKey(KEY_TOTAL_CORRECT_GLOBAL)).apply()
+        getSecurePrefs(context).edit().remove(getUserKey(KEY_TOTAL_CORRECT_GLOBAL)).apply()
     }
 
-
-    fun getOverallTotalScore(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_TOTAL_SCORE), 0)
-
     // =====================================================
-    // 💾 Progresso por nível
+    // 💾 Progresso por nível (SECURE)
     // =====================================================
     fun saveLastQuestionIndex(context: Context, levelName: String, index: Int) {
         val baseKey = "${levelName.replace("\\s+".toRegex(), "_")}_$KEY_LAST_QUESTION_INDEX"
-        getPrefs(context).edit().putInt(getUserKey(baseKey), index).apply()
+        getSecurePrefs(context).edit().putInt(getUserKey(baseKey), index).apply()
     }
 
     fun loadLastQuestionIndex(context: Context, levelName: String): Int {
         val baseKey = "${levelName.replace("\\s+".toRegex(), "_")}_$KEY_LAST_QUESTION_INDEX"
-        return getPrefs(context).getInt(getUserKey(baseKey), 0)
+        return getSecurePrefs(context).getInt(getUserKey(baseKey), 0)
     }
 
     fun clearLastQuestionIndex(context: Context, levelName: String) {
         val baseKey = "${levelName.replace("\\s+".toRegex(), "_")}_$KEY_LAST_QUESTION_INDEX"
-        getPrefs(context).edit().remove(getUserKey(baseKey)).apply()
+        getSecurePrefs(context).edit().remove(getUserKey(baseKey)).apply()
     }
 
     // =====================================================
-    // 🎨 Avatares desbloqueados (por usuário)
+    // 🎨 Avatares desbloqueados (por usuário) (SECURE)
     // =====================================================
     fun unlockAvatar(context: Context, avatarId: Int) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_UNLOCKED_AVATARS)
-        val set = (p.getStringSet(key, mutableSetOf()) ?: mutableSetOf()).toMutableSet()
+        val set = (sp.getStringSet(key, mutableSetOf()) ?: mutableSetOf()).toMutableSet()
         if (set.add(avatarId.toString())) {
-            p.edit().putStringSet(key, set).apply()
+            sp.edit().putStringSet(key, set).apply()
         }
     }
 
     fun isAvatarUnlocked(context: Context, avatarId: Int): Boolean {
         if (avatarId == R.drawable.avatar1) return true
 
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_UNLOCKED_AVATARS)
-        val set = p.getStringSet(key, emptySet())
+        val set = sp.getStringSet(key, emptySet())
         return set?.contains(avatarId.toString()) == true
     }
 
@@ -333,30 +343,29 @@ object GameDataManager {
         setActiveUserId(context, "guest")
         Log.d("GameDataManager", "🧹 Sessão limpa. activeUser=guest")
     }
+
     // =====================================================
-// 📅 Daily Challenge (por usuário) - FONTE ÚNICA
-// =====================================================
-
-
-    private fun todayKey(): String = java.time.LocalDate.now().toString() // ex: 2026-01-02
+    // 📅 Daily Challenge (por usuário) - FONTE ÚNICA (SECURE)
+    // =====================================================
+    private fun todayKey(): String = LocalDate.now().toString() // ex: 2026-01-02
 
     fun isDailyDone(context: Context): Boolean {
-        val p = getPrefs(context)
-        val last = p.getString(getUserKey(KEY_DAILY_DONE_DATE), null)
+        val sp = getSecurePrefs(context)
+        val last = sp.getString(getUserKey(KEY_DAILY_DONE_DATE), null)
         return last == todayKey()
     }
 
     fun getDailyStreak(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_DAILY_STREAK), 0)
+        getSecurePrefs(context).getInt(getUserKey(KEY_DAILY_STREAK), 0)
 
     fun markDailyDone(context: Context) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val today = todayKey()
 
-        val last = p.getString(getUserKey(KEY_DAILY_DONE_DATE), null)
-        val currentStreak = p.getInt(getUserKey(KEY_DAILY_STREAK), 0)
+        val last = sp.getString(getUserKey(KEY_DAILY_DONE_DATE), null)
+        val currentStreak = sp.getInt(getUserKey(KEY_DAILY_STREAK), 0)
 
-        val yesterday = java.time.LocalDate.now().minusDays(1).toString()
+        val yesterday = LocalDate.now().minusDays(1).toString()
 
         val newStreak = when {
             last == today -> currentStreak          // já marcado hoje
@@ -364,15 +373,15 @@ object GameDataManager {
             else -> 1                               // reseta
         }
 
-        p.edit()
+        sp.edit()
             .putString(getUserKey(KEY_DAILY_DONE_DATE), today)
             .putInt(getUserKey(KEY_DAILY_STREAK), newStreak)
             .apply()
     }
 
     fun saveDailyResult(context: Context, correct: Int, score: Int, xpEarned: Int) {
-        val p = getPrefs(context)
-        p.edit()
+        val sp = getSecurePrefs(context)
+        sp.edit()
             .putString(getUserKey(KEY_DAILY_RESULT_DATE), todayKey())
             .putInt(getUserKey(KEY_DAILY_CORRECT), correct)
             .putInt(getUserKey(KEY_DAILY_SCORE), score)
@@ -381,21 +390,20 @@ object GameDataManager {
     }
 
     fun addTotalCorrect(context: Context, amount: Int = 1) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = getUserKey(KEY_TOTAL_CORRECT)
-        val total = p.getInt(key, 0) + amount
-        p.edit().putInt(key, total.coerceAtLeast(0)).apply()
+        val total = sp.getInt(key, 0) + amount
+        sp.edit().putInt(key, total.coerceAtLeast(0)).apply()
     }
 
     fun getTotalCorrect(context: Context): Int =
-        getPrefs(context).getInt(getUserKey(KEY_TOTAL_CORRECT), 0)
-
+        getSecurePrefs(context).getInt(getUserKey(KEY_TOTAL_CORRECT), 0)
 
     fun getDailyLastResult(context: Context): Triple<Int, Int, Int> {
-        val p = getPrefs(context)
-        val correct = p.getInt(getUserKey(KEY_DAILY_CORRECT), 0)
-        val score = p.getInt(getUserKey(KEY_DAILY_SCORE), 0)
-        val xp = p.getInt(getUserKey(KEY_DAILY_XP_EARNED), 0)
+        val sp = getSecurePrefs(context)
+        val correct = sp.getInt(getUserKey(KEY_DAILY_CORRECT), 0)
+        val score = sp.getInt(getUserKey(KEY_DAILY_SCORE), 0)
+        val xp = sp.getInt(getUserKey(KEY_DAILY_XP_EARNED), 0)
         return Triple(correct, score, xp)
     }
 
@@ -410,7 +418,7 @@ object GameDataManager {
         unlockedLevels: Set<String>
     ): List<com.desafiolgico.model.Question> {
 
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val today = todayKey()
 
         // Pool
@@ -421,11 +429,11 @@ object GameDataManager {
         if (pool.size < 3) return pool
 
         // Se já existe hoje, tenta restaurar
-        val savedDate = p.getString(getUserKey(KEY_DAILY_Q_DATE), null)
+        val savedDate = sp.getString(getUserKey(KEY_DAILY_Q_DATE), null)
         if (savedDate == today) {
-            val t1 = p.getString(getUserKey(KEY_DAILY_Q1), null)
-            val t2 = p.getString(getUserKey(KEY_DAILY_Q2), null)
-            val t3 = p.getString(getUserKey(KEY_DAILY_Q3), null)
+            val t1 = sp.getString(getUserKey(KEY_DAILY_Q1), null)
+            val t2 = sp.getString(getUserKey(KEY_DAILY_Q2), null)
+            val t3 = sp.getString(getUserKey(KEY_DAILY_Q3), null)
 
             val restored = listOfNotNull(
                 pool.firstOrNull { it.questionText == t1 },
@@ -441,7 +449,7 @@ object GameDataManager {
         val selected = pool.shuffled(rnd).take(3)
 
         // Salva para ficar igual o dia todo
-        p.edit()
+        sp.edit()
             .putString(getUserKey(KEY_DAILY_Q_DATE), today)
             .putString(getUserKey(KEY_DAILY_Q1), selected[0].questionText)
             .putString(getUserKey(KEY_DAILY_Q2), selected[1].questionText)
@@ -450,16 +458,17 @@ object GameDataManager {
 
         return selected
     }
+
     // =====================================================
-// 🧹 Reset local (por usuário)
-// =====================================================
+    // 🧹 Reset local (por usuário) (SECURE)
+    // =====================================================
 
     /**
      * Apaga SOMENTE os dados locais do usuário atual (UID atual).
      * Não apaga o app todo e não mexe em outros usuários.
      */
     fun resetUserLocalData(context: Context) {
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val id = sanitizeUserId(currentUserId)
 
         val keysToRemove = listOf(
@@ -474,8 +483,7 @@ object GameDataManager {
             "${id}_$KEY_UNLOCKED_AVATARS",
             "${id}_$KEY_TOTAL_CORRECT_GLOBAL",
 
-
-            // Daily (se você adicionou essas keys)
+            // Daily
             "${id}_$KEY_DAILY_DONE_DATE",
             "${id}_$KEY_DAILY_STREAK",
             "${id}_$KEY_DAILY_RESULT_DATE",
@@ -488,7 +496,7 @@ object GameDataManager {
             "${id}_$KEY_DAILY_Q3"
         )
 
-        p.edit().apply {
+        sp.edit().apply {
             keysToRemove.forEach { remove(it) }
             apply()
         }
@@ -500,13 +508,9 @@ object GameDataManager {
         resetCorrectForAllLevels(context)
     }
 
-    // --- Map progress: correct answers per level (per user) ---
-
-
-
     // =====================================================
-// 🗺️ MAPA: Acertos por nível (por usuário) - 30 por nível
-// =====================================================
+    // 🗺️ MAPA: Acertos por nível (por usuário) - 30 por nível (SECURE)
+    // =====================================================
 
     private fun sanitizeLevelKey(level: String): String {
         // remove acentos/símbolos de forma simples (Intermediário -> Intermedi_rio)
@@ -519,25 +523,25 @@ object GameDataManager {
     }
 
     fun getCorrectForLevel(context: Context, level: String): Int {
-        return getPrefs(context).getInt(correctKeyForLevel(level), 0)
+        return getSecurePrefs(context).getInt(correctKeyForLevel(level), 0)
     }
 
     fun setCorrectForLevel(context: Context, level: String, value: Int) {
-        getPrefs(context).edit()
+        getSecurePrefs(context).edit()
             .putInt(correctKeyForLevel(level), value.coerceAtLeast(0))
             .apply()
     }
 
     fun addCorrectForLevel(context: Context, level: String, delta: Int = 1) {
         if (delta == 0) return
-        val p = getPrefs(context)
+        val sp = getSecurePrefs(context)
         val key = correctKeyForLevel(level)
-        val updated = (p.getInt(key, 0) + delta).coerceAtLeast(0)
-        p.edit().putInt(key, updated).apply()
+        val updated = (sp.getInt(key, 0) + delta).coerceAtLeast(0)
+        sp.edit().putInt(key, updated).apply()
     }
 
     fun resetCorrectForLevel(context: Context, level: String) {
-        getPrefs(context).edit().remove(correctKeyForLevel(level)).apply()
+        getSecurePrefs(context).edit().remove(correctKeyForLevel(level)).apply()
     }
 
     fun resetCorrectForAllLevels(context: Context) {
@@ -552,19 +556,17 @@ object GameDataManager {
             .sumOf { getCorrectForLevel(context, it) }
     }
 
-
-
-
-
-
+    // =====================================================
+    // Prefer Avatar (por usuário) (SECURE)
+    // =====================================================
     fun setPreferAvatar(context: Context, prefer: Boolean) {
-        getPrefs(context).edit()
+        getSecurePrefs(context).edit()
             .putBoolean(getUserKey(KEY_PREFER_AVATAR), prefer)
             .apply()
     }
 
     fun isPreferAvatar(context: Context): Boolean {
-        return getPrefs(context).getBoolean(getUserKey(KEY_PREFER_AVATAR), false)
+        return getSecurePrefs(context).getBoolean(getUserKey(KEY_PREFER_AVATAR), false)
     }
 
     /**
@@ -576,30 +578,30 @@ object GameDataManager {
     }
 
     // =====================================================
-// 💎 Cosmetics Premium (Temas / Molduras / Títulos / Pets / VFX) - por usuário
-// =====================================================
+    // 💎 Cosmetics Premium (Temas / Molduras / Títulos / Pets / VFX) - por usuário (SECURE)
+    // =====================================================
     private const val KEY_SELECTED_THEME = "selected_theme"
     private const val KEY_SELECTED_FRAME = "selected_frame"
     private const val KEY_SELECTED_TITLE = "selected_title"
-    private const val KEY_SELECTED_PET   = "selected_pet"
-    private const val KEY_SELECTED_VFX   = "selected_vfx"
+    private const val KEY_SELECTED_PET = "selected_pet"
+    private const val KEY_SELECTED_VFX = "selected_vfx"
 
     private const val KEY_UNLOCKED_THEMES = "unlocked_themes"
     private const val KEY_UNLOCKED_FRAMES = "unlocked_frames"
     private const val KEY_UNLOCKED_TITLES = "unlocked_titles"
-    private const val KEY_UNLOCKED_PETS   = "unlocked_pets"
-    private const val KEY_UNLOCKED_VFX    = "unlocked_vfx"
+    private const val KEY_UNLOCKED_PETS = "unlocked_pets"
+    private const val KEY_UNLOCKED_VFX = "unlocked_vfx"
 
     private const val KEY_PET_LEVEL_PREFIX = "pet_level_" // ex: pet_level_pet_owl
 
     private fun getUserStringSet(context: Context, key: String, def: Set<String> = emptySet()): MutableSet<String> {
-        val p = getPrefs(context)
-        val set = p.getStringSet(getUserKey(key), def) ?: def
+        val sp = getSecurePrefs(context)
+        val set = sp.getStringSet(getUserKey(key), def) ?: def
         return set.toMutableSet()
     }
 
     private fun putUserStringSet(context: Context, key: String, value: Set<String>) {
-        getPrefs(context).edit().putStringSet(getUserKey(key), value).apply()
+        getSecurePrefs(context).edit().putStringSet(getUserKey(key), value).apply()
     }
 
     fun trySpendCoins(context: Context, amount: Int): Boolean {
@@ -617,50 +619,179 @@ object GameDataManager {
     }
 
     private fun isStringUnlocked(context: Context, setKey: String, id: String): Boolean {
-        val s = getPrefs(context).getStringSet(getUserKey(setKey), emptySet()) ?: emptySet()
+        val s = getSecurePrefs(context).getStringSet(getUserKey(setKey), emptySet()) ?: emptySet()
         return s.contains(id)
     }
 
     // ---- Themes ----
     fun unlockTheme(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_THEMES, id)
     fun isThemeUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_THEMES, id)
-    fun setSelectedTheme(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_THEME), id).apply()
-    fun getSelectedTheme(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_THEME), "theme_default") ?: "theme_default"
+    fun setSelectedTheme(context: Context, id: String) =
+        getSecurePrefs(context).edit().putString(getUserKey(KEY_SELECTED_THEME), id).apply()
+    fun getSelectedTheme(context: Context): String =
+        getSecurePrefs(context).getString(getUserKey(KEY_SELECTED_THEME), "theme_default") ?: "theme_default"
 
     // ---- Frames ----
     fun unlockFrame(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_FRAMES, id)
     fun isFrameUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_FRAMES, id)
-    fun setSelectedFrame(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_FRAME), id).apply()
-    fun getSelectedFrame(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_FRAME), "frame_none") ?: "frame_none"
+    fun setSelectedFrame(context: Context, id: String) =
+        getSecurePrefs(context).edit().putString(getUserKey(KEY_SELECTED_FRAME), id).apply()
+    fun getSelectedFrame(context: Context): String =
+        getSecurePrefs(context).getString(getUserKey(KEY_SELECTED_FRAME), "frame_none") ?: "frame_none"
 
     // ---- Titles ----
     fun unlockTitle(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_TITLES, id)
     fun isTitleUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_TITLES, id)
-    fun setSelectedTitle(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_TITLE), id).apply()
-    fun getSelectedTitle(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_TITLE), "title_none") ?: "title_none"
+    fun setSelectedTitle(context: Context, id: String) =
+        getSecurePrefs(context).edit().putString(getUserKey(KEY_SELECTED_TITLE), id).apply()
+    fun getSelectedTitle(context: Context): String =
+        getSecurePrefs(context).getString(getUserKey(KEY_SELECTED_TITLE), "title_none") ?: "title_none"
 
     // ---- Pets ----
     fun unlockPet(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_PETS, id)
     fun isPetUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_PETS, id)
-    fun setSelectedPet(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_PET), id).apply()
-    fun getSelectedPet(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_PET), "pet_none") ?: "pet_none"
+    fun setSelectedPet(context: Context, id: String) =
+        getSecurePrefs(context).edit().putString(getUserKey(KEY_SELECTED_PET), id).apply()
+    fun getSelectedPet(context: Context): String =
+        getSecurePrefs(context).getString(getUserKey(KEY_SELECTED_PET), "pet_none") ?: "pet_none"
 
     fun getPetLevel(context: Context, petId: String): Int {
         val k = getUserKey(KEY_PET_LEVEL_PREFIX + petId)
-        return getPrefs(context).getInt(k, 1).coerceIn(1, 3)
+        return getSecurePrefs(context).getInt(k, 1).coerceIn(1, 3)
     }
+
     fun setPetLevel(context: Context, petId: String, lvl: Int) {
         val k = getUserKey(KEY_PET_LEVEL_PREFIX + petId)
-        getPrefs(context).edit().putInt(k, lvl.coerceIn(1, 3)).apply()
+        getSecurePrefs(context).edit().putInt(k, lvl.coerceIn(1, 3)).apply()
     }
 
     // ---- VFX ----
     fun unlockVfx(context: Context, id: String) = unlockString(context, KEY_UNLOCKED_VFX, id)
     fun isVfxUnlocked(context: Context, id: String) = isStringUnlocked(context, KEY_UNLOCKED_VFX, id)
-    fun setSelectedVfx(context: Context, id: String) = getPrefs(context).edit().putString(getUserKey(KEY_SELECTED_VFX), id).apply()
-    fun getSelectedVfx(context: Context): String = getPrefs(context).getString(getUserKey(KEY_SELECTED_VFX), "vfx_basic") ?: "vfx_basic"
+    fun setSelectedVfx(context: Context, id: String) =
+        getSecurePrefs(context).edit().putString(getUserKey(KEY_SELECTED_VFX), id).apply()
+    fun getSelectedVfx(context: Context): String =
+        getSecurePrefs(context).getString(getUserKey(KEY_SELECTED_VFX), "vfx_basic") ?: "vfx_basic"
 
+    // =====================================================
+    // MIGRAÇÃO: prefs antigo -> secure (1x por usuário)
+    // =====================================================
+    private fun migrateUserDataToSecureIfNeeded(context: Context) {
+        val normal = getPrefs(context)
+        val secure = getSecurePrefs(context)
 
+        val markerKey = getUserKey(KEY_SECURE_MIGRATION_DONE)
+        if (secure.getBoolean(markerKey, false)) return
+
+        // lista de chaves base (serão prefixadas com userKey)
+        val stringKeys = listOf(
+            KEY_USER_NAME,
+            KEY_USER_PHOTO,
+            KEY_DAILY_DONE_DATE,
+            KEY_DAILY_RESULT_DATE,
+            KEY_DAILY_Q_DATE,
+            KEY_DAILY_Q1,
+            KEY_DAILY_Q2,
+            KEY_DAILY_Q3,
+            KEY_SELECTED_THEME,
+            KEY_SELECTED_FRAME,
+            KEY_SELECTED_TITLE,
+            KEY_SELECTED_PET,
+            KEY_SELECTED_VFX
+        )
+
+        val intKeys = listOf(
+            KEY_USER_AVATAR,
+            KEY_TOTAL_SCORE,
+            KEY_COINS,
+            KEY_XP,
+            KEY_HIGHEST_STREAK,
+            KEY_TOTAL_CORRECT_GLOBAL,
+            KEY_DAILY_STREAK,
+            KEY_DAILY_CORRECT,
+            KEY_DAILY_SCORE,
+            KEY_DAILY_XP_EARNED,
+            KEY_TOTAL_CORRECT
+        )
+
+        val setKeys = listOf(
+            KEY_UNLOCKED_LEVELS,
+            KEY_UNLOCKED_AVATARS,
+            KEY_UNLOCKED_THEMES,
+            KEY_UNLOCKED_FRAMES,
+            KEY_UNLOCKED_TITLES,
+            KEY_UNLOCKED_PETS,
+            KEY_UNLOCKED_VFX
+        )
+
+        // Migra string
+        for (k in stringKeys) {
+            val full = getUserKey(k)
+            val v = normal.getString(full, null)
+            if (v != null) secure.edit().putString(full, v).apply()
+        }
+
+        // Migra int
+        for (k in intKeys) {
+            val full = getUserKey(k)
+            if (normal.contains(full)) {
+                runCatching {
+                    val v = normal.getInt(full, Int.MIN_VALUE)
+                    if (v != Int.MIN_VALUE) secure.edit().putInt(full, v).apply()
+                }
+            }
+        }
+
+        // Migra sets
+        for (k in setKeys) {
+            val full = getUserKey(k)
+            val v = normal.getStringSet(full, null)
+            if (v != null) secure.edit().putStringSet(full, HashSet(v)).apply()
+        }
+
+        // Migra chaves dinâmicas: correct_by_level_*, last_q_index_*, pet_level_*
+        // (varre tudo do antigo e copia o que for do usuário atual)
+        val userPrefix = sanitizeUserId(currentUserId) + "_"
+        val all = normal.all.keys
+        val dynamicPrefixes = listOf(
+            userPrefix + KEY_CORRECT_BY_LEVEL,
+            userPrefix + KEY_PET_LEVEL_PREFIX
+        )
+
+        for (key in all) {
+            // last_q_index tem formato: "<nivel>_last_q_index" prefixado pelo userKey(...)
+            // então ele também começa com userPrefix.
+            if (!key.startsWith(userPrefix)) continue
+
+            val isDynamic =
+                key.contains(KEY_LAST_QUESTION_INDEX) ||
+                    dynamicPrefixes.any { key.startsWith(it) }
+
+            if (!isDynamic) continue
+
+            val value = normal.all[key]
+            when (value) {
+                is Int -> secure.edit().putInt(key, value).apply()
+                is String -> secure.edit().putString(key, value).apply()
+                is Set<*> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    secure.edit().putStringSet(key, HashSet(value as Set<String>)).apply()
+                }
+            }
+        }
+
+        // ✅ apaga do antigo (do usuário atual) para ficar limpo
+        normal.edit().apply {
+            // remove tudo que começa com prefixo do usuário
+            for (key in all) {
+                if (key.startsWith(userPrefix)) remove(key)
+            }
+            apply()
+        }
+
+        secure.edit().putBoolean(markerKey, true).apply()
+        Log.d("GameDataManager", "🔐 Migração para SecurePrefs concluída (uid=$currentUserId)")
+    }
 
     object Levels {
         const val INICIANTE = "Iniciante"
@@ -668,7 +799,6 @@ object GameDataManager {
         const val AVANCADO = "Avançado"
         const val EXPERIENTE = "Experiente"
     }
-
 
     object SecretLevels {
         const val RELAMPAGO = "Relâmpago"

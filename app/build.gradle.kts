@@ -24,16 +24,33 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+
     }
+    signingConfigs {
+        create("release") {
+            storeFile = file("keystore/release.jks") // ajuste o caminho
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+
 
     buildTypes {
         debug {
             isMinifyEnabled = false
             isShrinkResources = false
+
+            // ✅ App ID de teste (debug)
+            manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
+
+            // (Opcional) IDs em strings por buildType
+            resValue("string", "banner_ad_unit_id", "ca-app-pub-3940256099942544/6300978111")
+            resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-3940256099942544/5224354917")
         }
 
         release {
-            // (como você deixou) sem R8/shrink
             isMinifyEnabled = false
             isShrinkResources = false
 
@@ -41,7 +58,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+
+            // ✅ App ID REAL (release) — o seu:
+            manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-4958622518589705~1887040194"
+
+            // (Opcional) IDs em strings por buildType (produção)
+            resValue("string", "banner_ad_unit_id", "ca-app-pub-4958622518589705/1887040194")
+            resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-4958622518589705/3051012274")
+
+            signingConfig = signingConfigs.getByName("release") // só se existir!
         }
     }
 
@@ -116,6 +141,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    implementation("androidx.security:security-crypto:1.1.0")
     // HTTP e JSON
     implementation(libs.retrofit)
     implementation(libs.converter.gson)

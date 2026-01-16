@@ -100,40 +100,50 @@ class LoginActivity : AppCompatActivity() {
             signInWithCredentialManager()
         }
 
-        binding.guestButton.setOnClickListener {
-            setLoading(true, "Entrando como convidado", "Preparando sua sessão")
-            setStep(LoginStep.PREPARANDO)
 
-            // troca de tela primeiro (percepção melhor)
-            goToNextAfterLogin()
+            binding.guestButton.setOnClickListener {
+                setLoading(true, "Entrando como convidado", "Preparando sua sessão")
+                setStep(LoginStep.PREPARANDO)
 
-            // gravações em background depois
-            Thread {
-                ensureGameData()
-                GameDataManager.setActiveUserId(this, "guest_mode")
+                // troca de tela primeiro (percepção melhor)
+                goToNextAfterLogin()
 
-                GameDataManager.saveUserData(
-                    context = this,
-                    username = "Convidado",
-                    photoUrl = null,
-                    avatarId = R.drawable.avatar1
-                )
+                // gravações em background depois (com cancelamento automático)
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        ensureGameData()
 
-                UserManager.salvarDadosUsuario(
-                    context = this,
-                    nome = "Convidado",
-                    email = "guest@desafiologico.com",
-                    photoUrl = null,
-                    avatarId = R.drawable.avatar1
-                )
+                        // ✅ tudo que é "persistência / init" fica no IO
+                        GameDataManager.setActiveUserId(this@LoginActivity, "guest_mode")
 
-                getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
-                    .putBoolean("is_guest_mode", true)
-                    .apply()
+                        GameDataManager.saveUserData(
+                            context = this@LoginActivity,
+                            username = "Convidado",
+                            photoUrl = null,
+                            avatarId = R.drawable.avatar1
+                        )
 
-                AdMobInitializer.ensureInitialized(applicationContext)
-            }.start()
-        }
+                        UserManager.salvarDadosUsuario(
+                            context = this@LoginActivity,
+                            nome = "Convidado",
+                            email = "guest@desafiologico.com",
+                            photoUrl = null,
+                            avatarId = R.drawable.avatar1
+                        )
+
+                        getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
+                            .putBoolean("is_guest_mode", true)
+                            .apply()
+
+                        AdMobInitializer.ensureInitialized(applicationContext)
+                    }
+
+                    // (opcional) se quiser dar “ok” final e ainda estiver vivo:
+                    if (!isFinishing && !isDestroyed) {
+                        // setLoading(false) etc, se fizer sentido no seu fluxo
+                    }
+                }
+            }
     }
 
     private fun ensureGameData() {

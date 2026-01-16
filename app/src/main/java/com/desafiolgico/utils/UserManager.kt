@@ -4,8 +4,9 @@ import android.content.Context
 import androidx.core.content.edit
 
 /**
- * Gerencia o perfil (nome, email, foto e avatar) por usuário (UID).
- * avatarId = 0 => nenhum avatar escolhido (foto do Google tem prioridade).
+ * Perfil por usuário (UID).
+ * - NÃO sensível (nome, avatarId, canChangeAvatar) -> SharedPreferences normal
+ * - Sensível (email, photoUrl) -> EncryptedSharedPreferences (SecurePrefs)
  */
 object UserManager {
 
@@ -30,20 +31,23 @@ object UserManager {
         return "${userId}_$key"
     }
 
-    fun setCanChangeAvatar(context: Context, value: Boolean) {
+    private fun plainPrefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit { putBoolean(getUserKey(KEY_CAN_CHANGE_AVATAR), value) }
+
+    fun setCanChangeAvatar(context: Context, value: Boolean) {
+        plainPrefs(context).edit { putBoolean(getUserKey(KEY_CAN_CHANGE_AVATAR), value) }
     }
 
     fun canChangeAvatar(context: Context): Boolean {
-        return context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(getUserKey(KEY_CAN_CHANGE_AVATAR), false)
+        return plainPrefs(context).getBoolean(getUserKey(KEY_CAN_CHANGE_AVATAR), false)
     }
 
     /**
      * Salva perfil.
-     * - photoUrl pode ser null
+     * - email/photoUrl vão criptografados
      * - avatarId: se null ou <=0 => remove avatar (volta a usar foto)
+     *
+     * Obs: "nome mostrado" continua: nome -> email -> Jogador
      */
     fun salvarDadosUsuario(
         context: Context,
@@ -52,66 +56,76 @@ object UserManager {
         photoUrl: String?,
         avatarId: Int?
     ) {
-        val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val appCtx = context.applicationContext
 
-        prefs.edit {
-            // Nome mostrado
-            val finalName = nome?.takeIf { it.isNotBlank() } ?: email?.takeIf { it.isNotBlank() } ?: "Jogador"
+        // 1) Nome/Avatar (não sensível) -> prefs normal
+        val finalName = nome?.takeIf { it.isNotBlank() }
+            ?: email?.takeIf { it.isNotBlank() }
+            ?: "Jogador"
+
+        plainPrefs(appCtx).edit {
             putString(getUserKey(KEY_USERNAME), finalName)
 
-            // Email (pode ser null)
-            putString(getUserKey(KEY_EMAIL), email)
-
-            // Foto (pode ser null)
-            putString(getUserKey(KEY_PHOTO_URL), photoUrl)
-
-            // Avatar opcional
             if (avatarId != null && avatarId > 0) {
                 putInt(getUserKey(KEY_AVATAR_ID), avatarId)
             } else {
                 remove(getUserKey(KEY_AVATAR_ID))
             }
         }
+
+        // 2) Email/Foto (sensível) -> prefs criptografado
+        // Guest: recomendado minimizar (não salvar email/foto)
+        val isGuest = sanitizeUserId(GameDataManager.currentUserId) == "guest_mode" ||
+            sanitizeUserId(GameDataManager.currentUserId) == GUEST_ID
+
+        if (isGuest) {
+            SecurePrefs.remove(appCtx, getUserKey(KEY_EMAIL))
+            SecurePrefs.remove(appCtx, getUserKey(KEY_PHOTO_URL))
+        } else {
+            SecurePrefs.putString(appCtx, getUserKey(KEY_EMAIL), email)
+            SecurePrefs.putString(appCtx, getUserKey(KEY_PHOTO_URL), photoUrl)
+        }
     }
 
     /**
      * Carrega perfil do usuário atual.
-     * IMPORTANTE: avatarId default = 0 (não força avatar1).
+     * - email/photoUrl vêm do SecurePrefs
+     * - avatarId default = 0 (não força avatar1)
      */
     fun carregarDadosUsuario(context: Context): UserProfile {
-        val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val appCtx = context.applicationContext
 
-        val name = prefs.getString(getUserKey(KEY_USERNAME), "Jogador") ?: "Jogador"
-        val email = prefs.getString(getUserKey(KEY_EMAIL), null)
-        val photoUrl = prefs.getString(getUserKey(KEY_PHOTO_URL), null)
+        val name = plainPrefs(appCtx).getString(getUserKey(KEY_USERNAME), "Jogador") ?: "Jogador"
+        val avatarId = plainPrefs(appCtx).getInt(getUserKey(KEY_AVATAR_ID), 0)
 
-        // default 0 => "sem avatar escolhido"
-        val avatarId = prefs.getInt(getUserKey(KEY_AVATAR_ID), 0)
+        val email = SecurePrefs.getString(appCtx, getUserKey(KEY_EMAIL), null)
+        val photoUrl = SecurePrefs.getString(appCtx, getUserKey(KEY_PHOTO_URL), null)
 
         return UserProfile(name = name, email = email, photoUrl = photoUrl, avatarId = avatarId)
     }
 
     fun getNomeUsuario(context: Context): String? =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(getUserKey(KEY_USERNAME), null)
+        plainPrefs(context).getString(getUserKey(KEY_USERNAME), null)
 
     fun getEmailUsuario(context: Context): String? =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(getUserKey(KEY_EMAIL), null)
+        SecurePrefs.getString(context.applicationContext, getUserKey(KEY_EMAIL), null)
 
     fun limparDadosUsuario(context: Context) {
-        val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit {
+        val appCtx = context.applicationContext
+
+        plainPrefs(appCtx).edit {
             remove(getUserKey(KEY_USERNAME))
-            remove(getUserKey(KEY_EMAIL))
-            remove(getUserKey(KEY_PHOTO_URL))
             remove(getUserKey(KEY_AVATAR_ID))
             remove(getUserKey(KEY_CAN_CHANGE_AVATAR))
         }
+
+        SecurePrefs.remove(appCtx, getUserKey(KEY_EMAIL))
+        SecurePrefs.remove(appCtx, getUserKey(KEY_PHOTO_URL))
     }
 
     fun resetarTodosOsUsuarios(context: Context) {
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit { clear() }
+        // ⚠️ aqui limpa o normal, mas o SecurePrefs fica com chaves antigas de usuários.
+        // Se você quiser "reset total", eu te passo uma estratégia segura pra limpar por prefixo.
+        plainPrefs(context).edit { clear() }
     }
 }

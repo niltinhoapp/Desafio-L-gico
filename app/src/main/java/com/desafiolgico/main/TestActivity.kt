@@ -177,9 +177,6 @@ class TestActivity : AppCompatActivity() {
         private const val GREEN_THRESHOLD_PERCENT = 50
         private const val YELLOW_THRESHOLD_PERCENT = 20
 
-        const val THRESHOLD_INTERMEDIATE = 3000
-        const val THRESHOLD_ADVANCED = 7000
-        const val THRESHOLD_EXPERT = 11000
 
         private const val PREF_QSTATE = "QuestionState_v2"
         private const val KEY_SEEN_PREFIX = "seen_"
@@ -1227,23 +1224,26 @@ class TestActivity : AppCompatActivity() {
 
     private fun loadUserHeader() {
         val (username, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
-        val displayName = if (username.isNullOrBlank()) getString(R.string.default_username) else username
+
+        val displayName =
+            if (username.isNullOrBlank()) getString(R.string.default_username) else username
         binding.welcomeUsername.text = displayName
 
-        val preferAvatar = GameDataManager.isPreferAvatar(this)
-        val avatarUnlocked = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
+        // ✅ Regra fixa: FOTO > AVATAR > fallback
+        val hasPhoto = !photoUrl.isNullOrBlank()
+        val hasAvatar = (avatarResId != null && avatarResId != 0)
+        val avatarUnlocked = hasAvatar && CoinManager.isAvatarUnlocked(this, avatarResId!!)
 
         when {
-            !preferAvatar && !photoUrl.isNullOrEmpty() -> {
+            hasPhoto -> {
                 Glide.with(this).load(photoUrl).circleCrop().into(binding.logoImageView)
             }
-            preferAvatar && avatarUnlocked -> {
+            avatarUnlocked -> {
                 binding.logoImageView.setImageResource(avatarResId!!)
             }
-            !photoUrl.isNullOrEmpty() -> {
-                Glide.with(this).load(photoUrl).circleCrop().into(binding.logoImageView)
+            else -> {
+                binding.logoImageView.setImageResource(R.drawable.avatar1)
             }
-            else -> binding.logoImageView.setImageResource(R.drawable.avatar1)
         }
 
         PremiumUi.applyFrameToAvatar(binding.logoImageView, this)
@@ -1330,25 +1330,12 @@ class TestActivity : AppCompatActivity() {
     }
 
     private fun checkUnlocksAndNotifyInGame() {
-        val total = GameDataManager.getOverallTotalScore(this)
-        val unlockedNow = mutableListOf<String>()
-
-        fun unlockIfNeeded(levelRaw: String, threshold: Int) {
-            val level = canonicalLevelKey(levelRaw)
-            if (total >= threshold && !GameDataManager.isLevelUnlocked(this, level)) {
-                GameDataManager.unlockLevel(this, level)
-                unlockedNow.add(level)
-            }
-        }
-
-        unlockIfNeeded(GameDataManager.Levels.INTERMEDIARIO, THRESHOLD_INTERMEDIATE)
-        unlockIfNeeded(GameDataManager.Levels.AVANCADO, THRESHOLD_ADVANCED)
-        unlockIfNeeded(GameDataManager.Levels.EXPERIENTE, THRESHOLD_EXPERT)
-
+        // ✅ Fonte única: LevelManager
+        val unlockedNow = levelManager.checkAndSaveLevelUnlocks(showToast = false)
         if (unlockedNow.isEmpty()) return
 
         val labels = unlockedNow.joinToString(", ") { level ->
-            when (canonicalLevelKey(level)) {
+            when (level) {
                 GameDataManager.Levels.INTERMEDIARIO -> "INTERMEDIÁRIO"
                 GameDataManager.Levels.AVANCADO -> "AVANÇADO"
                 GameDataManager.Levels.EXPERIENTE -> "EXPERIENTE"
@@ -1588,6 +1575,10 @@ class TestActivity : AppCompatActivity() {
 
     private fun setupBanner() {
         adView = binding.adView
+
+        // ✅ FORÇA o Ad Unit ID conforme build (evita "vazar" anúncio real no debug)
+        adView.adUnitId = bannerUnitId()
+
         adView.visibility = View.INVISIBLE
 
         adView.adListener = object : AdListener() {
