@@ -55,11 +55,13 @@ object PremiumManager {
     fun upgradePet(context: Context, petId: String, cost: Int): Boolean {
         if (cost <= 0) return false
 
-        val ok = CoinManager.spendCoins(context, cost)
-        if (!ok) return false
 
         val lvl = GameDataManager.getPetLevel(context, petId)
         if (lvl >= 3) return false
+
+        val ok = CoinManager.spendCoins(context, cost)
+        if (!ok) return false
+
 
         GameDataManager.setPetLevel(context, petId, lvl + 1)
         return true

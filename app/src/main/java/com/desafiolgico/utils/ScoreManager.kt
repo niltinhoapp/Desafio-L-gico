@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlin.random.Random
 import kotlin.math.roundToInt
+import com.desafiolgico.utils.CoinManager
 
 
 
@@ -110,8 +111,8 @@ class ScoreManager(private val context: Context) {
         if (updatedSessionScore / 500 > lastMilestoneCheck / 500) {
             val numMilestones = updatedSessionScore / 500 - lastMilestoneCheck / 500
             val rewardCoins = numMilestones * COINS_PER_MILESTONE
-            GameDataManager.addCoins(context, rewardCoins)
-            lastMilestoneCheck = updatedSessionScore
+            CoinManager.addCoins(context, rewardCoins, reason = "Marco ${updatedSessionScore / 500 * 500} pts")
+           lastMilestoneCheck = updatedSessionScore
         }
 
         Log.d(

@@ -50,7 +50,8 @@ object CoinManager {
         if (baseAmount <= 0) return
 
         // ✅ Regra: moedas só do anúncio
-        if (reason != "AdReward") {
+
+            if (!isAllowedReason(reason)) {
             Log.w("CoinManager", "⛔ Moedas bloqueadas. reason=$reason, amount=$baseAmount")
             return
         }
@@ -63,6 +64,15 @@ object CoinManager {
             "💰 +$finalAmount moedas (motivo: $reason, base: $baseAmount, mult: x$currentMultiplier)"
         )
     }
+
+
+    private fun isAllowedReason(reason: String): Boolean {
+        return reason == "AdReward" ||
+            reason.startsWith("Streak") ||
+            reason.startsWith("Marco") ||
+            reason == "Fase Secreta"
+    }
+
 
     /** * Deduz moedas (ex: compras, penalidades).
      * Deve ser o ÚNICO ponto de entrada para DEDUÇÃO de moedas.
