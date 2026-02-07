@@ -29,7 +29,8 @@ android {
     }
     signingConfigs {
         create("release") {
-            storeFile = file("keystore/release.jks") // ajuste o caminho
+            storeFile = file("../keystore/desafio_lgico_25.jks")
+            // ajuste o caminho
             storePassword = System.getenv("KEYSTORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
@@ -39,16 +40,20 @@ android {
 
     buildTypes {
         debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+
+            // (opcional) trocar nome do app no launcher
+            resValue("string", "app_name", "Desafio Lógico (Debug)")
+
             isMinifyEnabled = false
             isShrinkResources = false
 
-            // ✅ App ID de teste (debug)
             manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
-
-            // (Opcional) IDs em strings por buildType
             resValue("string", "banner_ad_unit_id", "ca-app-pub-3940256099942544/6300978111")
             resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-3940256099942544/5224354917")
         }
+
 
         release {
             isMinifyEnabled = false

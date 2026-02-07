@@ -161,6 +161,7 @@ class TestActivity : AppCompatActivity() {
     // --- Ads ---
     private lateinit var adView: AdView
     private var rewardedAd: RewardedAd? = null
+    private var bannerLoaded = false
 
     // --- FX AAA leve ---
     private var scoreAnimator: ValueAnimator? = null
@@ -191,6 +192,7 @@ class TestActivity : AppCompatActivity() {
 
         private const val PREF_TEMP = "TempGameData"
         private const val KEY_SEED_BACKUP = "seed_backup"
+        private const val EXTRA_RETURN_FROM_SECRET = "RETURN_FROM_SECRET"
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -240,6 +242,7 @@ class TestActivity : AppCompatActivity() {
 
         // --- nível ---
         val nivelDaIntent = intent.getStringExtra("level") ?: GameDataManager.Levels.INICIANTE
+        val returnFromSecret = intent.getBooleanExtra(EXTRA_RETURN_FROM_SECRET, false)
 
         val isLaunchingSecretLevel =
             GameDataManager.isModoSecretoAtivo &&
@@ -264,7 +267,9 @@ class TestActivity : AppCompatActivity() {
         val nivelRetorno = GameDataManager.getUltimoNivelNormal(this)
         val backupDisponivel = prefs.getBoolean("is_backup_available", false)
 
-        val isRestoringBackup = (nivelRetorno != null && backupDisponivel && !isLaunchingSecretLevel)
+
+        val isRestoringBackup =
+            (nivelRetorno != null && backupDisponivel && !isLaunchingSecretLevel && !returnFromSecret)
 
         if (isRestoringBackup) {
             levelToLoad = nivelRetorno!!
@@ -286,7 +291,27 @@ class TestActivity : AppCompatActivity() {
                 "Continuando o jogo em $levelToLoad, Pergunta ${startIndex + 1}",
                 Toast.LENGTH_LONG
             ).show()
+         }
+          if (returnFromSecret && backupDisponivel) {
+            val restoredScore = prefs.getInt("score_backup", 0)
+            scoreManager.setOverallScore(restoredScore)
+            scoreManager.setCurrentStreak(0)
+
+            prefs.edit { clear() }
+            GameDataManager.clearUltimoNivelNormal(this)
+            GameDataManager.isModoSecretoAtivo = false
+
+            wrongAnswersCount = 0
+            runScoreLevel = 0
+            currentQuestionIndex = 0
+
+            Toast.makeText(
+                this,
+                "✅ Fase reiniciada com perguntas novas.",
+                Toast.LENGTH_SHORT
+            ).show()
         }
+
 
         currentLevelLoaded = levelToLoad
 
@@ -310,9 +335,12 @@ class TestActivity : AppCompatActivity() {
 
         // ✅ Perguntas:
         // - Backup => lista única inteira na mesma seed
+        // - Retorno do secreto => apenas novas (pool fresco)
         // - Normal => 30: novas primeiro, completa com revisão (+0 pts)
         questions = if (isRestoringBackup) {
             buildUniqueShuffledQuestions(levelToLoad, shuffleSeed)
+        } else if (returnFromSecret) {
+            buildFreshRunQuestions(levelToLoad, shuffleSeed)
         } else {
             buildPremiumRunQuestions(levelToLoad, shuffleSeed)
         }
@@ -423,6 +451,29 @@ class TestActivity : AppCompatActivity() {
         return map.values.toList().shuffled(Random(seedToInt(seed)))
     }
 
+
+    /**
+     * FRESH RUN (sem repetição):
+     * - somente perguntas não vistas (pool fresco)
+     * - newThisRunKeys marca tudo que é novo nesta rodada
+     */
+    private fun buildFreshRunQuestions(level: String, seed: Long): List<Question> {
+        val allUnique = buildUniqueShuffledQuestions(level, seed)
+        newThisRunKeys.clear()
+
+        val fresh = ArrayList<Question>()
+        for (q in allUnique) {
+            val k = questionKey(q)
+            if (k !in initialSeenKeys) {
+                fresh.add(q)
+                newThisRunKeys.add(k)
+            }
+        }
+
+        return fresh
+    }
+
+
     /**
      * PREMIUM RUN (30):
      * - pega “novas” (não vistas no snapshot inicial) primeiro
@@ -442,19 +493,19 @@ class TestActivity : AppCompatActivity() {
             if (k in initialSeenKeys) review.add(q) else newOnes.add(q)
         }
 
-        val selected = ArrayList<Question>(30)
+        val selected = ArrayList<Question>(49)
 
         // novas primeiro
         for (q in newOnes) {
-            if (selected.size >= 30) break
+            if (selected.size >= 49) break
             selected.add(q)
             newThisRunKeys.add(questionKey(q))
         }
 
         // completa com revisão
-        if (selected.size < 30) {
+        if (selected.size < 49) {
             for (q in review) {
-                if (selected.size >= 30) break
+                if (selected.size >= 49) break
                 selected.add(q)
             }
         }
@@ -1528,6 +1579,7 @@ class TestActivity : AppCompatActivity() {
 
                 startActivity(Intent(this, TestActivity::class.java).apply {
                     putExtra("level", nivelAnterior)
+                    putExtra(EXTRA_RETURN_FROM_SECRET, true)
                 })
                 finish()
             } else {
@@ -1571,16 +1623,20 @@ class TestActivity : AppCompatActivity() {
     // =============================================================================================
 
     private fun rewardedUnitId(): String = if (BuildConfig.DEBUG) TEST_REWARDED_ID else PROD_REWARDED_ID
-    private fun bannerUnitId(): String = if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
+
+
+
+    private fun bannerUnitId(): String =
+        if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
 
     private fun setupBanner() {
         adView = binding.adView
+        if (bannerLoaded) return
+        bannerLoaded = true
 
-        // ✅ FORÇA o Ad Unit ID conforme build (evita "vazar" anúncio real no debug)
-        adView.adUnitId = bannerUnitId()
+        adView.adUnitId = bannerUnitId() // ✅ só aqui, uma vez
 
         adView.visibility = View.INVISIBLE
-
         adView.adListener = object : AdListener() {
             override fun onAdLoaded() { adView.visibility = View.VISIBLE }
             override fun onAdFailedToLoad(error: LoadAdError) { adView.visibility = View.INVISIBLE }
@@ -1588,6 +1644,9 @@ class TestActivity : AppCompatActivity() {
 
         adView.loadAd(AdRequest.Builder().build())
     }
+
+
+
 
     private fun ensureLastOptionVisible(extraBottomDp: Int = 16) {
         val scroll = binding.gameElementsScrollView

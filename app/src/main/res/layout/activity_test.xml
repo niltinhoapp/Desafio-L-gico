@@ -310,8 +310,8 @@
             android:id="@+id/adView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:adSize="BANNER"
-            app:adUnitId="ca-app-pub-4958622518589705/1734854735" />
+            app:adSize="BANNER" />
+
     </FrameLayout>
 
     <!-- 🎉 Efeito Konfetti (overlay) -->

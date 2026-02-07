@@ -1,0 +1,139 @@
+{
+  "project_info": {
+    "project_number": "476676650911",
+    "project_id": "desafio-logico",
+    "storage_bucket": "desafio-logico.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476676650911:android:353f28732aa334f2a8afaa",
+        "android_client_info": {
+          "package_name": "com.desafiolgico"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "476676650911-0hhgmti85t6bp0vpukpg04r8l0q2v4ff.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.desafiolgico",
+            "certificate_hash": "ef769785c83929bf452ae0f19c8ede7d7c9e0392"
+          }
+        },
+        {
+          "client_id": "476676650911-jkaguigqgpjooud6p8q0o67acioldurp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.desafiolgico",
+            "certificate_hash": "01831ae7e7e2e87a5594648b83b27af670c22cf4"
+          }
+        },
+        {
+          "client_id": "476676650911-lipvspclgf64b69c0m6pl64jbse2hlih.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.desafiolgico",
+            "certificate_hash": "736e800020a1146ad634c9fe079f2430e5fe99d6"
+          }
+        },
+        {
+          "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVq3_Bp3dI1eseTwfg6eCMMM9-WiTio7E"
+        },
+        {
+          "current_key": "AIzaSyCBj7efsnUzqB7NiQvvV_zcnAjiQ8ekcCM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476676650911:android:4db6ca3332faef97a8afaa",
+        "android_client_info": {
+          "package_name": "com.desafiolgico.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "476676650911-3bon3t3ptkqsol4dqehrk7qon83k9bqk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.desafiolgico.debug",
+            "certificate_hash": "01831ae7e7e2e87a5594648b83b27af670c22cf4"
+          }
+        },
+        {
+          "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVq3_Bp3dI1eseTwfg6eCMMM9-WiTio7E"
+        },
+        {
+          "current_key": "AIzaSyCBj7efsnUzqB7NiQvvV_zcnAjiQ8ekcCM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476676650911:android:3e0cba91cf8957c8a8afaa",
+        "android_client_info": {
+          "package_name": "com.desafiologico"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVq3_Bp3dI1eseTwfg6eCMMM9-WiTio7E"
+        },
+        {
+          "current_key": "AIzaSyCBj7efsnUzqB7NiQvvV_zcnAjiQ8ekcCM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "476676650911-9h3s8j6r593bs20pv2mj56h4g1t5evp0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-4958622518589705~1887040194"
+    }
+  ],
+  "configuration_version": "1"
+}

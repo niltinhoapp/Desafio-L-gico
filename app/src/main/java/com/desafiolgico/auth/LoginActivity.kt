@@ -65,6 +65,14 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyEdgeToEdge()
 
+        FirebaseApp.initializeApp(applicationContext)
+
+        val opts = FirebaseApp.getInstance().options
+        Log.e("FBKEY", "appId=${opts.applicationId}")
+        Log.e("FBKEY", "apiKey=${opts.apiKey}")
+        Log.e("FBKEY", "projectId=${opts.projectId}")
+
+
         val tInflate = SystemClock.elapsedRealtime()
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -79,6 +87,7 @@ class LoginActivity : AppCompatActivity() {
             binding.lottieAnimationView.isVisible = true
             binding.lottieAnimationView.playAnimation()
         }
+
 
         binding.guestButton.isVisible = resources.getBoolean(R.bool.show_guest)
 
@@ -99,6 +108,7 @@ class LoginActivity : AppCompatActivity() {
             setStep(LoginStep.GOOGLE)
             signInWithCredentialManager()
         }
+
 
 
             binding.guestButton.setOnClickListener {
@@ -144,6 +154,7 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
             }
+
     }
 
     private fun ensureGameData() {
