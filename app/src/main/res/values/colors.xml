@@ -8,6 +8,11 @@
     <color name="colorPrimaryDark">#3700B3</color>
     <color name="colorOnPrimary">#FFFFFFFF</color>
 
+
+    <color name="portal_flash_success">#66FFD54F</color>
+    <color name="portal_flash_fail">#66FF5252</color>
+
+
     <color name="colorSecondary">#03DAC5</color>
     <color name="colorOnSecondary">#FF000000</color>
 

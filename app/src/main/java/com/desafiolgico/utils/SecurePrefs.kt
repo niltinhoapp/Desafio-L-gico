@@ -8,27 +8,38 @@ import androidx.security.crypto.MasterKey
 object SecurePrefs {
 
     private const val SECURE_PREFS_NAME = "DesafioLogicoPrefs_secure"
+    private const val FALLBACK_PREFS_NAME = "DesafioLogicoPrefs_fallback"
 
+    @Volatile
     private var cached: SharedPreferences? = null
 
     private fun securePrefs(context: Context): SharedPreferences {
         cached?.let { return it }
 
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        val appCtx = context.applicationContext
 
-        val prefs = EncryptedSharedPreferences.create(
-            context,
-            SECURE_PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        val prefs = try {
+            val masterKey = MasterKey.Builder(appCtx)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+
+            EncryptedSharedPreferences.create(
+                appCtx,
+                SECURE_PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Exception) {
+            // ✅ fallback (não derruba o app se crypto falhar)
+            appCtx.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE)
+        }
 
         cached = prefs
         return prefs
     }
+
+    fun get(context: Context): SharedPreferences = securePrefs(context)
 
     fun putString(context: Context, key: String, value: String?) {
         securePrefs(context).edit().putString(key, value).apply()
@@ -46,6 +57,14 @@ object SecurePrefs {
         return securePrefs(context).getInt(key, def)
     }
 
+    fun putLong(context: Context, key: String, value: Long) {
+        securePrefs(context).edit().putLong(key, value).apply()
+    }
+
+    fun getLong(context: Context, key: String, def: Long = 0L): Long {
+        return securePrefs(context).getLong(key, def)
+    }
+
     fun putBoolean(context: Context, key: String, value: Boolean) {
         securePrefs(context).edit().putBoolean(key, value).apply()
     }
@@ -55,16 +74,21 @@ object SecurePrefs {
     }
 
     fun putStringSet(context: Context, key: String, value: Set<String>) {
-        securePrefs(context).edit().putStringSet(key, value).apply()
+        // ✅ copia defensiva
+        securePrefs(context).edit().putStringSet(key, HashSet(value)).apply()
     }
 
     fun getStringSet(context: Context, key: String, def: Set<String> = emptySet()): Set<String> {
-        return securePrefs(context).getStringSet(key, def) ?: def
+        // ✅ copia defensiva
+        val set = securePrefs(context).getStringSet(key, null) ?: def
+        return HashSet(set)
     }
 
     fun remove(context: Context, key: String) {
         securePrefs(context).edit().remove(key).apply()
     }
-    fun get(context: Context): SharedPreferences = securePrefs(context)
 
+    fun clear(context: Context) {
+        securePrefs(context).edit().clear().apply()
+    }
 }

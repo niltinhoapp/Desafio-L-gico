@@ -16,23 +16,30 @@ class SecretTransitionActivity : AppCompatActivity() {
 
     private var mediaPlayer: MediaPlayer? = null
 
+    companion object {
+        const val EXTRA_SECRET_LEVEL = "SECRET_LEVEL"
+        const val EXTRA_IS_SECRET_LEVEL = "IS_SECRET_LEVEL"
+        const val EXTRA_RETURN_TO_ACTIVE_GAME = "RETURN_TO_ACTIVE_GAME"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_secret_transition)
 
-        val secretLevel = intent.getStringExtra("SECRET_LEVEL")
-            ?: intent.getStringExtra("level")
+        GameDataManager.init(this)
+
+        val secretLevel = intent.getStringExtra(EXTRA_SECRET_LEVEL)
+            ?: intent.getStringExtra("level") // fallback
 
         if (secretLevel.isNullOrBlank()) {
             finish()
             return
         }
 
-        // ✅ se você usa isso como “modo secreto ativo”, garante aqui também
+        // ✅ marca modo secreto ativo (fonte única pro app)
         GameDataManager.isModoSecretoAtivo = true
 
-        val currentStreak = intent.getIntExtra("currentStreak", 0)
-        val returnToActive = intent.getBooleanExtra("RETURN_TO_ACTIVE_GAME", false)
+        val returnToActive = intent.getBooleanExtra(EXTRA_RETURN_TO_ACTIVE_GAME, false)
 
         val animView = findViewById<LottieAnimationView>(R.id.lottieSecret)
         val tvTitle = findViewById<TextView>(R.id.tvSecretTitle)
@@ -45,24 +52,26 @@ class SecretTransitionActivity : AppCompatActivity() {
         }
         tvTitle.text = getString(titleRes)
 
-        // ✅ animação (Lottie)
+        // ✅ animação
         animView.setAnimation(R.raw.ic_animationcerebro)
         animView.playAnimation()
 
-        // ✅ SOM (tem que ser mp3/ogg/wav)
-        // Coloque um arquivo real em res/raw: secret_whoosh.mp3
+        // ✅ som (opcional)
         runCatching {
             mediaPlayer = MediaPlayer.create(this, R.raw.secret_whoosh)?.apply { start() }
         }
 
-        // Após 3s abre a fase secreta
+        // ✅ vai pro TestActivity no secreto
         lifecycleScope.launch {
             delay(3000L)
             startActivity(
                 Intent(this@SecretTransitionActivity, TestActivity::class.java).apply {
                     putExtra("level", secretLevel)
-                    putExtra("currentStreak", currentStreak)
-                    putExtra("RETURN_TO_ACTIVE_GAME", returnToActive)
+                    putExtra(EXTRA_IS_SECRET_LEVEL, true)
+                    putExtra(EXTRA_RETURN_TO_ACTIVE_GAME, returnToActive)
+
+                    // ❌ NÃO passar currentStreak (no secreto não existe streak)
+                    // putExtra("currentStreak", ...)
                 }
             )
             finish()

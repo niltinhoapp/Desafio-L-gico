@@ -297,11 +297,12 @@
 
     </LinearLayout>
 
-    <!-- ✅ Banner FIXO: não empurra layout ao carregar -->
+    <!-- ✅ Banner FIXO (não empurra), compatível com Adaptive -->
     <FrameLayout
         android:id="@+id/adContainer"
         android:layout_width="0dp"
-        android:layout_height="50dp"
+        android:layout_height="wrap_content"
+        android:minHeight="50dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -309,10 +310,14 @@
         <com.google.android.gms.ads.AdView
             android:id="@+id/adView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:adSize="BANNER" />
+            android:layout_height="wrap_content"
+            tools:adSize="BANNER"
+            tools:adUnitId="ca-app-pub-3940256099942544/6300978111"
+            tools:ignore="MissingAdSizeAttribute,MissingAdUnitIdAttribute" />
+
 
     </FrameLayout>
+
 
     <!-- 🎉 Efeito Konfetti (overlay) -->
     <nl.dionsegijn.konfetti.xml.KonfettiView

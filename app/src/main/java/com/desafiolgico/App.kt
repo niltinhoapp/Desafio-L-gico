@@ -3,6 +3,8 @@ package com.desafiolgico
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import com.desafiolgico.utils.AdMobInitializer
+import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.CrashlyticsHelper
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -21,6 +23,13 @@ class App : Application() {
 
                 // ✅ depois que a UI já está na tela (fora do cold start crítico)
                 activity.window.decorView.post {
+                    // 1) Ads (idempotente via AtomicBoolean no initializer)
+                 //   AdMobInitializer.ensureInitialized(applicationContext)
+
+                    // 2) Multiplicador (se você decidiu persistir)
+                    CoinManager.loadMultiplier(applicationContext)
+
+                    // 3) Crashlytics (em thread separada, como você já fez)
                     Thread {
                         CrashlyticsHelper.initFast(applicationContext, enableInDebug = false)
                     }.start()

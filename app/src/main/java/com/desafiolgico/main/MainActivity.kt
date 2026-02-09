@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnSettingsMain: MaterialButton
     private lateinit var btnRecordsMain: MaterialButton
 
-    // Level buttons (campos da Activity => acessíveis no onResume)
+    // Level buttons
     private lateinit var beginnerButton: MaterialButton
     private lateinit var intermediateButton: MaterialButton
     private lateinit var advancedButton: MaterialButton
@@ -76,13 +76,10 @@ class MainActivity : AppCompatActivity() {
         applyEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-
         // ✅ init primeiro
         GameDataManager.init(this)
 
-
-
-        // ✅ Launchers primeiro (pra não esquecer)
+        // ✅ Launchers primeiro
         setupActivityResultLauncher()
         setupNotificationLauncher()
 
@@ -104,8 +101,11 @@ class MainActivity : AppCompatActivity() {
         exitButton = findViewById(R.id.exitButton)
         mapButton = findViewById(R.id.mapButton)
 
-        PremiumThemes.apply(this, root = findViewById(android.R.id.content), cardViews = listOf(menuCard, dailyCard))
-
+        PremiumThemes.apply(
+            this,
+            root = findViewById(android.R.id.content),
+            cardViews = listOf(menuCard, dailyCard)
+        )
 
         levelManager = LevelManager(this)
 
@@ -120,13 +120,11 @@ class MainActivity : AppCompatActivity() {
         btnRecordsMain.visibility = View.GONE
         btnSettingsMain.visibility = View.GONE
 
-        // ✅ Recordes (compacto)
+        // ✅ Recordes
         btnRecordsMain.setOnClickListener {
             playClickSound()
             animateTap(btnRecordsMain)
             startActivity(Intent(this, LocalRecordsActivity::class.java))
-
-
         }
 
         // ✅ Settings
@@ -170,9 +168,10 @@ class MainActivity : AppCompatActivity() {
         )
 
         // ✅ Atualiza estados já no create
+        levelManager.checkAndSaveLevelUnlocks(showToast = true)
         levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
 
-        // UI diária + recordes
+        // ✅ UI diária + recordes (antes da intro acabar, já deixa textos certos)
         updateDailyLabelState()
         updateDailyUI()
         updateRecordsButtonText()
@@ -185,21 +184,23 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // ✅ TEMPO REAL: voltou pra Main => recalcula desbloqueios e atualiza botões
+        // ✅ Recalcula desbloqueios e atualiza botões
         if (::levelManager.isInitialized
             && ::intermediateButton.isInitialized
             && ::advancedButton.isInitialized
             && ::expertButton.isInitialized
         ) {
+            levelManager.checkAndSaveLevelUnlocks(showToast = true)
             levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
         }
 
-        // ✅ Mostra aviso somente quando desbloqueou pela primeira vez
+        // ✅ Notifica somente quando desbloqueou pela primeira vez
         notifyNewUnlocksIfAny()
-        // ✅ Atualiza recordes / daily sempre que voltar
-        updateRecordsButtonText()
+
+        // ✅ Atualiza daily/recordes sempre ao voltar
         updateDailyLabelState()
         updateDailyUI()
+        updateRecordsButtonText()
 
         // Glow se estiver visível
         if (::btnSettingsMain.isInitialized && btnSettingsMain.visibility == View.VISIBLE) {
@@ -222,10 +223,9 @@ class MainActivity : AppCompatActivity() {
                 mediaPlayer.stop()
                 mediaPlayer.release()
             }
-
-    } catch (e: Exception) {
-        Log.w("MainActivity", "Falha ao liberar o MediaPlayer", e)
-    }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Falha ao liberar o MediaPlayer", e)
+        }
         super.onDestroy()
     }
 
@@ -233,16 +233,12 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences("unlock_notifs", MODE_PRIVATE)
 
     private fun notifyNewUnlocksIfAny() {
-        // ✅ Mostra aviso APENAS quando houve transição (bloqueado -> desbloqueado),
-        // e não apenas por estar habilitado ao abrir a tela.
         val p = unlockNotifPrefs()
 
         // chave por usuário (pra não vazar aviso entre contas/guest)
         val snapshotKey = "last_unlocked_levels_snapshot_${GameDataManager.currentUserId}"
 
-        // conjunto atual (cópia defensiva)
         val now = GameDataManager.getUnlockedLevels(this).toSet()
-
         val last = p.getStringSet(snapshotKey, null)?.toSet()
 
         // primeira vez que abre: apenas salva o estado atual (não notifica)
@@ -254,10 +250,9 @@ class MainActivity : AppCompatActivity() {
         val newLevels = now - last
         if (newLevels.isEmpty()) return
 
-        // atualiza snapshot primeiro (evita repetição se algo falhar depois)
+        // atualiza snapshot primeiro (evita repetição)
         p.edit().putStringSet(snapshotKey, HashSet(now)).apply()
 
-        // Notifica somente níveis "principais"
         newLevels.forEach { lvl ->
             when (lvl) {
                 GameDataManager.Levels.INTERMEDIARIO -> {
@@ -265,24 +260,23 @@ class MainActivity : AppCompatActivity() {
                     bounceUnlock(intermediateButton)
                     glowUnlock(intermediateButton)
                 }
+
                 GameDataManager.Levels.AVANCADO -> {
                     Toast.makeText(this, "⚡ NOVO NÍVEL DESBLOQUEADO: AVANÇADO!", Toast.LENGTH_LONG).show()
                     bounceUnlock(advancedButton)
                     glowUnlock(advancedButton)
                 }
+
                 GameDataManager.Levels.EXPERIENTE -> {
                     Toast.makeText(this, "👑 NOVO NÍVEL DESBLOQUEADO: EXPERIENTE!", Toast.LENGTH_LONG).show()
                     bounceUnlock(expertButton)
                     glowUnlock(expertButton)
                 }
-                else -> {
-                    // INICIANTE / secretos / outros -> não notifica aqui
-                }
+
+                else -> Unit
             }
         }
     }
-
-
 
     private fun bounceUnlock(v: View) {
         v.animate().cancel()
@@ -298,7 +292,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun glowUnlock(v: View) {
-        // brilho rápido (sem precisar de recurso)
         v.alpha = 1f
         v.animate().cancel()
         v.animate()
@@ -343,7 +336,6 @@ class MainActivity : AppCompatActivity() {
     // Click handlers
     // =============================================================================================
 
-
     private fun handleButtonClick(btn: MaterialButton, level: String) {
         playClickSound()
         animateTap(btn)
@@ -360,7 +352,6 @@ class MainActivity : AppCompatActivity() {
             }
         )
     }
-
 
     private fun onLevelLocked(level: String) {
         // opcional: analytics/feedback
@@ -383,7 +374,8 @@ class MainActivity : AppCompatActivity() {
         if (!::btnRecordsMain.isInitialized) return
 
         val bestToday = LocalRecordsManager.getBestStreakOfDay(this)
-        btnRecordsMain.text = if (bestToday > 0) "Recordes (🔥$bestToday)" else "Recordes"
+        btnRecordsMain.text =
+            if (bestToday > 0) "🏆 Recordes (🔥$bestToday)" else "🏆 Recordes"
 
         // se já passou da intro, deixa visível
         if (menuCard.visibility == View.VISIBLE) {
@@ -396,15 +388,14 @@ class MainActivity : AppCompatActivity() {
         if (!::dailyLabel.isInitialized) return
 
         dailyLabel.text = if (GameDataManager.isDailyDone(this)) {
-            getString(R.string.daily_done_label) // ex: "Concluído hoje ✅"
+            getString(R.string.daily_done_label)
         } else {
-            getString(R.string.daily_available_label) // ex: "Disponível hoje 🎯"
+            getString(R.string.daily_available_label)
         }
     }
 
     private fun updateDailyUI() {
         if (!::dailyCard.isInitialized) return
-
         val done = GameDataManager.isDailyDone(this)
         dailyCard.alpha = if (done) 0.7f else 1f
     }
@@ -424,7 +415,6 @@ class MainActivity : AppCompatActivity() {
     // =============================================================================================
 
     private fun setupAnimation() {
-        // Se você já tem uma animação pronta, pode manter a sua e só chamar showMenu()
         lottieAnimationView.visibility = View.VISIBLE
         lottieAnimationView.playAnimation()
 
@@ -432,6 +422,7 @@ class MainActivity : AppCompatActivity() {
             override fun onAnimationEnd(animation: Animator) {
                 showMenu()
             }
+
             override fun onAnimationCancel(animation: Animator) {
                 showMenu()
             }
@@ -442,18 +433,19 @@ class MainActivity : AppCompatActivity() {
         lottieAnimationView.visibility = View.GONE
         menuCard.visibility = View.VISIBLE
         dailyCard.visibility = View.VISIBLE
+
+        // ✅ mostra botões do topo
         btnRecordsMain.visibility = View.VISIBLE
         btnSettingsMain.visibility = View.VISIBLE
 
         // ✅ garante que quando a intro acabar, já esteja atualizado
         levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
-        updateRecordsButtonText()
         updateDailyLabelState()
         updateDailyUI()
+        updateRecordsButtonText()
     }
 
     private fun initBackgroundMusic() {
-        // Troque o raw se seu arquivo tiver outro nome
         mediaPlayer = MediaPlayer.create(this, R.raw.background_music)
         mediaPlayer.isLooping = true
         mediaPlayer.setVolume(0.5f, 0.5f)
@@ -495,8 +487,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playClickSound() {
-        // Opcional: se você tiver R.raw.click_sound, use ele.
-        // Se não tiver, pode deixar vazio.
         try {
             val mp = MediaPlayer.create(this, R.raw.click_sound)
             mp.setOnCompletionListener { it.release() }
@@ -506,7 +496,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // util opcional (caso use em algum lugar)
     private fun dp(value: Int): Int {
         return TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,

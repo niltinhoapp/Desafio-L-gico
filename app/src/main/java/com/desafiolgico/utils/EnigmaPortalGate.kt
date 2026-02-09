@@ -1,91 +1,110 @@
 package com.desafiolgico.utils
 
 import android.content.Context
-import com.desafiolgico.BuildConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 object EnigmaPortalGate {
 
-    private const val PREF = "enigma_portal_gate"
+    private const val MAX_TRIES_PER_DAY = 3
 
-    private const val MAX_PLAYS_PER_DAY = 3
+    // chaves diárias
+    private const val KEY_DAY = "portal_day"
+    private const val KEY_TRIES_USED = "portal_tries_used"
+    private const val KEY_ACTIVE_RUN = "portal_active_run"
+    private const val KEY_AUTO_OPENED = "portal_auto_opened"
 
-    private const val KEY_AUTO_OPEN_DONE = "auto_open_done"
-    private const val KEY_DAY = "played_day"
-    private const val KEY_PLAYS_TODAY = "plays_today"
-    private const val KEY_LAST_RESULT = "last_result" // "win" | "lose" | ""
-    private const val KEY_RELICS = "relics_count"
+    // relíquias (você já usa)
+    private const val KEY_RELICS = "portal_relics"
 
-    fun requiredScore(): Int = if (BuildConfig.DEBUG) 200 else 7000
+    fun requiredScore(): Int = 12000 // ajuste como você quiser
 
-    private fun prefs(ctx: Context) =
-        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    private fun todayKey(): String {
+        val df = SimpleDateFormat("yyyyMMdd", Locale.US)
+        return df.format(Date())
+    }
 
-    private fun todayKey(): String =
-        SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-
-    private fun ensureToday(ctx: Context) {
-        val p = prefs(ctx)
+    /** ✅ Reset diário (chame em MapActivity e no Portal). */
+    fun touchToday(ctx: Context) {
         val today = todayKey()
-        val saved = p.getString(KEY_DAY, null)
+        val saved = SecurePrefs.getString(ctx, KEY_DAY, null)
 
         if (saved != today) {
-            p.edit()
-                .putString(KEY_DAY, today)
-                .putInt(KEY_PLAYS_TODAY, 0)
-                .putString(KEY_LAST_RESULT, "")
-                .apply()
+            SecurePrefs.putString(ctx, KEY_DAY, today)
+            SecurePrefs.putInt(ctx, KEY_TRIES_USED, 0)
+            SecurePrefs.putBoolean(ctx, KEY_ACTIVE_RUN, false)
+            SecurePrefs.putBoolean(ctx, KEY_AUTO_OPENED, false)
         }
     }
 
-    /**
-     * ✅ CHAME isso em telas como Map/Main
-     * para garantir que o reset diário já ocorreu.
-     */
-    fun touchToday(ctx: Context) {
-        ensureToday(ctx)
+    fun attemptsLeftToday(ctx: Context): Int {
+        touchToday(ctx)
+        val used = SecurePrefs.getInt(ctx, KEY_TRIES_USED, 0).coerceAtLeast(0)
+        return (MAX_TRIES_PER_DAY - used).coerceAtLeast(0)
     }
 
-    /** ✅ abre automático só 1x (da vida), quando atingir o score */
+    fun canPlayToday(ctx: Context): Boolean {
+        // ✅ Se existe run ativa, pode continuar mesmo com 0 tentativas restantes
+        return hasActiveRun(ctx) || attemptsLeftToday(ctx) > 0
+    }
+
+    fun hasActiveRun(ctx: Context): Boolean {
+        touchToday(ctx)
+        return SecurePrefs.getBoolean(ctx, KEY_ACTIVE_RUN, false)
+    }
+
+    /**
+     * ✅ MELHOR OPÇÃO:
+     * Reserva 1 tentativa no INÍCIO do Portal.
+     * - Se já tem run ativa, não consome mais.
+     * - Impede exploit de sair/entrar pra resetar sem custo.
+     */
+    fun reserveAttemptIfNeeded(ctx: Context): Boolean {
+        touchToday(ctx)
+
+        if (hasActiveRun(ctx)) return true
+
+        val left = attemptsLeftToday(ctx)
+        if (left <= 0) return false
+
+        val used = SecurePrefs.getInt(ctx, KEY_TRIES_USED, 0)
+        SecurePrefs.putInt(ctx, KEY_TRIES_USED, used + 1)
+        SecurePrefs.putBoolean(ctx, KEY_ACTIVE_RUN, true)
+        return true
+    }
+
+    /** ✅ Chame quando o portal terminar (win/fail). */
+    fun finishRun(ctx: Context, win: Boolean) {
+        touchToday(ctx)
+        SecurePrefs.putBoolean(ctx, KEY_ACTIVE_RUN, false)
+        if (win) addRelic(ctx)
+    }
+
+    // ---------- Auto-open (se você usa no mapa) ----------
     fun shouldAutoOpen(ctx: Context, score: Int): Boolean {
         if (score < requiredScore()) return false
-        return !prefs(ctx).getBoolean(KEY_AUTO_OPEN_DONE, false)
+        if (!canPlayToday(ctx)) return false
+        return !SecurePrefs.getBoolean(ctx, KEY_AUTO_OPENED, false)
     }
 
     fun markAutoOpened(ctx: Context) {
-        prefs(ctx).edit().putBoolean(KEY_AUTO_OPEN_DONE, true).apply()
+        SecurePrefs.putBoolean(ctx, KEY_AUTO_OPENED, true)
     }
 
-    /** ✅ tentativas restantes hoje (0..3) */
-    fun attemptsLeftToday(ctx: Context): Int {
-        ensureToday(ctx)
-        val used = prefs(ctx).getInt(KEY_PLAYS_TODAY, 0)
-        return (MAX_PLAYS_PER_DAY - used).coerceAtLeast(0)
-    }
-
-    fun canPlayToday(ctx: Context): Boolean = attemptsLeftToday(ctx) > 0
-
-    /** ✅ consome 1 tentativa do dia */
-    fun markPlayedToday(ctx: Context, win: Boolean) {
-        ensureToday(ctx)
-        val p = prefs(ctx)
-        val used = p.getInt(KEY_PLAYS_TODAY, 0)
-
-        p.edit()
-            .putInt(KEY_PLAYS_TODAY, (used + 1).coerceAtMost(MAX_PLAYS_PER_DAY))
-            .putString(KEY_LAST_RESULT, if (win) "win" else "lose")
-            .apply()
-    }
-
+    // ---------- Relíquias ----------
     fun addRelic(ctx: Context) {
-        val p = prefs(ctx)
-        val cur = p.getInt(KEY_RELICS, 0)
-        p.edit().putInt(KEY_RELICS, cur + 1).apply()
+        val cur = SecurePrefs.getInt(ctx, KEY_RELICS, 0)
+        SecurePrefs.putInt(ctx, KEY_RELICS, cur + 1)
     }
 
-    fun getRelicsCount(ctx: Context): Int =
-        prefs(ctx).getInt(KEY_RELICS, 0)
+    fun getRelicsCount(ctx: Context): Int = SecurePrefs.getInt(ctx, KEY_RELICS, 0)
 
+    /**
+     * (Compat) Se você ainda chama markPlayedToday(win),
+     * pode manter chamando — agora só finaliza a run.
+     */
+    fun markPlayedToday(ctx: Context, win: Boolean) {
+        finishRun(ctx, win)
+    }
 }

@@ -13,9 +13,9 @@ import com.google.android.material.button.MaterialButton
 class LevelManager(private val context: Context) {
 
     companion object {
-        const val THRESHOLD_INTERMEDIATE = 3500
-        const val THRESHOLD_ADVANCED = 7000
-        const val THRESHOLD_EXPERT = 11000
+        const val THRESHOLD_INTERMEDIATE = 500
+        const val THRESHOLD_ADVANCED = 700
+        const val THRESHOLD_EXPERT = 1000
         private const val VIBRATION_MS = 300L
     }
 
@@ -87,7 +87,6 @@ class LevelManager(private val context: Context) {
         expertButton: MaterialButton
     ) {
         // ✅ garante persistência coerente
-        checkAndSaveLevelUnlocks(showToast = true)
 
         updateSingleButtonState(intermediateButton, GameDataManager.Levels.INTERMEDIARIO)
         updateSingleButtonState(advancedButton, GameDataManager.Levels.AVANCADO)

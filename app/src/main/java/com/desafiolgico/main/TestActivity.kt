@@ -28,6 +28,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.desafiolgico.BuildConfig
+
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityTestBinding
 import com.desafiolgico.model.Question
@@ -43,11 +44,13 @@ import com.desafiolgico.utils.PremiumManager
 import com.desafiolgico.utils.PremiumPets
 import com.desafiolgico.utils.PremiumUi
 import com.desafiolgico.utils.ScoreManager
+import com.desafiolgico.utils.SecurePrefs
 import com.desafiolgico.utils.VictoryFx
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
@@ -67,6 +70,7 @@ import nl.dionsegijn.konfetti.xml.KonfettiView
 import java.text.Normalizer
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -90,7 +94,8 @@ class TestActivity : AppCompatActivity() {
     private var lastPremiumEvalStreak = -1
 
     // --- Anti-farm / Anti-repeat (premium) ---
-    private val newThisRunKeys = HashSet<String>()            // “novas nesta rodada” (candidatas a pontuar)
+    private val newThisRunKeys =
+        HashSet<String>()            // “novas nesta rodada” (candidatas a pontuar)
     private var initialSeenKeys: Set<String> = emptySet()     // snapshot do visto ANTES da rodada
 
     // --- Baralho de perguntas ---
@@ -163,6 +168,7 @@ class TestActivity : AppCompatActivity() {
     private var rewardedAd: RewardedAd? = null
     private var bannerLoaded = false
 
+
     // --- FX AAA leve ---
     private var scoreAnimator: ValueAnimator? = null
     private var fxOverlay: View? = null
@@ -174,26 +180,48 @@ class TestActivity : AppCompatActivity() {
     // micro celebration
     private var lastCelebratedStreak = -1
 
-    companion object {
-        private const val GREEN_THRESHOLD_PERCENT = 50
-        private const val YELLOW_THRESHOLD_PERCENT = 20
 
+        companion object {
+            // Timer UI (mesmo do seu código)
+            private const val GREEN_THRESHOLD_PERCENT = 50
+            private const val YELLOW_THRESHOLD_PERCENT = 20
 
-        private const val PREF_QSTATE = "QuestionState_v2"
-        private const val KEY_SEEN_PREFIX = "seen_"
-        private const val KEY_SCORED_PREFIX = "scored_"
+            // Anti-farm / seen+scored (agora salvos via SecurePrefs)
+            private const val KEY_SEEN_PREFIX = "seen_"
+            private const val KEY_SCORED_PREFIX = "scored_"
 
-        const val REWARD_AD_COINS = 5
+            // Reward
+            const val REWARD_AD_COINS = 5
 
-        private const val TEST_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917"
-        private const val TEST_BANNER_ID = "ca-app-pub-3940256099942544/6300978111"
-        private const val PROD_REWARDED_ID = "ca-app-pub-4958622518589705/3051012274"
-        private const val PROD_BANNER_ID = "ca-app-pub-4958622518589705/1734854735"
+            // AdMob IDs
+            private const val TEST_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917"
+            private const val TEST_BANNER_ID = "ca-app-pub-3940256099942544/6300978111"
+            private const val PROD_REWARDED_ID = "ca-app-pub-4958622518589705/3051012274"
+            private const val PROD_BANNER_ID = "ca-app-pub-4958622518589705/1734854735"
 
-        private const val PREF_TEMP = "TempGameData"
-        private const val KEY_SEED_BACKUP = "seed_backup"
-        private const val EXTRA_RETURN_FROM_SECRET = "RETURN_FROM_SECRET"
-    }
+            // Return flag (Intent)
+            private const val EXTRA_RETURN_FROM_SECRET = "RETURN_FROM_SECRET"
+
+            // =========================================================================================
+            // ✅ FLUXO NORMAL + SECRETO (SecurePrefs)
+            // =========================================================================================
+
+            // Score contínuo (normal + secreto somam no mesmo placar)
+            private const val KEY_SESSION_SCORE = "session_score"
+
+            // Estado / flags do fluxo
+            private const val KEY_BACKUP_AVAILABLE = "backup_available"
+            private const val KEY_IN_SECRET = "in_secret"
+            private const val KEY_SECRET_LEVEL = "secret_level"
+
+            // Backup do NORMAL antes de entrar no SECRETO (para voltar exatamente)
+            private const val KEY_NORMAL_LEVEL = "normal_level"
+            private const val KEY_NORMAL_INDEX = "normal_index"
+            private const val KEY_NORMAL_ERRORS = "normal_errors"
+            private const val KEY_NORMAL_STREAK = "normal_streak"
+            private const val KEY_NORMAL_RUN_SCORE = "normal_run_score"
+            private const val KEY_NORMAL_SEED = "normal_seed"
+        }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
@@ -203,6 +231,7 @@ class TestActivity : AppCompatActivity() {
     // CICLO DE VIDA
     // =============================================================================================
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyEdgeToEdge()
@@ -210,15 +239,13 @@ class TestActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         GameDataManager.init(this)
-        MobileAds.initialize(this) {}
+        // Se você já inicializa Ads em outra Activity, pode remover:
+       //  MobileAds.initialize(this) {}
 
         overlayContainer = binding.overlayContainer
         rootLayout = binding.rootLayoutTest
         konfettiView = binding.konfettiView
-
-        // ajuda a ficar por cima do rodapé (timer/pontos)
         overlayContainer.elevation = dp(30).toFloat()
-
         ensureFxOverlay()
 
         questionManager = QuestionManager(LanguageHelper.getLanguage(this))
@@ -226,7 +253,7 @@ class TestActivity : AppCompatActivity() {
         levelManager = LevelManager(this)
 
         configurarAudio()
-        setupBanner()
+        setupBannerAdaptive()
         loadRewardedAd()
         loadUserHeader()
         observeScoreManager()
@@ -235,146 +262,229 @@ class TestActivity : AppCompatActivity() {
             startActivity(Intent(this, AvatarSelectionActivity::class.java))
         }
 
-        // --- restore streak se veio de secreto ---
-        val restoredStreak = intent.getIntExtra("currentStreak", 0)
-        if (restoredStreak > 0) scoreManager.setCurrentStreak(restoredStreak)
-        binding.streakTextView.text = getString(R.string.streak_format, restoredStreak)
+        // =========================================================================================
+        // ✅ CHAVES (SecurePrefs)
+        // =========================================================================================
+        // Sessão contínua (normal + secreto somam no MESMO score)
+        val KEY_SESSION_SCORE = "session_score"
 
-        // --- nível ---
-        val nivelDaIntent = intent.getStringExtra("level") ?: GameDataManager.Levels.INICIANTE
+        // Estado normal salvo antes de entrar no secreto (backup/retorno)
+        val KEY_BACKUP_AVAILABLE = "backup_available"
+        val KEY_IN_SECRET = "in_secret"
+        val KEY_SECRET_LEVEL = "secret_level"
+
+        val KEY_NORMAL_LEVEL = "normal_level"
+        val KEY_NORMAL_INDEX = "normal_index"
+        val KEY_NORMAL_ERRORS = "normal_errors"
+        val KEY_NORMAL_STREAK = "normal_streak"
+        val KEY_NORMAL_RUN_SCORE = "normal_run_score"
+        val KEY_NORMAL_SEED = "normal_seed"
+
+        // -----------------------------------------------------------------------------------------
+        // Helpers Long via SecurePrefs.get(context) (porque seu SecurePrefs ainda não tem putLong/getLong)
+        fun securePutLong(key: String, value: Long) {
+            SecurePrefs.get(this).edit().putLong(key, value).apply()
+        }
+
+        fun secureGetLong(key: String, def: Long = 0L): Long {
+            return SecurePrefs.get(this).getLong(key, def)
+        }
+
+        // =========================================================================================
+        // ✅ INTENTS / FLAGS
+        // =========================================================================================
+        val levelFromIntent = intent.getStringExtra("level") ?: GameDataManager.Levels.INICIANTE
         val returnFromSecret = intent.getBooleanExtra(EXTRA_RETURN_FROM_SECRET, false)
+        val launchingSecret = isSecretLevel(levelFromIntent)
 
-        val isLaunchingSecretLevel =
-            GameDataManager.isModoSecretoAtivo &&
-                (nivelDaIntent == GameDataManager.SecretLevels.RELAMPAGO ||
-                    nivelDaIntent == GameDataManager.SecretLevels.PERFEICAO ||
-                    nivelDaIntent == GameDataManager.SecretLevels.ENIGMA)
+        val backupAvailable = SecurePrefs.getBoolean(this, KEY_BACKUP_AVAILABLE, false)
 
-        var levelToLoad = nivelDaIntent
+        // =========================================================================================
+        // ✅ VARS DE CONTROLE (defaults)
+        // =========================================================================================
+        var levelToLoad = levelFromIntent
         var startIndex = 0
 
-        if (isLaunchingSecretLevel) {
-            if (isSecretLevel(levelToLoad)) {
-                secretCorrectCounter = 0
-                secretHitsInRow = 0
-                resetCuriosityBag()
-            }
+        wrongAnswersCount = 0
+        runScoreLevel = 0
+        shuffleSeed = 0L
+
+        // =========================================================================================
+        // ✅ (A) SECRETO: sem streak, mas score continua somando
+        // =========================================================================================
+        if (launchingSecret) {
+            // score da sessão continua (normal + secreto)
+            val sessionScore = SecurePrefs.getInt(this, KEY_SESSION_SCORE, 0)
+            scoreManager.setOverallScore(sessionScore)
+
+            // secreto NÃO TEM streak
+            scoreManager.setCurrentStreak(0)
+            binding.streakTextView.visibility = View.GONE
+            binding.secretProgressLayout.visibility = View.GONE
+
+            // no secreto: erros/score da fase (runScoreLevel) você decide (aqui zerado)
+            wrongAnswersCount = 0
+            runScoreLevel = 0
+
+            // seed novo no secreto
+            shuffleSeed = newSeed()
+
+            // marca estado "em secreto"
+            SecurePrefs.putBoolean(this, KEY_IN_SECRET, true)
+            SecurePrefs.putString(this, KEY_SECRET_LEVEL, levelToLoad)
+
+            // FX / curiosidades do secreto
+            secretCorrectCounter = 0
+            secretHitsInRow = 0
+            resetCuriosityBag()
             dispararEfeitoFaseSecreta(levelToLoad)
         }
 
-        // --- restore jogo (backup) ---
-        val prefs = getSharedPreferences(PREF_TEMP, Context.MODE_PRIVATE)
-        val nivelRetorno = GameDataManager.getUltimoNivelNormal(this)
-        val backupDisponivel = prefs.getBoolean("is_backup_available", false)
+        // =========================================================================================
+        // ✅ (B) VOLTOU DO SECRETO: restaura NORMAL sem zerar score e mantendo streak normal
+        // =========================================================================================
+        else if (returnFromSecret && backupAvailable) {
+            val normalLevel =
+                SecurePrefs.getString(this, KEY_NORMAL_LEVEL, GameDataManager.Levels.INICIANTE)!!
+            val normalIndex = SecurePrefs.getInt(this, KEY_NORMAL_INDEX, 0)
+            val normalErrors = SecurePrefs.getInt(this, KEY_NORMAL_ERRORS, 0)
+            val normalStreak = SecurePrefs.getInt(this, KEY_NORMAL_STREAK, 0)
+            val normalRunScore = SecurePrefs.getInt(this, KEY_NORMAL_RUN_SCORE, 0)
+            val normalSeed = secureGetLong(KEY_NORMAL_SEED, 0L)
 
+            val sessionScore = SecurePrefs.getInt(this, KEY_SESSION_SCORE, 0)
 
-        val isRestoringBackup =
-            (nivelRetorno != null && backupDisponivel && !isLaunchingSecretLevel && !returnFromSecret)
+            levelToLoad = normalLevel
+            startIndex = normalIndex + 1
+            wrongAnswersCount = normalErrors
+            runScoreLevel = normalRunScore
+            shuffleSeed = normalSeed.takeIf { it != 0L } ?: newSeed()
 
-        if (isRestoringBackup) {
-            levelToLoad = nivelRetorno!!
-            startIndex = GameDataManager.loadLastQuestionIndex(this, levelToLoad) + 1
+            // ✅ score continua (não zera)
+            scoreManager.setOverallScore(sessionScore)
 
-            wrongAnswersCount = prefs.getInt("errors_backup", 0)
-            scoreManager.setCurrentStreak(prefs.getInt("streak_backup", 0))
-            scoreManager.setOverallScore(prefs.getInt("score_backup", 0))
+            // ✅ streak volta do normal (mantém!)
+            scoreManager.setCurrentStreak(normalStreak)
+            binding.streakTextView.visibility = View.VISIBLE
 
-            // ✅ seed da partida (para voltar exatamente na mesma ordem)
-            shuffleSeed = prefs.getLong(KEY_SEED_BACKUP, 0L)
+            // saiu do secreto
+            SecurePrefs.putBoolean(this, KEY_IN_SECRET, false)
+            SecurePrefs.putString(this, KEY_SECRET_LEVEL, "")
 
-            prefs.edit { clear() }
-            GameDataManager.clearUltimoNivelNormal(this)
+            // (opcional) não limpar backup aqui se quiser tolerância a crash
+            // se quiser limpar, faça depois que a primeira pergunta carregar com sucesso.
             GameDataManager.isModoSecretoAtivo = false
-
-            Toast.makeText(
-                this,
-                "Continuando o jogo em $levelToLoad, Pergunta ${startIndex + 1}",
-                Toast.LENGTH_LONG
-            ).show()
-         }
-          if (returnFromSecret && backupDisponivel) {
-            val restoredScore = prefs.getInt("score_backup", 0)
-            scoreManager.setOverallScore(restoredScore)
-            scoreManager.setCurrentStreak(0)
-
-            prefs.edit { clear() }
             GameDataManager.clearUltimoNivelNormal(this)
-            GameDataManager.isModoSecretoAtivo = false
 
-            wrongAnswersCount = 0
-            runScoreLevel = 0
-            currentQuestionIndex = 0
-
-            Toast.makeText(
-                this,
-                "✅ Fase reiniciada com perguntas novas.",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(this, "✅ Voltando ao nível $levelToLoad", Toast.LENGTH_SHORT).show()
         }
 
+        // =========================================================================================
+        // ✅ (C) RESTORE NORMAL (caso crash no normal) - opcional, mas recomendado
+        // =========================================================================================
+        val isRestoringNormalBackup =
+            (!launchingSecret && !returnFromSecret && backupAvailable &&
+                !SecurePrefs.getString(this, KEY_NORMAL_LEVEL, "").isNullOrBlank())
 
+        if (isRestoringNormalBackup) {
+            val normalLevel = SecurePrefs.getString(this, KEY_NORMAL_LEVEL, null)
+            if (!normalLevel.isNullOrBlank()) {
+                val normalIndex = SecurePrefs.getInt(this, KEY_NORMAL_INDEX, 0)
+                val normalErrors = SecurePrefs.getInt(this, KEY_NORMAL_ERRORS, 0)
+                val normalStreak = SecurePrefs.getInt(this, KEY_NORMAL_STREAK, 0)
+                val normalRunScore = SecurePrefs.getInt(this, KEY_NORMAL_RUN_SCORE, 0)
+                val normalSeed = secureGetLong(KEY_NORMAL_SEED, 0L)
+                val sessionScore = SecurePrefs.getInt(this, KEY_SESSION_SCORE, 0)
+
+                levelToLoad = normalLevel
+                startIndex = normalIndex + 1
+                wrongAnswersCount = normalErrors
+                runScoreLevel = normalRunScore
+                shuffleSeed = normalSeed.takeIf { it != 0L } ?: newSeed()
+
+                scoreManager.setOverallScore(sessionScore)
+                scoreManager.setCurrentStreak(normalStreak)
+                binding.streakTextView.visibility = View.VISIBLE
+            }
+        }
+
+        // =========================================================================================
+        // ✅ SETS / TARGETS / UI
+        // =========================================================================================
         currentLevelLoaded = levelToLoad
 
-        // alvo pra desbloquear fase secreta (só nos níveis normais)
-        secretTarget = when (currentLevelLoaded) {
-            GameDataManager.Levels.INICIANTE -> 10
-            GameDataManager.Levels.INTERMEDIARIO -> 10
-            GameDataManager.Levels.AVANCADO -> 8
-            else -> 0
+        // UI: secreto não mostra streak/progresso, normal mostra
+        if (isSecretLevel(currentLevelLoaded)) {
+            binding.streakTextView.visibility = View.GONE
+            binding.secretProgressLayout.visibility = View.GONE
+        } else {
+            binding.streakTextView.visibility = View.VISIBLE
         }
 
-        setupSecretProgressUi()
+        // alvo pra fase secreta (somente níveis normais)
+        secretTarget = if (!isSecretLevel(currentLevelLoaded)) {
+            when (currentLevelLoaded) {
+                GameDataManager.Levels.INICIANTE -> 10
+                GameDataManager.Levels.INTERMEDIARIO -> 10
+                GameDataManager.Levels.AVANCADO -> 8
+                else -> 0
+            }
+        } else 0
+
         configurarNivel(levelToLoad)
         configurarTituloNivel(levelToLoad)
 
-        // ✅ seed por partida (se não veio do backup)
+        // seed por partida (se ainda não existe)
         if (shuffleSeed == 0L) shuffleSeed = newSeed()
 
-        // ✅ snapshot do visto ANTES da rodada (base para “novas primeiro”)
+        // snapshot do visto (premium)
         initialSeenKeys = getSeenSet(levelToLoad).toSet()
 
-        // ✅ Perguntas:
-        // - Backup => lista única inteira na mesma seed
-        // - Retorno do secreto => apenas novas (pool fresco)
-        // - Normal => 30: novas primeiro, completa com revisão (+0 pts)
-        questions = if (isRestoringBackup) {
-            buildUniqueShuffledQuestions(levelToLoad, shuffleSeed)
-        } else if (returnFromSecret) {
-            buildFreshRunQuestions(levelToLoad, shuffleSeed)
-        } else {
-            buildPremiumRunQuestions(levelToLoad, shuffleSeed)
+        // =========================================================================================
+        // ✅ LISTA DE PERGUNTAS
+        // =========================================================================================
+        questions = when {
+            launchingSecret -> {
+                // segredo: só perguntas novas (fresh) desse nível
+                buildFreshRunQuestions(levelToLoad, shuffleSeed)
+            }
+
+            // retorno do secreto ou restore => mantém ordem estável para startIndex funcionar
+            (returnFromSecret || isRestoringNormalBackup) -> {
+                buildUniqueShuffledQuestions(levelToLoad, shuffleSeed)
+            }
+
+            else -> {
+                // normal: premium run (novas primeiro, completa com revisão)
+                buildPremiumRunQuestions(levelToLoad, shuffleSeed)
+            }
         }
 
         totalQuestions = questions.size
 
-        // ✅ Aviso premium quando não houver “novas” nesta rodada
-        if (!isRestoringBackup && !isSecretLevel(currentLevelLoaded) && newThisRunKeys.isEmpty()) {
-            Toast.makeText(
-                this,
-                "✅ Você já respondeu todas as perguntas novas deste nível. Modo revisão ativado (+0 pts).",
-                Toast.LENGTH_LONG
-            ).show()
-        }
+        currentQuestionIndex =
+            if (startIndex >= totalQuestions && totalQuestions > 0) totalQuestions else startIndex
 
-        // start index seguro
-        currentQuestionIndex = if (startIndex >= totalQuestions && totalQuestions > 0) totalQuestions else startIndex
-        if (!isRestoringBackup) runScoreLevel = 0
-
+        // progress UI só no normal
+        setupSecretProgressUi()
         updateQuestionsRemaining()
         updateCoinsUI()
 
         if (questions.isEmpty()) {
-            binding.questionTextView.text = getString(R.string.nenhuma_pergunta_dispon_vel_para_este_n_vel)
+            binding.questionTextView.text =
+                getString(R.string.nenhuma_pergunta_dispon_vel_para_este_n_vel)
             setOptionsEnabled(false)
             return
         }
 
         inflateOptionButtons()
         setupAnswerButtons()
-
         cacheQuestionCardDefaults()
         playIntroThenStartGame()
     }
+
+
+
 
     override fun onResume() {
         super.onResume()
@@ -676,82 +786,138 @@ class TestActivity : AppCompatActivity() {
      *   - só pontua se for “nova desta rodada” E for a primeira vez na vida (markScoredIfFirstTime).
      *   - revisão: +streak (feedback premium), +0 pts.
      */
-    private fun checkAnswer(selectedIndex: Int) {
-        if (currentQuestionIndex >= questions.size) return
-        if (answerLocked) return
 
-        val selectedBtn = optionButtons.getOrNull(selectedIndex)
-        if (selectedBtn == null || selectedBtn.visibility != View.VISIBLE) return
+        private fun checkAnswer(selectedIndex: Int) {
+            if (currentQuestionIndex >= questions.size) return
+            if (answerLocked) return
 
-        answerLocked = true
-        pauseTimer()
-        setOptionsEnabled(false)
+            val selectedBtn = optionButtons.getOrNull(selectedIndex)
+            if (selectedBtn == null || selectedBtn.visibility != View.VISIBLE) return
 
-        val q = questions[currentQuestionIndex]
-        val isCorrect = selectedIndex == q.correctAnswerIndex
+            answerLocked = true
+            pauseTimer()
+            setOptionsEnabled(false)
 
-        val oldScore = scoreManager.getOverallScore()
-        val levelNow = currentLevel()
-        val isSecretNow = isSecretLevel(levelNow)
-        val qKey = questionKey(q)
+            val q = questions[currentQuestionIndex]
+            val isCorrect = selectedIndex == q.correctAnswerIndex
 
-        secretHitsInRow = if (isSecretNow) {
-            if (isCorrect) secretHitsInRow + 1 else 0
-        } else 0
+            val oldScore = scoreManager.getOverallScore()
+            val levelNow = currentLevel()
+            val isSecretNow = isSecretLevel(levelNow)
+            val qKey = questionKey(q)
 
-        paintButtonsForAnswer(selectedIndex, q.correctAnswerIndex)
+            // visual da resposta
+            paintButtonsForAnswer(selectedIndex, q.correctAnswerIndex)
 
-        val spent = (totalTimeInMillis - remainingTimeInMillis).coerceAtLeast(0L)
-        questionsAnswered++
-        totalTimeAccumulated += spent
+            // métricas
+            val spent = (totalTimeInMillis - remainingTimeInMillis).coerceAtLeast(0L)
+            questionsAnswered++
+            totalTimeAccumulated += spent
 
-        if (isCorrect) {
-            val totalDaQuestao = when (levelNow) {
-                GameDataManager.Levels.INTERMEDIARIO -> 20_000L
-                GameDataManager.Levels.AVANCADO -> 15_000L
-                else -> 30_000L
-            }
+            if (isCorrect) {
+                val totalDaQuestao = when (levelNow) {
+                    GameDataManager.Levels.INTERMEDIARIO -> 20_000L
+                    GameDataManager.Levels.AVANCADO -> 15_000L
+                    else -> 30_000L
+                }
 
-            val eligibleForPoints = isSecretNow || (
-                newThisRunKeys.contains(qKey) && markScoredIfFirstTime(levelNow, qKey)
-                )
+                if (isSecretNow) {
+                    // =====================================================
+                    // ✅ SECRETO: NÃO EXISTE STREAK
+                    // - pontua sempre
+                    // - não chama onCorrectAnswer()
+                    // - não dispara iniciarModoSecreto()
+                    // =====================================================
+                    playCorrectSfx()
 
-            if (eligibleForPoints) {
-                // ✅ PONTUA (addScore já incrementa streak)
-                handleCorrectAnswerAward(levelNow, totalDaQuestao)
-                if (isFinishing) return
+                    // Soma pontos sem streak (streakNow=0)
+                    scoreManager.addScoreNoStreak(
+                        remainingTimeInMillis = remainingTimeInMillis,
+                        totalTimeInMillis = totalDaQuestao,
+                        streakNow = 0
+                    )
 
-                val newScore = scoreManager.getOverallScore()
-                val gained = (newScore - oldScore).coerceAtLeast(0)
-                if (!isSecretNow) runScoreLevel += gained
+                    val newScore = scoreManager.getOverallScore()
+                    val gained = (newScore - oldScore).coerceAtLeast(0)
 
-                val streakNow = scoreManager.currentStreakLive.value ?: 0
-                showFloatingChip("✔ +$gained pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+                    showFloatingChip("✔ +$gained pts", R.drawable.ic_check_circle, true)
+
+                    // curiosidades / progress interno do secreto (se você quiser manter)
+                    secretHitsInRow += 1
+
+                } else {
+                    // =====================================================
+                    // ✅ NORMAL: sua regra premium (novo + primeira vez = pontua)
+                    // revisão: +streak e +0 pts
+                    // =====================================================
+                    val eligibleForPoints =
+                        newThisRunKeys.contains(qKey) && markScoredIfFirstTime(levelNow, qKey)
+
+                    if (eligibleForPoints) {
+                        // pontua normal (addScore incrementa streak)
+                        handleCorrectAnswerAward(levelNow, totalDaQuestao)
+                        if (isFinishing) return
+
+                        val newScore = scoreManager.getOverallScore()
+                        val gained = (newScore - oldScore).coerceAtLeast(0)
+                        runScoreLevel += gained
+
+                        val streakNow = scoreManager.currentStreakLive.value ?: 0
+                        showFloatingChip("✔ +$gained pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+                    } else {
+                        // revisão: +streak, +0 pts
+                        scoreManager.onCorrectAnswer()
+                        playCorrectSfx()
+
+                        val streakNow = scoreManager.currentStreakLive.value ?: 0
+                        showFloatingChip("✔ Revisão • +0 pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+                    }
+                }
+
+                glowQuestionCard(success = true)
+                flashFx(success = true)
+
             } else {
-                // ✅ REVISÃO: +streak, +0 pts
-                scoreManager.onCorrectAnswer()
-                playCorrectSfx()
+                // =====================================================
+                // ❌ ERRO
+                // - secreto: não “reseta streak” porque streak não existe
+                // - normal: seu fluxo padrão (zera streak etc.)
+                // =====================================================
+                if (isSecretNow) {
+                    try {
+                        wrongSound.seekTo(0)
+                        wrongSound.start()
+                    } catch (_: Exception) {}
 
-                val streakNow = scoreManager.currentStreakLive.value ?: 0
-                showFloatingChip("✔ Revisão • +0 pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+                    secretHitsInRow = 0
+                    vibrateWrong()
+
+                    // NÃO chama scoreManager.onWrongAnswer() (pois ele zera streak e altera score global)
+                    // Se você quiser penalidade no secreto, faça aqui uma dedução própria (opcional).
+                    wrongAnswersCount++
+
+                    showFloatingChip("✖ Errou", R.drawable.ic_delete, false)
+                } else {
+                    handleWrongAnswer()
+
+                    val streakNow = scoreManager.currentStreakLive.value ?: 0
+                    showFloatingChip("✖ Errou • 🔥 $streakNow", R.drawable.ic_delete, false)
+                }
+
+                glowQuestionCard(success = false)
+                shake(selectedBtn)
+                flashFx(success = false)
             }
 
-            glowQuestionCard(success = true)
-            flashFx(success = true)
-        } else {
-            handleWrongAnswer()
+            // ✅ Atualiza UI de “rumo ao secreto” só no normal
+            if (!isSecretNow) {
+                updateSecretProgressUi(scoreManager.currentStreakLive.value ?: 0)
+            }
 
-            val streakNow = scoreManager.currentStreakLive.value ?: 0
-            showFloatingChip("✖ Errou • 🔥 $streakNow", R.drawable.ic_delete, false)
-
-            glowQuestionCard(success = false)
-            shake(selectedBtn)
-            flashFx(success = false)
+            advanceToNextQuestionWithDelayOrCuriosity(isCorrect)
         }
 
-        updateSecretProgressUi(scoreManager.currentStreakLive.value ?: 0)
-        advanceToNextQuestionWithDelayOrCuriosity(isCorrect)
-    }
+
 
     private fun playCorrectSfx() {
         try {
@@ -760,39 +926,56 @@ class TestActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun handleCorrectAnswerAward(nivelAtual: String, totalDaQuestao: Long) {
-        if (faseFinalizada) return
+        @SuppressLint("SetTextI18n")
+        private fun handleCorrectAnswerAward(nivelAtual: String, totalDaQuestao: Long) {
+            if (faseFinalizada) return
 
-        playCorrectSfx()
+            // ✅ Segurança: dentro do secreto NÃO tem streak e NÃO entra em secreto de novo
+            if (isSecretLevel(nivelAtual)) {
+                // Se por algum motivo você chamar isso no secreto, ignora o gatilho.
+                // (pontuação do secreto você faz no checkAnswer com addScoreNoStreak)
+                playCorrectSfx()
+                return
+            }
 
-        // ✅ soma pontos (addScore incrementa streak + globais/marcos)
-        scoreManager.addScore(remainingTimeInMillis, totalDaQuestao)
+            playCorrectSfx()
 
-        // ✅ conta 1 acerto POR NÍVEL (somente níveis normais)
-        if (!isSecretLevel(nivelAtual)) {
+            // ✅ soma pontos (addScore incrementa streak + globais/marcos)
+            scoreManager.addScore(remainingTimeInMillis, totalDaQuestao)
+
+            // ✅ conta 1 acerto POR NÍVEL (somente níveis normais)
             GameDataManager.addCorrectForLevel(this, nivelAtual, 1)
+
+            // ✅ modo secreto (apenas se NÃO existe jogo pausado / não está retornando etc.)
+            val streakCalculo = scoreManager.currentStreakLive.value ?: 0
+            val nenhumPausado = GameDataManager.getUltimoNivelNormal(this) == null
+
+            if (!nenhumPausado) return
+
+            when (nivelAtual) {
+                GameDataManager.Levels.INICIANTE -> {
+                    if (streakCalculo == 10) {
+                        iniciarModoSecreto(GameDataManager.SecretLevels.RELAMPAGO)
+                        return
+                    }
+                }
+
+                GameDataManager.Levels.INTERMEDIARIO -> {
+                    if (streakCalculo == 10) {
+                        iniciarModoSecreto(GameDataManager.SecretLevels.PERFEICAO)
+                        return
+                    }
+                }
+
+                GameDataManager.Levels.AVANCADO -> {
+                    if (streakCalculo == 8) {
+                        iniciarModoSecreto(GameDataManager.SecretLevels.ENIGMA)
+                        return
+                    }
+                }
+            }
         }
 
-        // ✅ modo secreto (só quando pontuou de verdade)
-        val streakCalculo = scoreManager.currentStreakLive.value ?: 0
-        val nenhumPausado = GameDataManager.getUltimoNivelNormal(this) == null
-
-        when (nivelAtual) {
-            GameDataManager.Levels.INICIANTE ->
-                if (streakCalculo == 10 && nenhumPausado) {
-                    iniciarModoSecreto(GameDataManager.SecretLevels.RELAMPAGO); return
-                }
-            GameDataManager.Levels.INTERMEDIARIO ->
-                if (streakCalculo == 10 && nenhumPausado) {
-                    iniciarModoSecreto(GameDataManager.SecretLevels.PERFEICAO); return
-                }
-            GameDataManager.Levels.AVANCADO ->
-                if (streakCalculo == 8 && nenhumPausado) {
-                    iniciarModoSecreto(GameDataManager.SecretLevels.ENIGMA); return
-                }
-        }
-    }
 
     private fun handleWrongAnswer() {
         try {
@@ -951,17 +1134,19 @@ class TestActivity : AppCompatActivity() {
     }
 
     // =============================================================================================
-    // PERSISTÊNCIA ANTI-FARM (seen + scored) - por usuário + por nível
-    // =============================================================================================
+// PERSISTÊNCIA ANTI-FARM (seen + scored) - por usuário + por nível (SecurePrefs)
+// =============================================================================================
 
-    private fun qStatePrefs() = getSharedPreferences(PREF_QSTATE, Context.MODE_PRIVATE)
 
     private fun userScopeKey(): String {
         val uid = GameDataManager.currentUserId
         return if (uid.isNullOrBlank()) "anon" else uid
     }
 
-    private fun levelScopeKey(level: String): String = canonicalLevelKey(level).trim().lowercase()
+
+
+    private fun levelScopeKey(level: String): String =
+        canonicalLevelKey(level).trim().lowercase()
 
     private fun seenStorageKey(level: String): String =
         "${KEY_SEEN_PREFIX}${userScopeKey()}_${levelScopeKey(level)}"
@@ -970,12 +1155,12 @@ class TestActivity : AppCompatActivity() {
         "${KEY_SCORED_PREFIX}${userScopeKey()}_${levelScopeKey(level)}"
 
     private fun getSeenSet(level: String): MutableSet<String> {
-        val raw = qStatePrefs().getStringSet(seenStorageKey(level), emptySet()) ?: emptySet()
+        val raw = SecurePrefs.getStringSet(this, seenStorageKey(level), emptySet())
         return HashSet(raw)
     }
 
     private fun getScoredSet(level: String): MutableSet<String> {
-        val raw = qStatePrefs().getStringSet(scoredStorageKey(level), emptySet()) ?: emptySet()
+        val raw = SecurePrefs.getStringSet(this, scoredStorageKey(level), emptySet())
         return HashSet(raw)
     }
 
@@ -983,7 +1168,7 @@ class TestActivity : AppCompatActivity() {
         if (qKey.isBlank()) return
         val set = getSeenSet(level)
         if (set.add(qKey)) {
-            qStatePrefs().edit().putStringSet(seenStorageKey(level), HashSet(set)).apply()
+            SecurePrefs.putStringSet(this, seenStorageKey(level), set)
         }
     }
 
@@ -997,10 +1182,11 @@ class TestActivity : AppCompatActivity() {
         val set = getScoredSet(level)
         val first = set.add(qKey)
         if (first) {
-            qStatePrefs().edit().putStringSet(scoredStorageKey(level), HashSet(set)).apply()
+            SecurePrefs.putStringSet(this, scoredStorageKey(level), set)
         }
         return first
     }
+
 
     // =============================================================================================
     // UI / FX
@@ -1302,6 +1488,7 @@ class TestActivity : AppCompatActivity() {
         PremiumUi.applyTitleToUsername(binding.welcomeUsername, this, displayName)
     }
 
+
     private fun observeScoreManager() {
         scoreManager.overallScoreLive.observe(this) {
             configurarPontuacao()
@@ -1310,6 +1497,16 @@ class TestActivity : AppCompatActivity() {
         }
 
         scoreManager.currentStreakLive.observe(this) { streak ->
+            // ✅ No secreto: não usa streak pra nada (não persiste, não mostra, não conta)
+            if (isSecretLevel(currentLevel())) {
+                // opcional: garantir UI "neutra" no secreto
+                binding.streakTextView.visibility = View.GONE
+                // também não atualiza barra "rumo ao secreto"
+                // (no seu setupSecretProgressUi já deve esconder, mas aqui garante)
+                return@observe
+            }
+
+            // ✅ Normal: continua como antes
             configurarPontuacao()
             updateSecretProgressUi(streak)
 
@@ -1324,6 +1521,9 @@ class TestActivity : AppCompatActivity() {
             }
         }
     }
+
+
+
 
     private fun checkPremiumUnlocksInGame() {
         val ctx = applicationContext
@@ -1343,6 +1543,17 @@ class TestActivity : AppCompatActivity() {
 
         showFloatingChip(msg, R.drawable.ic_check_circle, true)
         microCelebrate()
+    }
+
+    private fun applySecretUiIfNeeded(level: String) {
+        val isSecret = isSecretLevel(level)
+
+        binding.streakTextView.visibility = if (isSecret) View.GONE else View.VISIBLE
+
+        // se você tiver layout de progresso pro secreto:
+        if (isSecret) {
+            binding.secretProgressLayout.visibility = View.GONE
+        }
     }
 
     private fun checkPremiumUnlocksIfAny() {
@@ -1500,26 +1711,36 @@ class TestActivity : AppCompatActivity() {
     private fun avgTimeSeconds(): Double =
         if (questionsAnswered > 0) totalTimeAccumulated.toDouble() / questionsAnswered / 1000.0 else 0.0
 
+
+
     private fun iniciarModoSecreto(secretLevel: String) {
         countDownTimer?.cancel()
 
         val nivelAtual = currentLevel()
-        val currentStreak = scoreManager.currentStreakLive.value ?: 0
+        val streakAtual = scoreManager.currentStreakLive.value ?: 0
+        val scoreSessao = scoreManager.getOverallScore()
 
+        // Mantém compat com seu fluxo atual (se você ainda usa isso em algum lugar)
         GameDataManager.saveLastQuestionIndex(this, nivelAtual, currentQuestionIndex)
         GameDataManager.setUltimoNivelNormal(this, nivelAtual)
         GameDataManager.isModoSecretoAtivo = true
 
-        val prefs = getSharedPreferences(PREF_TEMP, Context.MODE_PRIVATE)
-        prefs.edit().apply {
-            putInt("score_backup", scoreManager.getOverallScore())
-            putInt("errors_backup", wrongAnswersCount)
-            putInt("streak_backup", currentStreak)
-            putBoolean("is_backup_available", true)
-            putInt("run_score_backup", runScoreLevel)
-            putLong(KEY_SEED_BACKUP, shuffleSeed)
-            apply()
-        }
+        // ✅ SecurePrefs: salva o estado do NORMAL antes de entrar no SECRETO
+        SecurePrefs.putInt(this, KEY_SESSION_SCORE, scoreSessao)
+
+        SecurePrefs.putString(this, KEY_NORMAL_LEVEL, nivelAtual)
+        SecurePrefs.putInt(this, KEY_NORMAL_INDEX, currentQuestionIndex)
+        SecurePrefs.putInt(this, KEY_NORMAL_ERRORS, wrongAnswersCount)
+        SecurePrefs.putInt(this, KEY_NORMAL_STREAK, streakAtual)
+        SecurePrefs.putInt(this, KEY_NORMAL_RUN_SCORE, runScoreLevel)
+
+        // seed (Long) — usa SharedPreferences interno do SecurePrefs
+        SecurePrefs.get(this).edit().putLong(KEY_NORMAL_SEED, shuffleSeed).apply()
+
+        // flags de fluxo
+        SecurePrefs.putBoolean(this, KEY_BACKUP_AVAILABLE, true)
+        SecurePrefs.putBoolean(this, KEY_IN_SECRET, true)
+        SecurePrefs.putString(this, KEY_SECRET_LEVEL, secretLevel)
 
         Toast.makeText(
             this,
@@ -1527,31 +1748,42 @@ class TestActivity : AppCompatActivity() {
             Toast.LENGTH_LONG
         ).show()
 
+        // ✅ Importante: NÃO manda currentStreak pro secreto, porque no secreto não existe streak.
         startActivity(Intent(this, SecretTransitionActivity::class.java).apply {
             putExtra("SECRET_LEVEL", secretLevel)
             putExtra("RETURN_TO_ACTIVE_GAME", true)
-            putExtra("currentStreak", currentStreak)
+            // se a SecretTransitionActivity ainda espera esse extra, manda 0 só pra não quebrar:
+            putExtra("currentStreak", 0)
         })
+
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         finish()
     }
 
+
     private fun navigateToResultActivity(screenType: String) {
         countDownTimer?.cancel()
-        val totalScoreDaFaseAtual = scoreManager.getOverallScore()
-        val isSecretMode = GameDataManager.isModoSecretoAtivo
+
+        val isSecretNow = isSecretLevel(currentLevelLoaded) || GameDataManager.isModoSecretoAtivo
         val avgMs = (avgTimeSeconds() * 1000.0).toLong()
 
         val levelKey = if (currentLevelLoaded.isNotBlank()) currentLevelLoaded else currentLevel()
 
+        // ✅ Recordes só fazem sentido para NÍVEIS NORMAIS
         if (!isSecretLevel(levelKey)) {
+            // runScoreLevel = score DO NÍVEL (não o total global)
             LocalRecordsManager.updateBestScoreForLevel(this, levelKey, runScoreLevel)
             LocalRecordsManager.updateBestAvgTimeForLevel(this, levelKey, avgMs)
         }
 
+        // ✅ Intent de resultado (apenas para NORMAL)
         val resultIntent = Intent(this, ResultOrGameOverActivity::class.java).apply {
             putExtra("SCREEN_TYPE", screenType)
-            putExtra("SCORE", totalScoreDaFaseAtual)
+
+            // Mostra separado (você decide na tela de resultado)
+            putExtra("SCORE_TOTAL", scoreManager.getOverallScore()) // global (sessão)
+            putExtra("SCORE_LEVEL", runScoreLevel)                  // só da fase
+
             putExtra("WRONG_ANSWERS", wrongAnswersCount)
             putExtra("MAX_WRONG_ANSWERS", maxWrongAnswers)
             putExtra("TOTAL_QUESTIONS", totalQuestions)
@@ -1560,22 +1792,22 @@ class TestActivity : AppCompatActivity() {
         }
 
         val onAdDismissed = {
-            if (isSecretMode) {
-                val nivelAnterior =
-                    GameDataManager.getUltimoNivelNormal(this) ?: GameDataManager.Levels.INICIANTE
-
-                Toast.makeText(this, "⚡ Fase secreta concluída! Bônus aplicados.", Toast.LENGTH_SHORT).show()
-
-                val prefs = getSharedPreferences(PREF_TEMP, Context.MODE_PRIVATE)
-                val oldScore = prefs.getInt("score_backup", 0)
-                val scoreFinalTotal = oldScore + totalScoreDaFaseAtual
-
+            if (isSecretNow) {
+                // ✅ SECRETO:
+                // - NÃO soma score aqui (já somou durante o jogo)
+                // - recompensa moedas
                 CoinManager.rewardForSecretLevelCompletion(this)
 
-                prefs.edit().apply {
-                    putInt("score_backup", scoreFinalTotal)
-                    apply()
-                }
+                Toast.makeText(this, "⚡ Fase secreta concluída!", Toast.LENGTH_SHORT).show()
+
+                // ✅ volta para o nível normal salvo (SecurePrefs)
+                val nivelAnterior =
+                    SecurePrefs.getString(this, KEY_NORMAL_LEVEL, null)
+                        ?: (GameDataManager.getUltimoNivelNormal(this) ?: GameDataManager.Levels.INICIANTE)
+
+                // opcional: marca que saiu do secreto
+                SecurePrefs.putBoolean(this, KEY_IN_SECRET, false)
+                SecurePrefs.putString(this, KEY_SECRET_LEVEL, "")
 
                 startActivity(Intent(this, TestActivity::class.java).apply {
                     putExtra("level", nivelAnterior)
@@ -1583,6 +1815,7 @@ class TestActivity : AppCompatActivity() {
                 })
                 finish()
             } else {
+                // ✅ NORMAL: mostra tela de resultado
                 startActivity(resultIntent)
                 finish()
             }
@@ -1629,21 +1862,42 @@ class TestActivity : AppCompatActivity() {
     private fun bannerUnitId(): String =
         if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
 
-    private fun setupBanner() {
+    // --- Ads ---
+
+    private fun setupBannerAdaptive() {
         adView = binding.adView
         if (bannerLoaded) return
         bannerLoaded = true
 
-        adView.adUnitId = bannerUnitId() // ✅ só aqui, uma vez
-
         adView.visibility = View.INVISIBLE
-        adView.adListener = object : AdListener() {
-            override fun onAdLoaded() { adView.visibility = View.VISIBLE }
-            override fun onAdFailedToLoad(error: LoadAdError) { adView.visibility = View.INVISIBLE }
-        }
 
-        adView.loadAd(AdRequest.Builder().build())
+        // ✅ setar unitId UMA vez (agora vem só do Kotlin)
+        adView.adUnitId = bannerUnitId()
+
+        val container = binding.adContainer
+        container.post {
+            // ✅ se a Activity já está morrendo, evita crash
+            if (isFinishing || isDestroyed) return@post
+
+            val widthPx = kotlin.math.max(1, container.width)
+            val density = resources.displayMetrics.density
+            val widthDp = (widthPx / density).toInt().coerceAtLeast(320)
+
+            val adaptiveSize =
+                AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, widthDp)
+
+            // ✅ setAdSize UMA vez só
+            adView.setAdSize(adaptiveSize)
+
+            adView.adListener = object : AdListener() {
+                override fun onAdLoaded() { adView.visibility = View.VISIBLE }
+                override fun onAdFailedToLoad(error: LoadAdError) { adView.visibility = View.INVISIBLE }
+            }
+
+            adView.loadAd(AdRequest.Builder().build())
+        }
     }
+
 
 
 

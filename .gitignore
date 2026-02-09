@@ -38,3 +38,13 @@ keystore.properties
 *.jks
 *.keystore
 
+
+#audit
+reports/
+audit.ps1
+
+
+#audit
+reports/
+audit.ps1
+

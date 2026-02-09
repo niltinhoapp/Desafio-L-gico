@@ -11,24 +11,26 @@ class LocalRecordsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLocalRecordsBinding
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
 
-        binding = ActivityLocalRecordsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
 
-        GameDataManager.init(this)
+            binding = ActivityLocalRecordsBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        binding.btnBack.setOnClickListener { finish() }
+            GameDataManager.init(this)
 
-        binding.btnShare.setOnClickListener {
-            binding.recordsCard.post {
-                ShareUtils.shareViewAsImage(this, binding.recordsCard, "Compartilhar placar")
+            binding.btnBack.setOnClickListener { finish() }
+
+            binding.btnShare.setOnClickListener {
+                binding.recordsCard.post {
+                    ShareUtils.shareViewAsImage(this, binding.recordsCard, "Compartilhar placar")
+                }
             }
+
+            refreshAll()
         }
 
-        refreshAll()
-    }
 
     override fun onResume() {
         super.onResume()

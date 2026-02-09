@@ -1,28 +1,38 @@
 package com.desafiolgico.main
 
 import android.animation.ObjectAnimator
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.getSystemService
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityEnigmaPortalBinding
 import com.desafiolgico.utils.EnigmaPortalGate
+import com.desafiolgico.utils.SecurePrefs
 import com.google.android.material.card.MaterialCardView
 import kotlin.math.abs
 
 class EnigmaPortalActivity : AppCompatActivity() {
 
     companion object { const val EXTRA_SCORE = "extra_score" }
+
+    // ---- Persistência do RUN (SecurePrefs) ----
+    private companion object {
+        private const val KEY_RUN_SAVED = "portal_run_saved"
+        private const val KEY_RUN_STAGE = "portal_run_stage"
+        private const val KEY_RUN_ERRORS = "portal_run_errors"
+        private const val KEY_RUN_STABILITY = "portal_run_stability"
+        private const val KEY_RUN_FINISHED = "portal_run_finished"
+        private const val KEY_RUN_LAST_TS = "portal_run_last_ts" // anti “pause”
+    }
 
     private lateinit var binding: ActivityEnigmaPortalBinding
 
@@ -65,11 +75,13 @@ class EnigmaPortalActivity : AppCompatActivity() {
 
     private var stage = 0
     private var errorsLeft = 2
+    private var stability = 100 // 0..100
+    private var finished = false
 
     private var timer: CountDownTimer? = null
-    private var stability = 100 // 0..100
 
-    private var finished = false
+    // ✅ trava anti clique duplo
+    private var inputLocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,7 +93,9 @@ class EnigmaPortalActivity : AppCompatActivity() {
 
         val score = intent.getIntExtra(EXTRA_SCORE, 0)
 
-        // trava se não tiver score (segurança)
+        EnigmaPortalGate.touchToday(this)
+
+        // segurança do score
         if (score < EnigmaPortalGate.requiredScore()) {
             Toast.makeText(
                 this,
@@ -92,9 +106,8 @@ class EnigmaPortalActivity : AppCompatActivity() {
             return
         }
 
-        // ✅ 3 tentativas por dia
-        val left = EnigmaPortalGate.attemptsLeftToday(this)
-        if (left <= 0) {
+        // ✅ MELHOR: reserva tentativa ao entrar (ou continua run ativa)
+        if (!EnigmaPortalGate.reserveAttemptIfNeeded(this)) {
             Toast.makeText(this, "O portal já foi usado 3x hoje. Volte amanhã.", Toast.LENGTH_LONG).show()
             finish()
             return
@@ -102,9 +115,33 @@ class EnigmaPortalActivity : AppCompatActivity() {
 
         setupButtons()
         playIntro()
+
+        // restore do run (evita reset exploit)
+        if (!loadRunState()) {
+            stage = 0
+            errorsLeft = 2
+            stability = 100
+            finished = false
+            saveRunState()
+        }
+
         renderStage()
         updateAttemptsBadge()
         startStabilityTimer()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // ✅ anti “pausar o tempo”: desconta tempo fora do app
+        if (!finished) applyElapsedPenalty()
+        startStabilityTimer()
+        updateAttemptsBadge()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        timer?.cancel()
+        saveRunState()
     }
 
     override fun onDestroy() {
@@ -113,14 +150,13 @@ class EnigmaPortalActivity : AppCompatActivity() {
     }
 
     // -------------------------
-    // AAA Intro
+    // Intro
     // -------------------------
     private fun playIntro() {
         binding.overlayTop.visibility = View.VISIBLE
         binding.overlayTop.alpha = 0f
         binding.txtOverlay.text = "CÂMARA DOS ENIGMAS"
 
-        // “breath”
         binding.cardEnigma.scaleX = 0.98f
         binding.cardEnigma.scaleY = 0.98f
         binding.cardEnigma.alpha = 0.85f
@@ -139,10 +175,26 @@ class EnigmaPortalActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        binding.opt1.setOnClickListener { onOption(0 ) }
+        binding.opt1.setOnClickListener { onOption(0) }
         binding.opt2.setOnClickListener { onOption(1) }
         binding.opt3.setOnClickListener { onOption(2) }
         binding.opt4.setOnClickListener { onOption(3) }
+    }
+
+    private fun setOptionsEnabled(enabled: Boolean) {
+        binding.opt1.isEnabled = enabled
+        binding.opt2.isEnabled = enabled
+        binding.opt3.isEnabled = enabled
+        binding.opt4.isEnabled = enabled
+    }
+
+    private fun lockInput(ms: Long = 350L) {
+        inputLocked = true
+        setOptionsEnabled(false)
+        binding.rootPortal.postDelayed({
+            inputLocked = false
+            if (!finished) setOptionsEnabled(true)
+        }, ms)
     }
 
     // -------------------------
@@ -164,7 +216,6 @@ class EnigmaPortalActivity : AppCompatActivity() {
         updateStabilityUi()
         updateAttemptsBadge()
 
-        // anima cartão (premium)
         binding.cardEnigma.animate().cancel()
         binding.cardEnigma.scaleX = 0.985f
         binding.cardEnigma.scaleY = 0.985f
@@ -176,14 +227,11 @@ class EnigmaPortalActivity : AppCompatActivity() {
             .setDuration(240)
             .setInterpolator(DecelerateInterpolator())
             .start()
+
+        setOptionsEnabled(true)
     }
 
-
     private fun updateDoorsUi() {
-        // estados:
-        // index < stage  -> SOLVED (dourado)
-        // index == stage -> CURRENT (foco forte)
-        // index > stage  -> LOCKED (apagado)
         applyDoorState(binding.door1, binding.txtDoor1, 0)
         applyDoorState(binding.door2, binding.txtDoor2, 1)
         applyDoorState(binding.door3, binding.txtDoor3, 2)
@@ -206,40 +254,32 @@ class EnigmaPortalActivity : AppCompatActivity() {
                 card.strokeColor = gold
                 card.strokeWidth = dp(2)
                 card.cardElevation = dp(2).toFloat()
-
                 tv.setTextColor(text)
                 tv.alpha = 0.95f
             }
-
             isCurrent -> {
                 card.setCardBackgroundColor(surface70)
                 card.strokeColor = gold
                 card.strokeWidth = dp(3)
                 card.cardElevation = dp(4).toFloat()
-
                 tv.setTextColor(text)
                 tv.alpha = 1f
 
-                // brilho suave “vivo”
                 card.animate().cancel()
                 card.scaleX = 1f
                 card.scaleY = 1f
                 card.animate().scaleX(1.01f).scaleY(1.01f).setDuration(220).start()
             }
-
             else -> {
                 card.setCardBackgroundColor(surface55)
                 card.strokeColor = stroke
                 card.strokeWidth = dp(1)
                 card.cardElevation = 0f
-
                 tv.setTextColor(textDim)
                 tv.alpha = 0.55f
             }
         }
     }
-
-
 
     private fun pulseDoor(index: Int) {
         val v = when (index) {
@@ -264,24 +304,28 @@ class EnigmaPortalActivity : AppCompatActivity() {
             1 -> binding.door2
             else -> binding.door3
         }
-        val anim = ObjectAnimator.ofFloat(v, "translationX", 0f, 14f, -14f, 9f, -9f, 4f, -4f, 0f)
-        anim.duration = 260
-        anim.start()
+        ObjectAnimator.ofFloat(v, "translationX", 0f, 14f, -14f, 9f, -9f, 4f, -4f, 0f).apply {
+            duration = 260
+            start()
+        }
     }
 
     // -------------------------
-    // Stability timer + danger fx
+    // Timer / estabilidade (anti pause)
     // -------------------------
     private fun startStabilityTimer() {
         timer?.cancel()
+        if (finished) return
+
+        // 60s, mas a estabilidade é o “HP” (cai 1 por segundo)
         timer = object : CountDownTimer(60_000L, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
                 if (finished) return
                 stability = (stability - 1).coerceAtLeast(0)
                 updateStabilityUi()
+                saveRunLastTs()
 
                 if (stability in 1..18) {
-                    // “perigo” — micro tremor + flicker
                     microShake()
                     flickerStabilityText()
                 }
@@ -294,12 +338,27 @@ class EnigmaPortalActivity : AppCompatActivity() {
         }.start()
     }
 
+    private fun applyElapsedPenalty() {
+        val last = SecurePrefs.getLong(this, KEY_RUN_LAST_TS, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val deltaSec = ((now - last) / 1000L).toInt().coerceAtLeast(0)
+        if (deltaSec <= 0) return
+
+        // desconta “tempo fora”
+        stability = (stability - deltaSec).coerceAtLeast(0)
+        updateStabilityUi()
+        saveRunLastTs()
+
+        if (stability <= 0) {
+            fail("O portal colapsou (tempo fora).")
+        }
+    }
+
     private fun updateStabilityUi() {
         binding.progStability.max = 100
         binding.progStability.progress = stability
         binding.txtStability.text = "Estabilidade do Portal: $stability%"
 
-        // cor dinâmica do indicador (AAA)
         val color = when {
             stability >= 55 -> ContextCompat.getColor(this, R.color.portal_gold)
             stability >= 30 -> ContextCompat.getColor(this, R.color.portal_amber)
@@ -318,14 +377,41 @@ class EnigmaPortalActivity : AppCompatActivity() {
             .start()
     }
 
+    private fun microShake() {
+        val a = abs((stability - 18) / 18f)
+        val amp = (2f + 6f * a).coerceIn(2f, 8f)
+        binding.rootPortal.animate().cancel()
+        binding.rootPortal.translationX = 0f
+        binding.rootPortal.animate()
+            .translationX(amp)
+            .setDuration(40)
+            .withEndAction {
+                binding.rootPortal.animate()
+                    .translationX(-amp)
+                    .setDuration(40)
+                    .withEndAction { binding.rootPortal.animate().translationX(0f).setDuration(60).start() }
+                    .start()
+            }
+            .start()
+    }
+
     // -------------------------
     // Gameplay
     // -------------------------
     private fun onOption(index: Int) {
+        if (finished || inputLocked) return
+        lockInput()
+
         val e = enigmas[stage]
 
         if (index == e.correct) {
-            val solvedIndex = stage // ✅ guarda qual etapa foi concluída AGORA
+            flash(ContextCompat.getColor(this, R.color.portal_flash_success))
+            haptic(30)
+
+            // “respiro” leve no acerto
+            stability = (stability + 6).coerceAtMost(100)
+
+            val solvedIndex = stage
             pulseCard()
             pulseDoor(solvedIndex)
 
@@ -333,17 +419,25 @@ class EnigmaPortalActivity : AppCompatActivity() {
                 win()
             } else {
                 stage++
+                saveRunState()
                 renderStage()
             }
         } else {
+            flash(ContextCompat.getColor(this, R.color.portal_flash_fail))
+            haptic(60)
+
             errorsLeft--
-            stability = (stability - 22).coerceAtLeast(0)
+
+            // penalidade escalando por etapa (fica mais justo e “tenso”)
+            val penalty = 14 + stage * 4 // 14, 18, 22
+            stability = (stability - penalty).coerceAtLeast(0)
 
             shakeCard()
-            shakeDoor(stage) // ✅ treme a etapa atual
+            shakeDoor(stage)
             updateStabilityUi()
 
             binding.txtLives.text = "Erros restantes: $errorsLeft"
+            saveRunState()
 
             if (errorsLeft <= 0 || stability <= 0) {
                 fail("Você errou demais. O portal fechou.")
@@ -365,31 +459,14 @@ class EnigmaPortalActivity : AppCompatActivity() {
     }
 
     private fun shakeCard() {
-        val anim = ObjectAnimator.ofFloat(
+        ObjectAnimator.ofFloat(
             binding.cardEnigma,
             "translationX",
             0f, 16f, -16f, 10f, -10f, 6f, -6f, 0f
-        )
-        anim.duration = 320
-        anim.start()
-    }
-
-    private fun microShake() {
-        val a = abs((stability - 18) / 18f) // 0..1
-        val amp = (2f + 6f * a).coerceIn(2f, 8f)
-        binding.rootPortal.animate().cancel()
-        binding.rootPortal.translationX = 0f
-        binding.rootPortal.animate()
-            .translationX(amp)
-            .setDuration(40)
-            .withEndAction {
-                binding.rootPortal.animate()
-                    .translationX(-amp)
-                    .setDuration(40)
-                    .withEndAction { binding.rootPortal.animate().translationX(0f).setDuration(60).start() }
-                    .start()
-            }
-            .start()
+        ).apply {
+            duration = 320
+            start()
+        }
     }
 
     // -------------------------
@@ -409,11 +486,12 @@ class EnigmaPortalActivity : AppCompatActivity() {
         finished = true
         timer?.cancel()
 
-        EnigmaPortalGate.markPlayedToday(this, win = true)
-        EnigmaPortalGate.addRelic(this)
+        EnigmaPortalGate.finishRun(this, win = true)
 
         val relics = EnigmaPortalGate.getRelicsCount(this)
         val left = EnigmaPortalGate.attemptsLeftToday(this)
+
+        clearRunState()
 
         binding.overlayTop.visibility = View.VISIBLE
         binding.overlayTop.alpha = 0f
@@ -434,8 +512,11 @@ class EnigmaPortalActivity : AppCompatActivity() {
         finished = true
         timer?.cancel()
 
-        EnigmaPortalGate.markPlayedToday(this, win = false)
+        EnigmaPortalGate.finishRun(this, win = false)
+
         val left = EnigmaPortalGate.attemptsLeftToday(this)
+
+        clearRunState()
 
         binding.overlayTop.visibility = View.VISIBLE
         binding.overlayTop.alpha = 0f
@@ -452,7 +533,7 @@ class EnigmaPortalActivity : AppCompatActivity() {
     }
 
     // -------------------------
-    // Flash overlay (AAA)
+    // Flash overlay
     // -------------------------
     private fun flash(argb: Int) {
         val v = binding.flashOverlay
@@ -474,16 +555,56 @@ class EnigmaPortalActivity : AppCompatActivity() {
     }
 
     private fun haptic(ms: Long) {
-        val vib = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vib.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION") vib.vibrate(ms)
+        val vib = getSystemService<Vibrator>()
+        vib?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                it.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION") it.vibrate(ms)
+            }
         }
     }
 
+    // -------------------------
+    // SecurePrefs run state
+    // -------------------------
+    private fun saveRunLastTs() {
+        SecurePrefs.putLong(this, KEY_RUN_LAST_TS, System.currentTimeMillis())
+    }
+
+    private fun saveRunState() {
+        SecurePrefs.putBoolean(this, KEY_RUN_SAVED, true)
+        SecurePrefs.putInt(this, KEY_RUN_STAGE, stage)
+        SecurePrefs.putInt(this, KEY_RUN_ERRORS, errorsLeft)
+        SecurePrefs.putInt(this, KEY_RUN_STABILITY, stability)
+        SecurePrefs.putBoolean(this, KEY_RUN_FINISHED, finished)
+        saveRunLastTs()
+    }
+
+    private fun loadRunState(): Boolean {
+        val saved = SecurePrefs.getBoolean(this, KEY_RUN_SAVED, false)
+        if (!saved) {
+            saveRunLastTs()
+            return false
+        }
+
+        stage = SecurePrefs.getInt(this, KEY_RUN_STAGE, 0).coerceIn(0, enigmas.lastIndex)
+        errorsLeft = SecurePrefs.getInt(this, KEY_RUN_ERRORS, 2).coerceIn(0, 2)
+        stability = SecurePrefs.getInt(this, KEY_RUN_STABILITY, 100).coerceIn(0, 100)
+        finished = SecurePrefs.getBoolean(this, KEY_RUN_FINISHED, false)
+
+        saveRunLastTs()
+        return true
+    }
+
+    private fun clearRunState() {
+        SecurePrefs.putBoolean(this, KEY_RUN_SAVED, false)
+        SecurePrefs.remove(this, KEY_RUN_STAGE)
+        SecurePrefs.remove(this, KEY_RUN_ERRORS)
+        SecurePrefs.remove(this, KEY_RUN_STABILITY)
+        SecurePrefs.remove(this, KEY_RUN_FINISHED)
+        SecurePrefs.remove(this, KEY_RUN_LAST_TS)
+    }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-
 }

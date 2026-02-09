@@ -52,6 +52,7 @@ android {
             manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
             resValue("string", "banner_ad_unit_id", "ca-app-pub-3940256099942544/6300978111")
             resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-3940256099942544/5224354917")
+
         }
 
 
@@ -68,7 +69,8 @@ android {
             manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-4958622518589705~1887040194"
 
             // (Opcional) IDs em strings por buildType (produção)
-            resValue("string", "banner_ad_unit_id", "ca-app-pub-4958622518589705/1887040194")
+            resValue("string", "banner_ad_unit_id", "ca-app-pub-4958622518589705/1734854735")
+
             resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-4958622518589705/3051012274")
 
             signingConfig = signingConfigs.getByName("release") // só se existir!

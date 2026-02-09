@@ -17,7 +17,6 @@ import androidx.core.view.updateLayoutParams
 import com.desafiolgico.R
 import com.desafiolgico.utils.EnigmaPortalGate
 import com.desafiolgico.utils.GameDataManager
-import com.desafiolgico.utils.ScoreManager
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
 import kotlin.math.floor
@@ -39,8 +38,7 @@ class MapActivity : AppCompatActivity() {
     )
 
     /**
-     * ✅ Anchors (fração 0..1) EXTRAÍDOS do centro da estrada do seu mapa (mapa_pa),
-     * com MAIS pontos pra estrela não “cortar caminho” nas curvas.
+     * ✅ Anchors (fração 0..1) extraídos do centro da estrada do seu mapa (mapa_pa)
      */
     private val anchors = listOf(
         Anchor(0.1363f, 0.6021f),
@@ -81,23 +79,19 @@ class MapActivity : AppCompatActivity() {
     private lateinit var portalBadgeCard: MaterialCardView
     private lateinit var txtPortalBadge: TextView
 
+    // Cache do poly (performance)
+    private var cachedPoly: List<Pt>? = null
+    private var lastMapW = 0
+    private var lastMapH = 0
 
-    private lateinit var scoreManager: ScoreManager
+    // UX: anima só quando mudou milestone
+    private var lastMilestoneIndexShown = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
 
         GameDataManager.init(this)
-
-        scoreManager = ScoreManager(this)
-        scoreManager.overallScoreLive.observe(this) { score ->
-                EnigmaPortalGate.touchToday(this)
-                updatePortalBadge(score)
-                maybeOpenEnigmaPortal(score)
-
-
-        }
 
         toolbar = findViewById(R.id.toolbarMap)
         imgMap = findViewById(R.id.imgMap)
@@ -109,11 +103,10 @@ class MapActivity : AppCompatActivity() {
         portalBadgeCard = findViewById(R.id.portalBadgeCard)
         txtPortalBadge = findViewById(R.id.txtPortalBadge)
 
-// opcional: tocar abre o portal (se tiver tentativa)
+        // Opcional: tocar abre o portal (se tiver tentativa)
         portalBadgeCard.setOnClickListener {
             val score = GameDataManager.getOverallTotalScore(this)
             val req = EnigmaPortalGate.requiredScore()
-
             if (score < req) return@setOnClickListener
 
             if (!EnigmaPortalGate.canPlayToday(this)) {
@@ -127,7 +120,6 @@ class MapActivity : AppCompatActivity() {
             )
         }
 
-
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
@@ -135,19 +127,33 @@ class MapActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // ✅ IMPORTANTÍSSIMO: força reset diário do Portal também no Mapa
+        // ✅ reset diário do Portal também no Mapa
         EnigmaPortalGate.touchToday(this)
 
         val scoreGlobal = GameDataManager.getOverallTotalScore(this)
 
-        // ✅ atualiza badge (Portal: 3/3 etc.)
+        // ✅ badge + auto open
         updatePortalBadge(scoreGlobal)
         maybeOpenEnigmaPortal(scoreGlobal)
 
+        // Desenha/Anima quando a imagem já tiver dimensões e matrix aplicada
         imgMap.post {
-            // você disse que quer sempre começar do 0 pra ver a estrela “viajando”
-            refreshMap(animated = true, startFromZero = true)
+            val milestoneIndex = computeGlobalMilestoneIndex()
+            val shouldAnimateFromZero = (milestoneIndex != lastMilestoneIndexShown)
+            lastMilestoneIndexShown = milestoneIndex
+
+            refreshMap(
+                animated = true,
+                startFromZero = shouldAnimateFromZero
+            )
         }
+    }
+
+    override fun onPause() {
+        // ✅ evita animator rodando fora da tela
+        travelAnimator?.cancel()
+        travelAnimator = null
+        super.onPause()
     }
 
     // ---------------------------
@@ -157,7 +163,7 @@ class MapActivity : AppCompatActivity() {
         travelAnimator?.cancel()
 
         val (curLevel, curCorrect) = currentLevelAndCorrect()
-        val stageInLevel = stageFromCorrect(curCorrect) // 0..3
+        val stageInLevel = milestoneStage(curCorrect) // 0..3
 
         val totalCorrectAll = levelOrder.sumOf { GameDataManager.getCorrectForLevel(this, it) }
         val inLevel = curCorrect.coerceIn(0, 30)
@@ -174,22 +180,18 @@ class MapActivity : AppCompatActivity() {
         val milestoneCount = 1 + levelOrder.size * 3 // 13 (0/10/20/30 por nível)
         val currentIndex = computeGlobalMilestoneIndex().coerceIn(0, milestoneCount - 1)
 
-        // Anchors (fração -> px da imagem -> px na tela via matrix)
-        val screenPoly = anchors.map { a ->
-            val pImg = fractionToImagePx(imgMap, a.fx, a.fy)
-            drawableToViewPoint(imgMap, pImg.x, pImg.y)
-        }
+        val poly = getOrBuildScreenPoly()
 
         val tNow = currentIndex.toFloat() / (milestoneCount - 1).toFloat()
-
         val prevIndex = (currentIndex - 1).coerceAtLeast(0)
         val tPrev = prevIndex.toFloat() / (milestoneCount - 1).toFloat()
 
         ensureMilestoneStars(milestoneCount)
 
+        // posiciona as estrelas dos milestones
         for (i in 0 until milestoneCount) {
             val t = i.toFloat() / (milestoneCount - 1).toFloat()
-            val p = pointAtT(screenPoly, t)
+            val p = pointAtT(poly, t)
             placeMilestoneAt(i, p)
         }
 
@@ -206,18 +208,18 @@ class MapActivity : AppCompatActivity() {
         ensureMeasured(ping)
 
         val tStart = if (startFromZero) 0f else tPrev
-        val pStart = pointAtT(screenPoly, tStart)
+        val pStart = pointAtT(poly, tStart)
         placeOn(star, glow, ping, pStart)
 
         if (!animated) {
-            val pEnd = pointAtT(screenPoly, tNow)
+            val pEnd = pointAtT(poly, tNow)
             placeOn(star, glow, ping, pEnd)
             for (i in 0..currentIndex) setMilestoneLit(i, lit = true)
             return
         }
 
         animateAlongPath(
-            poly = screenPoly,
+            poly = poly,
             tStart = tStart,
             tEnd = tNow,
             duration = if (startFromZero) 1200L else 720L,
@@ -227,9 +229,30 @@ class MapActivity : AppCompatActivity() {
         )
     }
 
-    private fun maybeOpenEnigmaPortal(score: Int) {
-        if (!EnigmaPortalGate.shouldAutoOpen(this, score)) return
+    // Cache + rebuild se tamanho mudou (performance)
+    private fun getOrBuildScreenPoly(): List<Pt> {
+        val w = imgMap.width
+        val h = imgMap.height
+        if (cachedPoly != null && w == lastMapW && h == lastMapH) return cachedPoly!!
 
+        lastMapW = w
+        lastMapH = h
+
+        // Anchors (fração -> px da imagem -> px na tela via matrix)
+        val poly = anchors.map { a ->
+            val pImg = fractionToImagePx(imgMap, a.fx, a.fy)
+            drawableToViewPoint(imgMap, pImg.x, pImg.y)
+        }
+
+        cachedPoly = poly
+        return poly
+    }
+
+    private fun maybeOpenEnigmaPortal(score: Int) {
+        // ✅ Se tem run ativa, não auto abre (evita “teleport” irritante)
+        if (EnigmaPortalGate.hasActiveRun(this)) return
+
+        if (!EnigmaPortalGate.shouldAutoOpen(this, score)) return
         EnigmaPortalGate.markAutoOpened(this)
 
         startActivity(
@@ -241,26 +264,17 @@ class MapActivity : AppCompatActivity() {
     // ---------------------------
     // Progresso: 0..30 por nível, marcos 0/10/20/30
     // ---------------------------
-    private fun stageFromCorrect(c: Int): Int = when {
-        c >= 30 -> 3
-        c >= 20 -> 2
-        c >= 10 -> 1
-        else -> 0
-    }
+    private fun milestoneStage(c: Int): Int = (c / 10).coerceIn(0, 3)
 
     private fun computeGlobalMilestoneIndex(): Int {
         var idx = 0
         for (lvl in levelOrder) {
             val c = GameDataManager.getCorrectForLevel(this, lvl)
-            val stage = stageFromCorrect(c) // 0..3
-
-            if (c >= 30) idx += 3
-            else {
-                idx += stage
-                return idx
-            }
+            val stage = milestoneStage(c) // 0..3
+            idx += stage
+            if (stage < 3) return idx
         }
-        return (1 + levelOrder.size * 3 - 1)
+        return (1 + levelOrder.size * 3 - 1) // 12
     }
 
     private fun currentLevelAndCorrect(): Pair<String, Int> {
@@ -516,29 +530,48 @@ class MapActivity : AppCompatActivity() {
             override fun onAnimationEnd(animation: android.animation.Animator) = block()
         })
     }
-    private fun updatePortalBadge(score: Int) {
-        val req = EnigmaPortalGate.requiredScore()
 
-        // Só mostra quando o portal “existe” (depois do threshold)
-        if (score < req) {
-            portalBadgeCard.visibility = View.GONE
-            return
+        private fun updatePortalBadge(score: Int) {
+            val req = EnigmaPortalGate.requiredScore()
+
+            if (score < req) {
+                portalBadgeCard.visibility = View.GONE
+                return
+            }
+
+            portalBadgeCard.visibility = View.VISIBLE
+
+            val hasRun = EnigmaPortalGate.hasActiveRun(this)   // ✅ NOVO
+            val left = EnigmaPortalGate.attemptsLeftToday(this)
+            val total = 3
+
+            txtPortalBadge.text = when {
+                hasRun -> "🌀 Portal: em andamento"
+                left > 0 -> "🌀 Portal: $left/$total"
+                else -> "🌀 Portal: 0/$total • Amanhã"
+            }
+
+            // visual
+            portalBadgeCard.alpha = when {
+                hasRun -> 1f
+                left > 0 -> 1f
+                else -> 0.6f
+            }
+
+            // (opcional) dar um “destaque” quando está em andamento
+            if (hasRun) {
+                portalBadgeCard.animate().cancel()
+                portalBadgeCard.scaleX = 1f
+                portalBadgeCard.scaleY = 1f
+                portalBadgeCard.animate()
+                    .scaleX(1.02f).scaleY(1.02f)
+                    .setDuration(220)
+                    .withEndAction {
+                        portalBadgeCard.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
+                    }
+                    .start()
+            }
         }
-
-        portalBadgeCard.visibility = View.VISIBLE
-
-        val left = EnigmaPortalGate.attemptsLeftToday(this)
-        val total = 3
-
-        txtPortalBadge.text = if (left > 0) {
-            "🌀 Portal: $left/$total"
-        } else {
-            "🌀 Portal: 0/$total • Amanhã"
-        }
-
-        // dá um “visual lock” quando acabou
-        portalBadgeCard.alpha = if (left > 0) 1f else 0.6f
-    }
 
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()

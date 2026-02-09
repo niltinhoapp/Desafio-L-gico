@@ -93,6 +93,11 @@
             android:name=".main.EnigmaPortalActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".main.RecordsActivity"
+            android:exported="false" />
+
+
 
 
 
