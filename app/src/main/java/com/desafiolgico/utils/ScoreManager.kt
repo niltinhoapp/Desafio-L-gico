@@ -57,8 +57,13 @@ class ScoreManager(private val context: Context) {
     fun getTotalCorrectAnswers(): Int = totalCorrectAnswers
 
     fun setOverallScore(score: Int) {
-        _overallScoreLive.value = score.coerceAtLeast(0)
+        val v = score.coerceAtLeast(0)
+        _overallScoreLive.value = v
+
+        // ✅ evita re-disparar moedas de marco depois de um restore/retorno do secreto
+        lastMilestoneCheck = v
     }
+
 
     fun setCurrentStreak(streak: Int) {
         _currentStreakLive.value = streak.coerceAtLeast(0)
@@ -250,14 +255,7 @@ class ScoreManager(private val context: Context) {
 
         val totalPointsEarned = BASE_POINTS_PER_CORRECT + streakBonus + timeBonus + goldBonus
 
-        val updatedSessionScore = (_overallScoreLive.value ?: 0) + totalPointsEarned
-        _overallScoreLive.value = updatedSessionScore.coerceAtLeast(0)
-
-        // ✅ total global (se você quer que o secreto some no total geral / mapa)
-        GameDataManager.addScoreToOverallTotal(context, totalPointsEarned.coerceAtLeast(0))
-
-        // ✅ recompensa por marco (moedas)
-        handleMilestoneReward(updatedSessionScore)
+        applyPointsInternal(totalPointsEarned)
 
         Log.d(
             "ScoreManager",

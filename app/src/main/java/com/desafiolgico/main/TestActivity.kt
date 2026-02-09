@@ -458,6 +458,11 @@ class TestActivity : AppCompatActivity() {
                 // normal: premium run (novas primeiro, completa com revisão)
                 buildPremiumRunQuestions(levelToLoad, shuffleSeed)
             }
+
+
+        }
+        if (!launchingSecret) {
+            rebuildNewThisRunKeysFromQuestions()
         }
 
         totalQuestions = questions.size
@@ -831,11 +836,11 @@ class TestActivity : AppCompatActivity() {
                     playCorrectSfx()
 
                     // Soma pontos sem streak (streakNow=0)
-                    scoreManager.addScoreNoStreak(
+                    scoreManager.addScoreSecret(
                         remainingTimeInMillis = remainingTimeInMillis,
-                        totalTimeInMillis = totalDaQuestao,
-                        streakNow = 0
+                        totalTimeInMillis = totalDaQuestao
                     )
+
 
                     val newScore = scoreManager.getOverallScore()
                     val gained = (newScore - oldScore).coerceAtLeast(0)
@@ -991,6 +996,9 @@ class TestActivity : AppCompatActivity() {
         wrongAnswersCount++
         scoreManager.onWrongAnswer()
     }
+
+
+
 
     private fun advanceToNextQuestionWithDelayOrCuriosity(wasCorrect: Boolean) {
         lifecycleScope.launch {
@@ -1186,6 +1194,7 @@ class TestActivity : AppCompatActivity() {
         }
         return first
     }
+
 
 
     // =============================================================================================
@@ -1487,14 +1496,28 @@ class TestActivity : AppCompatActivity() {
         PremiumUi.applyThemeToRoot(findViewById(android.R.id.content), this)
         PremiumUi.applyTitleToUsername(binding.welcomeUsername, this, displayName)
     }
+    private fun rebuildNewThisRunKeysFromQuestions() {
+        newThisRunKeys.clear()
+        for (q in questions) {
+            val k = questionKey(q)
+            if (k.isNotBlank() && k !in initialSeenKeys) {
+                newThisRunKeys.add(k)
+            }
+        }
+    }
+
 
 
     private fun observeScoreManager() {
-        scoreManager.overallScoreLive.observe(this) {
+        scoreManager.overallScoreLive.observe(this) { total ->
+            // mantém persistido o total atualizado (normal + secreto)
+            SecurePrefs.putInt(this, KEY_SESSION_SCORE, total)
+
             configurarPontuacao()
             checkUnlocksAndNotifyInGame()
             checkPremiumUnlocksInGame()
         }
+
 
         scoreManager.currentStreakLive.observe(this) { streak ->
             // ✅ No secreto: não usa streak pra nada (não persiste, não mostra, não conta)
@@ -2126,7 +2149,7 @@ class TestActivity : AppCompatActivity() {
 
         val s = streak.coerceIn(0, secretTarget)
         binding.secretProgressText.text = "Rumo à fase secreta: $s/$secretTarget"
-        binding.secretProgressBar.progress = s
+        binding.secretProgressBar.progress = streak
 
         if (s == secretTarget - 1) {
             binding.secretProgressText.animate().cancel()

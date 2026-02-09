@@ -22,16 +22,17 @@ import kotlin.math.abs
 
 class EnigmaPortalActivity : AppCompatActivity() {
 
-    companion object { const val EXTRA_SCORE = "extra_score" }
+
 
     // ---- Persistência do RUN (SecurePrefs) ----
-    private companion object {
+    companion object {
         private const val KEY_RUN_SAVED = "portal_run_saved"
         private const val KEY_RUN_STAGE = "portal_run_stage"
         private const val KEY_RUN_ERRORS = "portal_run_errors"
         private const val KEY_RUN_STABILITY = "portal_run_stability"
         private const val KEY_RUN_FINISHED = "portal_run_finished"
         private const val KEY_RUN_LAST_TS = "portal_run_last_ts" // anti “pause”
+        const val EXTRA_SCORE = "extra_score"
     }
 
     private lateinit var binding: ActivityEnigmaPortalBinding
