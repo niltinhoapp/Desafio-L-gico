@@ -6,7 +6,7 @@ import androidx.core.content.edit
 /**
  * Perfil por usuário (UID).
  * - NÃO sensível (nome, avatarId, canChangeAvatar) -> SharedPreferences normal
- * - Sensível (email, photoUrl) -> EncryptedSharedPreferences (SecurePrefs)
+ * - Sensível (email, photoUrl) -> SecurePrefs (EncryptedSharedPreferences com fallback)
  */
 object UserManager {
 
@@ -19,35 +19,47 @@ object UserManager {
     private const val KEY_CAN_CHANGE_AVATAR = "canChangeAvatar"
 
     private const val GUEST_ID = "guest"
+    private const val DEFAULT_NAME = "Jogador"
+
+    // =========================
+    // Helpers (UID / keys)
+    // =========================
 
     private fun sanitizeUserId(raw: String?): String {
         val id = raw?.trim().takeUnless { it.isNullOrBlank() } ?: GUEST_ID
-        return id.replace("\\W+".toRegex(), "_")
+        // mantém curto e seguro para chaves
+        return id.replace("\\W+".toRegex(), "_").take(80)
     }
 
-    /** Chave única por usuário */
-    private fun getUserKey(key: String): String {
-        val userId = sanitizeUserId(GameDataManager.currentUserId)
-        return "${userId}_$key"
+    private fun currentUserIdSafe(): String = sanitizeUserId(GameDataManager.currentUserId)
+
+    private fun isGuestUser(userIdSafe: String = currentUserIdSafe()): Boolean {
+        val u = userIdSafe.lowercase()
+        return u == GUEST_ID || u == "guest_mode" || u.startsWith("guest")
     }
 
-    private fun plainPrefs(context: Context) =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private fun userKey(key: String): String = "${currentUserIdSafe()}_$key"
+
+    private fun plainPrefs(ctx: Context) =
+        ctx.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // =========================
+    // Public API
+    // =========================
 
     fun setCanChangeAvatar(context: Context, value: Boolean) {
-        plainPrefs(context).edit { putBoolean(getUserKey(KEY_CAN_CHANGE_AVATAR), value) }
+        plainPrefs(context).edit { putBoolean(userKey(KEY_CAN_CHANGE_AVATAR), value) }
     }
 
     fun canChangeAvatar(context: Context): Boolean {
-        return plainPrefs(context).getBoolean(getUserKey(KEY_CAN_CHANGE_AVATAR), false)
+        return plainPrefs(context).getBoolean(userKey(KEY_CAN_CHANGE_AVATAR), false)
     }
 
     /**
-     * Salva perfil.
-     * - email/photoUrl vão criptografados
-     * - avatarId: se null ou <=0 => remove avatar (volta a usar foto)
-     *
-     * Obs: "nome mostrado" continua: nome -> email -> Jogador
+     * Salva perfil (compatível com seu código atual).
+     * - email/photoUrl vão criptografados (SecurePrefs)
+     * - avatarId: null ou <=0 => remove (volta a usar foto)
+     * - nome mostrado: nome -> email -> "Jogador"
      */
     fun salvarDadosUsuario(
         context: Context,
@@ -57,33 +69,30 @@ object UserManager {
         avatarId: Int?
     ) {
         val appCtx = context.applicationContext
+        val safeUid = currentUserIdSafe()
 
-        // 1) Nome/Avatar (não sensível) -> prefs normal
-        val finalName = nome?.takeIf { it.isNotBlank() }
-            ?: email?.takeIf { it.isNotBlank() }
-            ?: "Jogador"
+        val emailClean = email?.trim().takeUnless { it.isNullOrBlank() }
+        val photoClean = photoUrl?.trim().takeUnless { it.isNullOrBlank() }
+        val nameClean = nome?.trim().takeUnless { it.isNullOrBlank() }
 
+        val finalName = nameClean ?: emailClean ?: DEFAULT_NAME
+
+        // 1) Não-sensível -> prefs normal
         plainPrefs(appCtx).edit {
-            putString(getUserKey(KEY_USERNAME), finalName)
+            putString("${safeUid}_$KEY_USERNAME", finalName)
 
-            if (avatarId != null && avatarId > 0) {
-                putInt(getUserKey(KEY_AVATAR_ID), avatarId)
-            } else {
-                remove(getUserKey(KEY_AVATAR_ID))
-            }
+            val aId = avatarId ?: 0
+            if (aId > 0) putInt("${safeUid}_$KEY_AVATAR_ID", aId)
+            else remove("${safeUid}_$KEY_AVATAR_ID")
         }
 
-        // 2) Email/Foto (sensível) -> prefs criptografado
-        // Guest: recomendado minimizar (não salvar email/foto)
-        val isGuest = sanitizeUserId(GameDataManager.currentUserId) == "guest_mode" ||
-            sanitizeUserId(GameDataManager.currentUserId) == GUEST_ID
-
-        if (isGuest) {
-            SecurePrefs.remove(appCtx, getUserKey(KEY_EMAIL))
-            SecurePrefs.remove(appCtx, getUserKey(KEY_PHOTO_URL))
+        // 2) Sensível -> SecurePrefs (guest: minimiza armazenamento)
+        if (isGuestUser(safeUid)) {
+            SecurePrefs.remove(appCtx, "${safeUid}_$KEY_EMAIL")
+            SecurePrefs.remove(appCtx, "${safeUid}_$KEY_PHOTO_URL")
         } else {
-            SecurePrefs.putString(appCtx, getUserKey(KEY_EMAIL), email)
-            SecurePrefs.putString(appCtx, getUserKey(KEY_PHOTO_URL), photoUrl)
+            SecurePrefs.putString(appCtx, "${safeUid}_$KEY_EMAIL", emailClean)
+            SecurePrefs.putString(appCtx, "${safeUid}_$KEY_PHOTO_URL", photoClean)
         }
     }
 
@@ -94,38 +103,73 @@ object UserManager {
      */
     fun carregarDadosUsuario(context: Context): UserProfile {
         val appCtx = context.applicationContext
+        val safeUid = currentUserIdSafe()
 
-        val name = plainPrefs(appCtx).getString(getUserKey(KEY_USERNAME), "Jogador") ?: "Jogador"
-        val avatarId = plainPrefs(appCtx).getInt(getUserKey(KEY_AVATAR_ID), 0)
+        val name = plainPrefs(appCtx).getString("${safeUid}_$KEY_USERNAME", DEFAULT_NAME) ?: DEFAULT_NAME
+        val avatarId = plainPrefs(appCtx).getInt("${safeUid}_$KEY_AVATAR_ID", 0)
 
-        val email = SecurePrefs.getString(appCtx, getUserKey(KEY_EMAIL), null)
-        val photoUrl = SecurePrefs.getString(appCtx, getUserKey(KEY_PHOTO_URL), null)
+        val email = SecurePrefs.getString(appCtx, "${safeUid}_$KEY_EMAIL", null)
+        val photoUrl = SecurePrefs.getString(appCtx, "${safeUid}_$KEY_PHOTO_URL", null)
 
-        return UserProfile(name = name, email = email, photoUrl = photoUrl, avatarId = avatarId)
+        return UserProfile(
+            name = name,
+            email = email,
+            photoUrl = photoUrl,
+            avatarId = avatarId
+        )
     }
 
-    fun getNomeUsuario(context: Context): String? =
-        plainPrefs(context).getString(getUserKey(KEY_USERNAME), null)
+    fun getNomeUsuario(context: Context): String? {
+        val safeUid = currentUserIdSafe()
+        return plainPrefs(context).getString("${safeUid}_$KEY_USERNAME", null)
+    }
 
-    fun getEmailUsuario(context: Context): String? =
-        SecurePrefs.getString(context.applicationContext, getUserKey(KEY_EMAIL), null)
+    fun getEmailUsuario(context: Context): String? {
+        val appCtx = context.applicationContext
+        val safeUid = currentUserIdSafe()
+        return SecurePrefs.getString(appCtx, "${safeUid}_$KEY_EMAIL", null)
+    }
+
+    fun getPhotoUrl(context: Context): String? {
+        val appCtx = context.applicationContext
+        val safeUid = currentUserIdSafe()
+        return SecurePrefs.getString(appCtx, "${safeUid}_$KEY_PHOTO_URL", null)
+    }
+
+    fun getAvatarId(context: Context): Int {
+        val safeUid = currentUserIdSafe()
+        return plainPrefs(context).getInt("${safeUid}_$KEY_AVATAR_ID", 0)
+    }
+
+    fun setAvatarId(context: Context, avatarId: Int?) {
+        val appCtx = context.applicationContext
+        val safeUid = currentUserIdSafe()
+        plainPrefs(appCtx).edit {
+            val a = avatarId ?: 0
+            if (a > 0) putInt("${safeUid}_$KEY_AVATAR_ID", a)
+            else remove("${safeUid}_$KEY_AVATAR_ID")
+        }
+    }
 
     fun limparDadosUsuario(context: Context) {
         val appCtx = context.applicationContext
+        val safeUid = currentUserIdSafe()
 
         plainPrefs(appCtx).edit {
-            remove(getUserKey(KEY_USERNAME))
-            remove(getUserKey(KEY_AVATAR_ID))
-            remove(getUserKey(KEY_CAN_CHANGE_AVATAR))
+            remove("${safeUid}_$KEY_USERNAME")
+            remove("${safeUid}_$KEY_AVATAR_ID")
+            remove("${safeUid}_$KEY_CAN_CHANGE_AVATAR")
         }
 
-        SecurePrefs.remove(appCtx, getUserKey(KEY_EMAIL))
-        SecurePrefs.remove(appCtx, getUserKey(KEY_PHOTO_URL))
+        SecurePrefs.remove(appCtx, "${safeUid}_$KEY_EMAIL")
+        SecurePrefs.remove(appCtx, "${safeUid}_$KEY_PHOTO_URL")
     }
 
+    /**
+     * ⚠️ Limpa SOMENTE o prefs normal (não-sensível) de TODOS.
+     * SecurePrefs mantém dados criptografados antigos (por design).
+     */
     fun resetarTodosOsUsuarios(context: Context) {
-        // ⚠️ aqui limpa o normal, mas o SecurePrefs fica com chaves antigas de usuários.
-        // Se você quiser "reset total", eu te passo uma estratégia segura pra limpar por prefixo.
-        plainPrefs(context).edit { clear() }
+        plainPrefs(context.applicationContext).edit { clear() }
     }
 }

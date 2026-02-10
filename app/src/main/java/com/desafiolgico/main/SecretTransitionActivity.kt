@@ -1,42 +1,54 @@
 package com.desafiolgico.main
 
+import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieAnimationView
 import com.desafiolgico.R
 import com.desafiolgico.utils.GameDataManager
+import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.applyEdgeToEdge
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class SecretTransitionActivity : AppCompatActivity() {
 
-    private var mediaPlayer: MediaPlayer? = null
-
     companion object {
         const val EXTRA_SECRET_LEVEL = "SECRET_LEVEL"
-        const val EXTRA_IS_SECRET_LEVEL = "IS_SECRET_LEVEL"
+        const val EXTRA_IS_SECRET_LEVEL = "IS_SECRET_LEVEL" // compat (não obrigatório)
         const val EXTRA_RETURN_TO_ACTIVE_GAME = "RETURN_TO_ACTIVE_GAME"
+    }
+
+    private var mediaPlayer: MediaPlayer? = null
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LanguageHelper.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyEdgeToEdge()
         setContentView(R.layout.activity_secret_transition)
 
         GameDataManager.init(this)
 
-        val secretLevel = intent.getStringExtra(EXTRA_SECRET_LEVEL)
-            ?: intent.getStringExtra("level") // fallback
+        val secretLevel =
+            intent.getStringExtra(EXTRA_SECRET_LEVEL)
+                ?: intent.getStringExtra("level") // fallback legado
 
         if (secretLevel.isNullOrBlank()) {
+            Log.w("SecretTransition", "Secret level vazio. Finalizando.")
             finish()
             return
         }
 
-        // ✅ marca modo secreto ativo (fonte única pro app)
+        // ✅ Fonte única: marca modo secreto
         GameDataManager.isModoSecretoAtivo = true
 
         val returnToActive = intent.getBooleanExtra(EXTRA_RETURN_TO_ACTIVE_GAME, false)
@@ -44,6 +56,7 @@ class SecretTransitionActivity : AppCompatActivity() {
         val animView = findViewById<LottieAnimationView>(R.id.lottieSecret)
         val tvTitle = findViewById<TextView>(R.id.tvSecretTitle)
 
+        // Título
         val titleRes = when (secretLevel) {
             GameDataManager.SecretLevels.RELAMPAGO -> R.string.secret_level_relampago_title
             GameDataManager.SecretLevels.PERFEICAO -> R.string.secret_level_perfeicao_title
@@ -52,38 +65,59 @@ class SecretTransitionActivity : AppCompatActivity() {
         }
         tvTitle.text = getString(titleRes)
 
-        // ✅ animação
-        animView.setAnimation(R.raw.ic_animationcerebro)
-        animView.playAnimation()
-
-        // ✅ som (opcional)
+        // Animação
         runCatching {
-            mediaPlayer = MediaPlayer.create(this, R.raw.secret_whoosh)?.apply { start() }
+            animView.setAnimation(R.raw.ic_animationcerebro)
+            animView.repeatCount = 0
+            animView.visibility = View.VISIBLE
+            animView.playAnimation()
         }
 
-        // ✅ vai pro TestActivity no secreto
+        // Som (opcional)
+        runCatching {
+            releasePlayer()
+            mediaPlayer = MediaPlayer.create(this, R.raw.secret_whoosh)?.apply {
+                setOnCompletionListener { releasePlayer() }
+                start()
+            }
+        }
+
+        // Vai pro TestActivity (modo secreto)
         lifecycleScope.launch {
             delay(3000L)
+            if (isFinishing || isDestroyed) return@launch
+
             startActivity(
                 Intent(this@SecretTransitionActivity, TestActivity::class.java).apply {
                     putExtra("level", secretLevel)
                     putExtra(EXTRA_IS_SECRET_LEVEL, true)
                     putExtra(EXTRA_RETURN_TO_ACTIVE_GAME, returnToActive)
-
-                    // ❌ NÃO passar currentStreak (no secreto não existe streak)
-                    // putExtra("currentStreak", ...)
+                    // ❌ NÃO passar streak: no secreto não existe streak
                 }
             )
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
             finish()
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        runCatching {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
+    private fun releasePlayer() {
+        mediaPlayer?.let {
+            runCatching {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
         }
         mediaPlayer = null
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // evita som “preso” se usuário minimizar
+        releasePlayer()
+    }
+
+    override fun onDestroy() {
+        releasePlayer()
+        super.onDestroy()
     }
 }

@@ -12,6 +12,7 @@ import com.desafiolgico.premium.PremiumShopActivity
 import com.desafiolgico.profile.AvatarSelectionActivity
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.PremiumThemes
 import com.desafiolgico.utils.applyEdgeToEdge
 
 class SettingsActivity : AppCompatActivity() {
@@ -33,6 +34,9 @@ class SettingsActivity : AppCompatActivity() {
         applyEdgeToEdge()
         setContentView(R.layout.activity_settings)
 
+        // ✅ init primeiro
+        GameDataManager.init(this)
+
         rowLanguage = findViewById(R.id.rowLanguage)
         rowAvatar = findViewById(R.id.rowAvatar)
         rowPremium = findViewById(R.id.rowPremium)
@@ -41,10 +45,21 @@ class SettingsActivity : AppCompatActivity() {
         rowDeleteAccount = findViewById(R.id.rowDeleteAccount)
         btnBackSettings = findViewById(R.id.btnBackSettings)
 
-        findViewById<View>(R.id.btnBackSettings).setOnClickListener {
+        // ✅ aplica tema premium nessa tela também
+        PremiumThemes.apply(
+            activity = this,
+            root = findViewById(android.R.id.content),
+            cardViews = listOf(rowLanguage, rowAvatar, rowPremium, rowTutorial, rowSwitchAccount, rowDeleteAccount)
+        )
+
+        btnBackSettings.setOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
 
+        // ✅ guest: não faz sentido “Excluir conta”
+        val uid = (GameDataManager.currentUserId ?: "").lowercase()
+        val isGuest = uid == "guest" || uid == "guest_mode" || uid.isBlank()
+        rowDeleteAccount.visibility = if (isGuest) View.GONE else View.VISIBLE
 
         // ⭐ Loja Premium
         rowPremium.setOnClickListener {
@@ -76,6 +91,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // Trocar conta
         rowSwitchAccount.setOnClickListener {
+            // OBS: se você quiser só “deslogar” sem apagar tudo, troque resetAll por um método de logout/sessão.
             GameDataManager.resetAll(this)
             startActivity(Intent(this, LoginActivity::class.java))
             finish()

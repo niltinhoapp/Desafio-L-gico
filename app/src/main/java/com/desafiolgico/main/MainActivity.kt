@@ -12,19 +12,17 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.util.TypedValue
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.OvershootInterpolator
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.airbnb.lottie.LottieAnimationView
 import com.desafiolgico.R
+import com.desafiolgico.databinding.ActivityMainBinding
 import com.desafiolgico.settings.SettingsActivity
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
@@ -32,40 +30,20 @@ import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.PremiumThemes
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
+import kotlin.math.max
 
 class MainActivity : AppCompatActivity() {
 
-    // Audio / Intro
-    private lateinit var mediaPlayer: MediaPlayer
-    private lateinit var lottieAnimationView: LottieAnimationView
+    private lateinit var binding: ActivityMainBinding
 
-    // Managers
     private lateinit var levelManager: LevelManager
 
-    // Launchers
     private lateinit var startForResult: ActivityResultLauncher<Intent>
     private lateinit var requestNotifLauncher: ActivityResultLauncher<String>
 
-    // Layout
-    private lateinit var menuCard: View
-    private lateinit var dailyCard: View
-
-    // Daily
-    private lateinit var dailyLottie: LottieAnimationView
-    private lateinit var dailyLabel: TextView
+    private var bgMusic: MediaPlayer? = null
     private var hideDailyLabelRunnable: Runnable? = null
-
-    // Top buttons
-    private lateinit var btnSettingsMain: MaterialButton
-    private lateinit var btnRecordsMain: MaterialButton
-
-    // Level buttons
-    private lateinit var beginnerButton: MaterialButton
-    private lateinit var intermediateButton: MaterialButton
-    private lateinit var advancedButton: MaterialButton
-    private lateinit var expertButton: MaterialButton
-    private lateinit var exitButton: MaterialButton
-    private lateinit var mapButton: MaterialButton
+    private var menuShown = false
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
@@ -74,70 +52,41 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyEdgeToEdge()
-        setContentView(R.layout.activity_main)
 
-        // ✅ init primeiro
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         GameDataManager.init(this)
 
-        // ✅ Launchers primeiro
         setupActivityResultLauncher()
         setupNotificationLauncher()
 
-        // Views
-        lottieAnimationView = findViewById(R.id.lottieAnimationView)
-        menuCard = findViewById(R.id.menuCard)
-
-        dailyCard = findViewById(R.id.dailyChallengeCard)
-        dailyLottie = findViewById(R.id.btnDailyChallenge)
-        dailyLabel = findViewById(R.id.txtDailyLabel)
-
-        btnRecordsMain = findViewById(R.id.btnRecordsMain)
-        btnSettingsMain = findViewById(R.id.btnSettingsMain)
-
-        beginnerButton = findViewById(R.id.beginnerButton)
-        intermediateButton = findViewById(R.id.intermediateButton)
-        advancedButton = findViewById(R.id.advancedButton)
-        expertButton = findViewById(R.id.expertButton)
-        exitButton = findViewById(R.id.exitButton)
-        mapButton = findViewById(R.id.mapButton)
-
-        PremiumThemes.apply(
-            this,
-            root = findViewById(android.R.id.content),
-            cardViews = listOf(menuCard, dailyCard)
-        )
-
         levelManager = LevelManager(this)
 
-        // Permissão notificação (Android 13+)
+        applyPremiumTheme()
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestNotificationPermission()
+            requestNotificationPermissionIfNeeded()
         }
 
-        // Esconde durante intro
-        menuCard.visibility = View.GONE
-        dailyCard.visibility = View.GONE
-        btnRecordsMain.visibility = View.GONE
-        btnSettingsMain.visibility = View.GONE
+        // começa escondido durante intro
+        setMenuVisible(false)
 
-        // ✅ Recordes
-        btnRecordsMain.setOnClickListener {
+        binding.btnRecordsMain.setOnClickListener {
             playClickSound()
-            animateTap(btnRecordsMain)
+            animateTap(binding.btnRecordsMain)
             startActivity(Intent(this, LocalRecordsActivity::class.java))
         }
 
-        // ✅ Settings
-        btnSettingsMain.setOnClickListener {
+        binding.btnSettingsMain.setOnClickListener {
             playClickSound()
-            animateTap(btnSettingsMain)
+            animateTap(binding.btnSettingsMain)
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        // ✅ clique do daily (card e lottie)
         val dailyClick = View.OnClickListener {
             playClickSound()
-            animateTap(dailyCard)
+            animateTap(binding.dailyChallengeCard)
 
             if (GameDataManager.isDailyDone(this)) {
                 showDailyTempMessage(getString(R.string.daily_come_back_tomorrow))
@@ -145,103 +94,125 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(Intent(this, DailyChallengeActivity::class.java))
         }
-        dailyCard.setOnClickListener(dailyClick)
-        dailyLottie.setOnClickListener(dailyClick)
+        binding.dailyChallengeCard.setOnClickListener(dailyClick)
+        binding.btnDailyChallenge.setOnClickListener(dailyClick)
 
-        // ✅ Map
-        mapButton.setOnClickListener {
+        binding.mapButton.setOnClickListener {
             playClickSound()
-            animateTap(mapButton)
+            animateTap(binding.mapButton)
             startActivity(Intent(this, MapActivity::class.java))
         }
 
-        // Setup botões de nível
         levelManager.setupButtons(
-            beginnerButton,
-            intermediateButton,
-            advancedButton,
-            expertButton,
-            exitButton,
-            ::handleButtonClick,
+            binding.beginnerButton,
+            binding.intermediateButton,
+            binding.advancedButton,
+            binding.expertButton,
+            binding.exitButton,
+            ::handleLevelClick,
             ::onLevelLocked,
             ::showExitConfirmationDialog
         )
 
-        // ✅ Atualiza estados já no create
+        // estado inicial
         levelManager.checkAndSaveLevelUnlocks(showToast = true)
-        levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
+        levelManager.updateButtonStates(binding.intermediateButton, binding.advancedButton, binding.expertButton)
 
-        // ✅ UI diária + recordes (antes da intro acabar, já deixa textos certos)
         updateDailyLabelState()
         updateDailyUI()
         updateRecordsButtonText()
 
-        // Intro + música
-        setupAnimation()
+        setupIntro()
         initBackgroundMusic()
     }
 
     override fun onResume() {
         super.onResume()
 
-        // ✅ Recalcula desbloqueios e atualiza botões
-        if (::levelManager.isInitialized
-            && ::intermediateButton.isInitialized
-            && ::advancedButton.isInitialized
-            && ::expertButton.isInitialized
-        ) {
-            levelManager.checkAndSaveLevelUnlocks(showToast = true)
-            levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
-        }
+        applyPremiumTheme()
 
-        // ✅ Notifica somente quando desbloqueou pela primeira vez
+        levelManager.checkAndSaveLevelUnlocks(showToast = true)
+        levelManager.updateButtonStates(binding.intermediateButton, binding.advancedButton, binding.expertButton)
+
         notifyNewUnlocksIfAny()
 
-        // ✅ Atualiza daily/recordes sempre ao voltar
         updateDailyLabelState()
         updateDailyUI()
         updateRecordsButtonText()
 
-        // Glow se estiver visível
-        if (::btnSettingsMain.isInitialized && btnSettingsMain.visibility == View.VISIBLE) {
-            startGlow(btnSettingsMain)
-        }
+        if (binding.btnSettingsMain.visibility == View.VISIBLE) startGlow(binding.btnSettingsMain)
 
-        // Música
-        if (::mediaPlayer.isInitialized && !mediaPlayer.isPlaying) mediaPlayer.start()
+        bgMusic?.let { if (!it.isPlaying) it.start() }
     }
 
     override fun onPause() {
         super.onPause()
-        if (::mediaPlayer.isInitialized && mediaPlayer.isPlaying) mediaPlayer.pause()
-        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
+        bgMusic?.let { if (it.isPlaying) it.pause() }
+        hideDailyLabelRunnable?.let { binding.txtDailyLabel.removeCallbacks(it) }
     }
 
     override fun onDestroy() {
-        try {
-            if (::mediaPlayer.isInitialized) {
-                mediaPlayer.stop()
-                mediaPlayer.release()
-            }
-        } catch (e: Exception) {
-            Log.w("MainActivity", "Falha ao liberar o MediaPlayer", e)
-        }
         super.onDestroy()
+        hideDailyLabelRunnable?.let { binding.txtDailyLabel.removeCallbacks(it) }
+        hideDailyLabelRunnable = null
+        releaseBgMusic()
     }
 
-    private fun unlockNotifPrefs() =
-        getSharedPreferences("unlock_notifs", MODE_PRIVATE)
+    // =============================================================================================
+    // Theme
+    // =============================================================================================
+
+    private fun applyPremiumTheme() {
+        runCatching {
+            PremiumThemes.apply(
+                this,
+                root = findViewById(android.R.id.content),
+                cardViews = listOf(binding.menuCard, binding.dailyChallengeCard)
+            )
+        }
+    }
+
+    // =============================================================================================
+    // Launchers / Permissions
+    // =============================================================================================
+
+    private fun setupActivityResultLauncher() {
+        startForResult =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                // onResume já atualiza
+            }
+    }
+
+    private fun setupNotificationLauncher() {
+        requestNotifLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+                // opcional: feedback
+            }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!granted) requestNotifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    // =============================================================================================
+    // Unlock notify (1x por mudança)
+    // =============================================================================================
+
+    private fun unlockNotifPrefs() = getSharedPreferences("unlock_notifs", MODE_PRIVATE)
 
     private fun notifyNewUnlocksIfAny() {
         val p = unlockNotifPrefs()
-
-        // chave por usuário (pra não vazar aviso entre contas/guest)
-        val snapshotKey = "last_unlocked_levels_snapshot_${GameDataManager.currentUserId}"
+        val uid = GameDataManager.currentUserId?.takeIf { it.isNotBlank() } ?: "anon"
+        val snapshotKey = "last_unlocked_levels_snapshot_$uid"
 
         val now = GameDataManager.getUnlockedLevels(this).toSet()
         val last = p.getStringSet(snapshotKey, null)?.toSet()
 
-        // primeira vez que abre: apenas salva o estado atual (não notifica)
         if (last == null) {
             p.edit().putStringSet(snapshotKey, HashSet(now)).apply()
             return
@@ -250,29 +221,25 @@ class MainActivity : AppCompatActivity() {
         val newLevels = now - last
         if (newLevels.isEmpty()) return
 
-        // atualiza snapshot primeiro (evita repetição)
         p.edit().putStringSet(snapshotKey, HashSet(now)).apply()
 
         newLevels.forEach { lvl ->
             when (lvl) {
                 GameDataManager.Levels.INTERMEDIARIO -> {
                     Toast.makeText(this, "🔥 NOVO NÍVEL DESBLOQUEADO: INTERMEDIÁRIO!", Toast.LENGTH_LONG).show()
-                    bounceUnlock(intermediateButton)
-                    glowUnlock(intermediateButton)
+                    bounceUnlock(binding.intermediateButton)
+                    glowUnlock(binding.intermediateButton)
                 }
-
                 GameDataManager.Levels.AVANCADO -> {
                     Toast.makeText(this, "⚡ NOVO NÍVEL DESBLOQUEADO: AVANÇADO!", Toast.LENGTH_LONG).show()
-                    bounceUnlock(advancedButton)
-                    glowUnlock(advancedButton)
+                    bounceUnlock(binding.advancedButton)
+                    glowUnlock(binding.advancedButton)
                 }
-
                 GameDataManager.Levels.EXPERIENTE -> {
                     Toast.makeText(this, "👑 NOVO NÍVEL DESBLOQUEADO: EXPERIENTE!", Toast.LENGTH_LONG).show()
-                    bounceUnlock(expertButton)
-                    glowUnlock(expertButton)
+                    bounceUnlock(binding.expertButton)
+                    glowUnlock(binding.expertButton)
                 }
-
                 else -> Unit
             }
         }
@@ -285,9 +252,7 @@ class MainActivity : AppCompatActivity() {
         v.animate()
             .scaleX(1.08f).scaleY(1.08f)
             .setDuration(160)
-            .withEndAction {
-                v.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
-            }
+            .withEndAction { v.animate().scaleX(1f).scaleY(1f).setDuration(220).start() }
             .start()
     }
 
@@ -297,46 +262,15 @@ class MainActivity : AppCompatActivity() {
         v.animate()
             .alpha(0.75f)
             .setDuration(120)
-            .withEndAction {
-                v.animate().alpha(1f).setDuration(180).start()
-            }
+            .withEndAction { v.animate().alpha(1f).setDuration(180).start() }
             .start()
-    }
-
-    // =============================================================================================
-    // Launchers
-    // =============================================================================================
-
-    private fun setupActivityResultLauncher() {
-        startForResult =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                // Quando volta do jogo, o onResume já atualiza tudo.
-            }
-    }
-
-    private fun setupNotificationLauncher() {
-        requestNotifLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-                if (!granted) {
-                    // opcional: toast
-                }
-            }
-    }
-
-    private fun requestNotificationPermission() {
-        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-
-        if (!granted) {
-            requestNotifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
 
     // =============================================================================================
     // Click handlers
     // =============================================================================================
 
-    private fun handleButtonClick(btn: MaterialButton, level: String) {
+    private fun handleLevelClick(btn: MaterialButton, level: String) {
         playClickSound()
         animateTap(btn)
 
@@ -346,15 +280,12 @@ class MainActivity : AppCompatActivity() {
             TestActivity::class.java
         }
 
-        startForResult.launch(
-            Intent(this, target).apply {
-                putExtra("level", level)
-            }
-        )
+        startForResult.launch(Intent(this, target).apply { putExtra("level", level) })
     }
 
     private fun onLevelLocked(level: String) {
-        // opcional: analytics/feedback
+        // opcional
+        Log.d("MainActivity", "Level locked: $level")
     }
 
     private fun showExitConfirmationDialog() {
@@ -371,23 +302,13 @@ class MainActivity : AppCompatActivity() {
     // =============================================================================================
 
     private fun updateRecordsButtonText() {
-        if (!::btnRecordsMain.isInitialized) return
-
         val bestToday = LocalRecordsManager.getBestStreakOfDay(this)
-        btnRecordsMain.text =
+        binding.btnRecordsMain.text =
             if (bestToday > 0) "🏆 Recordes (🔥$bestToday)" else "🏆 Recordes"
-
-        // se já passou da intro, deixa visível
-        if (menuCard.visibility == View.VISIBLE) {
-            btnRecordsMain.visibility = View.VISIBLE
-            btnSettingsMain.visibility = View.VISIBLE
-        }
     }
 
     private fun updateDailyLabelState() {
-        if (!::dailyLabel.isInitialized) return
-
-        dailyLabel.text = if (GameDataManager.isDailyDone(this)) {
+        binding.txtDailyLabel.text = if (GameDataManager.isDailyDone(this)) {
             getString(R.string.daily_done_label)
         } else {
             getString(R.string.daily_available_label)
@@ -395,61 +316,73 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDailyUI() {
-        if (!::dailyCard.isInitialized) return
         val done = GameDataManager.isDailyDone(this)
-        dailyCard.alpha = if (done) 0.7f else 1f
+        binding.dailyChallengeCard.alpha = if (done) 0.7f else 1f
     }
 
     private fun showDailyTempMessage(msg: String) {
-        dailyLabel.text = msg
-        dailyLabel.visibility = View.VISIBLE
+        binding.txtDailyLabel.text = msg
+        binding.txtDailyLabel.visibility = View.VISIBLE
 
-        hideDailyLabelRunnable?.let { dailyLabel.removeCallbacks(it) }
-        hideDailyLabelRunnable = Runnable {
-            updateDailyLabelState()
-        }.also { dailyLabel.postDelayed(it, 1700L) }
+        hideDailyLabelRunnable?.let { binding.txtDailyLabel.removeCallbacks(it) }
+        hideDailyLabelRunnable = Runnable { updateDailyLabelState() }
+            .also { binding.txtDailyLabel.postDelayed(it, 1700L) }
     }
 
     // =============================================================================================
-    // Intro + animações + música
+    // Intro + música
     // =============================================================================================
 
-    private fun setupAnimation() {
-        lottieAnimationView.visibility = View.VISIBLE
-        lottieAnimationView.playAnimation()
+    private fun setupIntro() {
+        binding.lottieAnimationView.visibility = View.VISIBLE
+        binding.lottieAnimationView.playAnimation()
 
-        lottieAnimationView.addAnimatorListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
-                showMenu()
-            }
-
-            override fun onAnimationCancel(animation: Animator) {
-                showMenu()
-            }
+        binding.lottieAnimationView.removeAllAnimatorListeners()
+        binding.lottieAnimationView.addAnimatorListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) = showMenuOnce()
+            override fun onAnimationCancel(animation: Animator) = showMenuOnce()
         })
     }
 
-    private fun showMenu() {
-        lottieAnimationView.visibility = View.GONE
-        menuCard.visibility = View.VISIBLE
-        dailyCard.visibility = View.VISIBLE
+    private fun showMenuOnce() {
+        if (menuShown) return
+        menuShown = true
 
-        // ✅ mostra botões do topo
-        btnRecordsMain.visibility = View.VISIBLE
-        btnSettingsMain.visibility = View.VISIBLE
+        binding.lottieAnimationView.visibility = View.GONE
+        setMenuVisible(true)
 
-        // ✅ garante que quando a intro acabar, já esteja atualizado
-        levelManager.updateButtonStates(intermediateButton, advancedButton, expertButton)
+        levelManager.updateButtonStates(binding.intermediateButton, binding.advancedButton, binding.expertButton)
         updateDailyLabelState()
         updateDailyUI()
         updateRecordsButtonText()
     }
 
+    private fun setMenuVisible(visible: Boolean) {
+        binding.menuCard.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.dailyChallengeCard.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.btnRecordsMain.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.btnSettingsMain.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
     private fun initBackgroundMusic() {
-        mediaPlayer = MediaPlayer.create(this, R.raw.background_music)
-        mediaPlayer.isLooping = true
-        mediaPlayer.setVolume(0.5f, 0.5f)
-        mediaPlayer.start()
+        releaseBgMusic()
+        runCatching {
+            bgMusic = MediaPlayer.create(this, R.raw.background_music)?.apply {
+                isLooping = true
+                setVolume(0.5f, 0.5f)
+                start()
+            }
+        }.onFailure {
+            Log.w("MainActivity", "Falha ao iniciar música de fundo", it)
+            bgMusic = null
+        }
+    }
+
+    private fun releaseBgMusic() {
+        val mp = bgMusic ?: return
+        bgMusic = null
+        runCatching { if (mp.isPlaying) mp.stop() }
+        runCatching { mp.release() }
     }
 
     // =============================================================================================
@@ -487,20 +420,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playClickSound() {
-        try {
-            val mp = MediaPlayer.create(this, R.raw.click_sound)
+        runCatching {
+            val mp = MediaPlayer.create(this, R.raw.click_sound) ?: return
             mp.setOnCompletionListener { it.release() }
             mp.start()
-        } catch (e: Exception) {
-            Log.w("MainActivity", "Falha ao tocar som de clique", e)
+        }.onFailure {
+            Log.w("MainActivity", "Falha ao tocar som de clique", it)
         }
-    }
-
-    private fun dp(value: Int): Int {
-        return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            value.toFloat(),
-            resources.displayMetrics
-        ).toInt()
     }
 }

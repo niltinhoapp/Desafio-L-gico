@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import kotlin.math.max
 import kotlin.random.Random
 
 /**
@@ -13,18 +14,20 @@ import kotlin.random.Random
  * - NORMAL: streak existe e influencia bônus.
  * - SECRETO: NÃO EXISTE STREAK (não incrementa, não reseta, não entra no cálculo).
  * - Pontuação da sessão sempre soma e também atualiza o total global (mapa/geral).
- * - Marco de pontuação (500 pts) dá moedas.
+ * - Marco de pontuação (500 pts) dá moedas (1x por marco, por sessão).
  */
 class ScoreManager(private val context: Context) {
 
     companion object {
+        private const val TAG = "ScoreManager"
+
         // Bases
         private const val BASE_POINTS_PER_CORRECT = 20
         private const val STREAK_BONUS_INCREMENT = 5
         private const val TIME_BONUS_MAX = 10
         private const val POINTS_DEDUCTION_WRONG = 5
 
-        // Marco / moedas
+        // Marco / moedas (sessão)
         private const val COINS_PER_MILESTONE = 50
         private const val SCORE_MILESTONE_POINTS = 500
 
@@ -38,8 +41,8 @@ class ScoreManager(private val context: Context) {
 
     private var totalCorrectAnswers = 0
 
-    // controle de marco (baseado no score da sessão)
-    private var lastMilestoneCheck = 0
+    // controla marcos sem duplicar (nunca diminui)
+    private var lastMilestoneIndex = 0
 
     private val _overallScoreLive = MutableLiveData(0)
     val overallScoreLive: LiveData<Int> get() = _overallScoreLive
@@ -56,14 +59,15 @@ class ScoreManager(private val context: Context) {
     fun getOverallScore(): Int = _overallScoreLive.value ?: 0
     fun getTotalCorrectAnswers(): Int = totalCorrectAnswers
 
+    /**
+     * ✅ Ajusta score da sessão (ex: restore/retorno do secreto).
+     * Também recalibra o controle de marcos para NÃO disparar moedas ao restaurar.
+     */
     fun setOverallScore(score: Int) {
         val v = score.coerceAtLeast(0)
         _overallScoreLive.value = v
-
-        // ✅ evita re-disparar moedas de marco depois de um restore/retorno do secreto
-        lastMilestoneCheck = v
+        lastMilestoneIndex = v / SCORE_MILESTONE_POINTS
     }
-
 
     fun setCurrentStreak(streak: Int) {
         _currentStreakLive.value = streak.coerceAtLeast(0)
@@ -79,8 +83,7 @@ class ScoreManager(private val context: Context) {
 
     private fun calculateTimeBonus(remainingTimeInMillis: Long, totalTimeInMillis: Long): Int {
         if (totalTimeInMillis <= 0L) return 0
-        val percentRemaining = (remainingTimeInMillis * 100 / totalTimeInMillis).toInt()
-
+        val percentRemaining = ((remainingTimeInMillis * 100) / totalTimeInMillis).toInt()
         return when {
             percentRemaining > GREEN_THRESHOLD_PERCENT -> TIME_BONUS_MAX
             percentRemaining > YELLOW_THRESHOLD_PERCENT -> TIME_BONUS_MAX / 2
@@ -89,24 +92,20 @@ class ScoreManager(private val context: Context) {
     }
 
     private fun calculateGoldBonus(streakForCalc: Int): Int {
-        // Ouro só existe no NORMAL e com streak alta (como você tinha)
         if (streakForCalc < 7) return 0
-
-        val shouldGiveBonus = Random.nextInt(100) < GOLD_BONUS_CHANCE_PERCENT
-        if (!shouldGiveBonus) return 0
-
-        val bonus = (25..50).random()
-        Log.d("ScoreManager", "GoldBonus aplicado: streak=$streakForCalc, bonus=$bonus")
+        val shouldGive = Random.nextInt(100) < GOLD_BONUS_CHANCE_PERCENT
+        if (!shouldGive) return 0
+        val bonus = Random.nextInt(25, 51)
+        Log.d(TAG, "GoldBonus aplicado: streak=$streakForCalc, bonus=$bonus")
         return bonus
     }
 
     // =====================================================
-    // MARCOS (500 pts) => moedas
+    // MARCOS (500 pts) => moedas (1x por marco, por sessão)
     // =====================================================
 
     private fun handleMilestoneReward(updatedSessionScore: Int) {
         val milestoneIndex = updatedSessionScore / SCORE_MILESTONE_POINTS
-        val lastMilestoneIndex = lastMilestoneCheck / SCORE_MILESTONE_POINTS
         if (milestoneIndex <= lastMilestoneIndex) return
 
         val numMilestones = milestoneIndex - lastMilestoneIndex
@@ -114,9 +113,9 @@ class ScoreManager(private val context: Context) {
         val milestonePoints = milestoneIndex * SCORE_MILESTONE_POINTS
 
         CoinManager.addCoins(context, rewardCoins, reason = "Marco $milestonePoints pts")
+        lastMilestoneIndex = milestoneIndex
 
-        lastMilestoneCheck = updatedSessionScore
-        Log.d("ScoreManager", "🏆 Marco atingido: $milestonePoints pts => +$rewardCoins moedas")
+        Log.d(TAG, "🏆 Marco atingido: $milestonePoints pts => +$rewardCoins moedas")
     }
 
     // =====================================================
@@ -141,22 +140,23 @@ class ScoreManager(private val context: Context) {
         val totalPointsEarned = BASE_POINTS_PER_CORRECT + streakBonus + timeBonus + goldBonus
         applyPointsInternal(totalPointsEarned)
 
-        // atualiza streak e record
         _currentStreakLive.value = newStreak
         updateHighestStreakIfNeeded(newStreak)
 
-        Log.d("ScoreManager", "✅ ACERTO NORMAL: streak=$newStreak, total=+$totalPointsEarned")
+        if (goldBonus > 0) onBonusVisual?.invoke(goldBonus)
+
+        Log.d(TAG, "✅ ACERTO NORMAL: streak=$newStreak, +$totalPointsEarned")
     }
 
     /**
-     * Revisão NORMAL: +streak, +0 pts (como você tinha).
+     * Revisão NORMAL: +streak, +0 pts.
      */
     fun onCorrectAnswer() {
         val old = _currentStreakLive.value ?: 0
         val newStreak = old + 1
         _currentStreakLive.value = newStreak
         updateHighestStreakIfNeeded(newStreak)
-        Log.d("ScoreManager", "✅ REVIEW NORMAL: streak=$newStreak (+0 pts)")
+        Log.d(TAG, "✅ REVIEW NORMAL: streak=$newStreak (+0)")
     }
 
     /**
@@ -165,7 +165,7 @@ class ScoreManager(private val context: Context) {
     fun onWrongAnswer() {
         applyPointsInternal(-POINTS_DEDUCTION_WRONG)
         _currentStreakLive.value = 0
-        Log.d("ScoreManager", "❌ ERRADO NORMAL: -$POINTS_DEDUCTION_WRONG pts (streak resetado)")
+        Log.d(TAG, "❌ ERRADO NORMAL: -$POINTS_DEDUCTION_WRONG (streak=0)")
     }
 
     // =====================================================
@@ -173,11 +173,11 @@ class ScoreManager(private val context: Context) {
     // =====================================================
 
     /**
-     * Acerto SECRETO: soma pontos SEM streak (base + tempo apenas).
+     * Acerto SECRETO: soma pontos SEM streak (base + tempo).
      * - Não usa streakBonus
      * - Não usa goldBonus
      * - Não altera currentStreak
-     * - Também incrementa acerto global (mapa), se você quiser manter progresso.
+     * - Também incrementa acerto global (mapa)
      */
     fun addScoreSecret(remainingTimeInMillis: Long, totalTimeInMillis: Long) {
         totalCorrectAnswers++
@@ -188,7 +188,7 @@ class ScoreManager(private val context: Context) {
 
         applyPointsInternal(totalPointsEarned)
 
-        Log.d("ScoreManager", "⚡ ACERTO SECRETO: +$totalPointsEarned (sem streak)")
+        Log.d(TAG, "⚡ ACERTO SECRETO: +$totalPointsEarned (sem streak)")
     }
 
     /**
@@ -196,51 +196,21 @@ class ScoreManager(private val context: Context) {
      */
     fun onWrongAnswerSecret() {
         applyPointsInternal(-POINTS_DEDUCTION_WRONG)
-        Log.d("ScoreManager", "⚡❌ ERRADO SECRETO: -$POINTS_DEDUCTION_WRONG (sem streak)")
+        Log.d(TAG, "⚡❌ ERRADO SECRETO: -$POINTS_DEDUCTION_WRONG (sem streak)")
     }
 
     // =====================================================
-    // CORE: aplicar pontos na sessão + total global + marco
+    // API GENÉRICA (sem mexer na streak)
     // =====================================================
 
-    private fun applyPointsInternal(delta: Int) {
-        val current = _overallScoreLive.value ?: 0
-        val updatedSessionScore = (current + delta).coerceAtLeast(0)
-
-        _overallScoreLive.value = updatedSessionScore
-
-        // total global (pode ser negativo também, como você já fazia)
-        GameDataManager.addScoreToOverallTotal(context, delta)
-
-        handleMilestoneReward(updatedSessionScore)
-    }
-
-    private fun updateHighestStreakIfNeeded(streak: Int) {
-        val currentHighest = _highestStreakLive.value ?: 0
-        if (streak > currentHighest) {
-            _highestStreakLive.value = streak
-            GameDataManager.updateHighestStreakIfNeeded(context, streak)
-            onNewRecord?.invoke(streak)
-        }
-    }
     fun onWrongAnswerNoStreak() {
-        val deduction = -POINTS_DEDUCTION_WRONG
-        val updatedSessionScore = (_overallScoreLive.value ?: 0) + deduction
-        _overallScoreLive.value = updatedSessionScore.coerceAtLeast(0)
-
-        // ✅ total global também registra (se você quer)
-        GameDataManager.addScoreToOverallTotal(context, deduction)
-
-        Log.d("ScoreManager", "❌ ERRADO (NO STREAK): -$POINTS_DEDUCTION_WRONG pts.")
+        applyPointsInternal(-POINTS_DEDUCTION_WRONG)
+        Log.d(TAG, "❌ ERRADO (NO STREAK): -$POINTS_DEDUCTION_WRONG")
     }
 
     /**
-     * ✅ Soma pontos SEM mexer na streak.
-     * Use quando você NÃO quer streak (ex: modo secreto) ou quando a streak já é controlada fora.
-     *
-     * @param remainingTimeInMillis tempo restante
-     * @param totalTimeInMillis tempo total da questão
-     * @param streakNow streak “virtual” usado só para cálculo de bônus (no secreto = 0)
+     * Soma pontos SEM mexer na streak.
+     * @param streakNow streak “virtual” usado só para cálculo (no secreto = 0).
      */
     fun addScoreNoStreak(
         remainingTimeInMillis: Long,
@@ -254,15 +224,40 @@ class ScoreManager(private val context: Context) {
         val goldBonus = calculateGoldBonus(streak)
 
         val totalPointsEarned = BASE_POINTS_PER_CORRECT + streakBonus + timeBonus + goldBonus
-
         applyPointsInternal(totalPointsEarned)
 
-        Log.d(
-            "ScoreManager",
-            "✅ addScoreNoStreak: streak=$streak, goldBonus=$goldBonus, total=$totalPointsEarned"
-        )
+        if (goldBonus > 0) onBonusVisual?.invoke(goldBonus)
+
+        Log.d(TAG, "✅ addScoreNoStreak: streak=$streak, +$totalPointsEarned")
     }
 
+    // =====================================================
+    // CORE: aplicar pontos na sessão + total global + marco
+    // =====================================================
+
+    private fun applyPointsInternal(delta: Int) {
+        val current = _overallScoreLive.value ?: 0
+        val updatedSessionScore = (current + delta).coerceAtLeast(0)
+
+        _overallScoreLive.value = updatedSessionScore
+
+        // total global (histórico)
+        if (delta != 0) {
+            GameDataManager.addScoreToOverallTotal(context, delta)
+        }
+
+        // marcos baseados no score da sessão (nunca duplica)
+        handleMilestoneReward(updatedSessionScore)
+    }
+
+    private fun updateHighestStreakIfNeeded(streak: Int) {
+        val currentHighest = _highestStreakLive.value ?: 0
+        if (streak > currentHighest) {
+            _highestStreakLive.value = streak
+            GameDataManager.updateHighestStreakIfNeeded(context, streak)
+            onNewRecord?.invoke(streak)
+        }
+    }
 
     // =====================================================
     // RESET
@@ -270,14 +265,14 @@ class ScoreManager(private val context: Context) {
 
     /**
      * Reset completo da sessão (novo jogo).
-     * - Zera score, streak, contadores e marco.
-     * - NÃO mexe no total global (porque é histórico).
+     * - Zera score, streak, contadores e marcos de sessão.
+     * - NÃO mexe no total global (histórico).
      */
     fun reset() {
         totalCorrectAnswers = 0
         _overallScoreLive.value = 0
         _currentStreakLive.value = 0
-        lastMilestoneCheck = 0
-        Log.d("ScoreManager", "♻️ Reset de pontuação/streak da sessão.")
+        lastMilestoneIndex = 0
+        Log.d(TAG, "♻️ Reset sessão (score/streak).")
     }
 }

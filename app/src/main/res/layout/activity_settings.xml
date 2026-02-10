@@ -41,7 +41,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:text="Personalize sua experiência"
+            android:text="@string/settings_subtitle"
+
             android:textColor="@color/settings_chevron_tint"
             android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -248,7 +249,8 @@
                             android:padding="9dp"
                             android:src="@drawable/ic_premium"
                             app:tint="@color/settings_icon_premium"
-                            android:contentDescription="Premium" />
+                            android:text="@string/settings_premium"
+                            />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -261,7 +263,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Loja Premium"
+                            android:contentDescription="@string/settings_premium"
+
                             android:textColor="@android:color/white"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -270,7 +273,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Temas • Molduras • Títulos • Pets • Efeitos"
+                            android:text="@string/settings_premium_desc_full"
+
                             android:textColor="@color/settings_chevron_tint"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -514,7 +518,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="14dp"
-                android:text="Voltar"
+                android:text="@string/voltar"
+
                 android:textAllCaps="false"
                 android:textStyle="bold"
                 android:textSize="15sp"

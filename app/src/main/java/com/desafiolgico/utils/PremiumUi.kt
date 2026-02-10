@@ -1,6 +1,7 @@
 package com.desafiolgico.utils
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -8,49 +9,46 @@ import com.desafiolgico.R
 
 object PremiumUi {
 
+    // Tag p/ guardar o background original do root e restaurar no theme_default
+    private const val TAG_ORIGINAL_BG = 0x51A7B001
+
     fun applyThemeToRoot(root: View, context: Context) {
+        // salva o bg original só na primeira vez
+        if (root.getTag(TAG_ORIGINAL_BG) == null) {
+            val cs = root.background?.constantState
+            root.setTag(TAG_ORIGINAL_BG, cs) // pode ser null
+        }
+
         when (GameDataManager.getSelectedTheme(context)) {
             "theme_neon"   -> root.setBackgroundResource(R.drawable.bg_theme_neon)
             "theme_royal"  -> root.setBackgroundResource(R.drawable.bg_theme_royal)
             "theme_shadow" -> root.setBackgroundResource(R.drawable.bg_theme_shadow)
-            else -> { /* theme_default: mantém o layout original */ }
+            else -> {
+                // ✅ volta pro background original
+                val cs = root.getTag(TAG_ORIGINAL_BG) as? Drawable.ConstantState
+                root.background = cs?.newDrawable()?.mutate()
+                // se era null originalmente, fica null mesmo
+            }
         }
     }
 
     fun applyFrameToAvatar(avatar: ImageView, context: Context) {
-        val frameId = GameDataManager.getSelectedFrame(context)
-        val res = when (frameId) {
-            "frame_bronze"  -> R.drawable.frame_bronze
-            "frame_silver"  -> R.drawable.frame_silver
-            "frame_gold"    -> R.drawable.frame_gold
-            "frame_neon"    -> R.drawable.frame_neon
-            "frame_diamond" -> R.drawable.frame_diamond
-            else -> 0 // frame_none
-        }
-
-        if (res == 0) {
-            avatar.background = null
-            avatar.setPadding(0, 0, 0, 0)
-        } else {
-            avatar.setBackgroundResource(res)
-            val p = dp(context, 6)
-            avatar.setPadding(p, p, p, p)
-        }
+        // ✅ usa sua versão “pro” de molduras
+        PremiumFrames.applyFrame(context, avatar)
     }
 
     fun applyTitleToUsername(tv: TextView, context: Context, baseName: String) {
         val titleId = GameDataManager.getSelectedTitle(context)
-        val title = when (titleId) {
-            "title_aprendiz" -> "Aprendiz"
-            "title_mestre"   -> "Mestre Lógico"
-            "title_lenda"    -> "Lenda do Desafio"
-            else -> null
-        }
-        tv.text = if (title != null) "$baseName\n$title" else baseName
-    }
 
-    private fun dp(context: Context, v: Int): Int {
-        val d = context.resources.displayMetrics.density
-        return (v * d).toInt()
+        val title: String? = when (titleId) {
+            "title_aprendiz"     -> context.getString(R.string.premium_title_aprendiz)
+            "title_estrategista" -> context.getString(R.string.premium_title_estrategista)
+            "title_mestre"       -> context.getString(R.string.premium_title_mestre)
+            "title_rei_daily"    -> context.getString(R.string.premium_title_rei_daily)
+            "title_lenda"        -> context.getString(R.string.premium_title_lenda)
+            else -> null // title_none / desconhecido
+        }
+
+        tv.text = if (!title.isNullOrBlank()) "$baseName\n$title" else baseName
     }
 }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.View.MeasureSpec
 import android.view.animation.DecelerateInterpolator
@@ -87,6 +88,11 @@ class MapActivity : AppCompatActivity() {
     // UX: anima só quando mudou milestone
     private var lastMilestoneIndexShown = -1
 
+    companion object {
+        private const val TAG = "MapActivity"
+        private const val PORTAL_TOTAL_TRIES = 3
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
@@ -103,25 +109,43 @@ class MapActivity : AppCompatActivity() {
         portalBadgeCard = findViewById(R.id.portalBadgeCard)
         txtPortalBadge = findViewById(R.id.txtPortalBadge)
 
-        // Opcional: tocar abre o portal (se tiver tentativa)
-        portalBadgeCard.setOnClickListener {
-            val score = GameDataManager.getOverallTotalScore(this)
-            val req = EnigmaPortalGate.requiredScore()
-            if (score < req) return@setOnClickListener
-
-            if (!EnigmaPortalGate.canPlayToday(this)) {
-                Toast.makeText(this, "Sem tentativas hoje. Volte amanhã!", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            startActivity(
-                Intent(this, EnigmaPortalActivity::class.java)
-                    .putExtra(EnigmaPortalActivity.EXTRA_SCORE, score)
-            )
-        }
-
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+
+        // ✅ clique no badge: abre se (tem run ativa) OU (atingiu score mínimo)
+        portalBadgeCard.setOnClickListener { openPortalFromBadge() }
+    }
+
+    private fun openPortalFromBadge() {
+        // garante reset diário do gate
+        EnigmaPortalGate.touchToday(this)
+
+        val score = GameDataManager.getOverallTotalScore(this)
+        val req = EnigmaPortalGate.requiredScore()
+
+        val hasRun = EnigmaPortalGate.hasActiveRun(this)
+        val canPlay = EnigmaPortalGate.canPlayToday(this)
+        val left = EnigmaPortalGate.attemptsLeftToday(this)
+
+        // Debug rápido (tira depois)
+        // Toast.makeText(this, "score=$score req=$req hasRun=$hasRun left=$left", Toast.LENGTH_LONG).show()
+
+        // ✅ regra: só bloqueia se NÃO tem run ativa e score insuficiente
+        if (!hasRun && score < req) {
+            Toast.makeText(this, "Portal bloqueado. Falta ${req - score} pts (atual $score).", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // ✅ se não pode jogar hoje (sem run e sem tentativas), bloqueia
+        if (!canPlay) {
+            Toast.makeText(this, "Sem tentativas hoje ($left/3). Volte amanhã!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        startActivity(
+            Intent(this, EnigmaPortalActivity::class.java)
+                .putExtra(EnigmaPortalActivity.EXTRA_SCORE, score)
+        )
     }
 
     override fun onResume() {
@@ -130,11 +154,12 @@ class MapActivity : AppCompatActivity() {
         // ✅ reset diário do Portal também no Mapa
         EnigmaPortalGate.touchToday(this)
 
-        val scoreGlobal = GameDataManager.getOverallTotalScore(this)
+        // Score global (se der 0 por algum bug, ainda assim respeitamos RUN ativa)
+        val scoreGlobal = GameDataManager.getOverallTotalScore(this).coerceAtLeast(0)
 
-        // ✅ badge + auto open
+        // ✅ badge + auto open (robusto)
         updatePortalBadge(scoreGlobal)
-        maybeOpenEnigmaPortal(scoreGlobal)
+        maybeAutoOpenPortal(scoreGlobal)
 
         // Desenha/Anima quando a imagem já tiver dimensões e matrix aplicada
         imgMap.post {
@@ -156,9 +181,62 @@ class MapActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    // ---------------------------
-    // Atualiza tudo (texto + estrela)
-    // ---------------------------
+    // =============================================================================================
+    // PORTAL (PRO / Premium UX)
+    // =============================================================================================
+
+
+    private fun maybeAutoOpenPortal(score: Int) {
+        // ✅ Não auto abre se tem run ativa (evita teleport chato)
+        if (EnigmaPortalGate.hasActiveRun(this)) return
+
+        if (!EnigmaPortalGate.shouldAutoOpen(this, score)) return
+        EnigmaPortalGate.markAutoOpened(this)
+
+        startActivity(
+            Intent(this, EnigmaPortalActivity::class.java)
+                .putExtra(EnigmaPortalActivity.EXTRA_SCORE, score)
+        )
+    }
+
+    private fun updatePortalBadge(score: Int) {
+        val req = EnigmaPortalGate.requiredScore()
+        val hasRun = EnigmaPortalGate.hasActiveRun(this)
+        val left = EnigmaPortalGate.attemptsLeftToday(this)
+
+        portalBadgeCard.visibility = View.VISIBLE
+
+        txtPortalBadge.text = when {
+            hasRun -> "🌀 Portal: em andamento"
+            score >= req && left > 0 -> "🌀 Portal: $left/$PORTAL_TOTAL_TRIES"
+            score >= req -> "🌀 Portal: 0/$PORTAL_TOTAL_TRIES • Amanhã"
+            else -> "🌀 Portal: $score/$req (falta ${req - score})"
+        }
+
+        portalBadgeCard.alpha = when {
+            hasRun -> 1f
+            score >= req -> 1f
+            else -> 0.85f
+        }
+
+        if (hasRun) {
+            portalBadgeCard.animate().cancel()
+            portalBadgeCard.scaleX = 1f
+            portalBadgeCard.scaleY = 1f
+            portalBadgeCard.animate()
+                .scaleX(1.02f).scaleY(1.02f)
+                .setDuration(220)
+                .withEndAction {
+                    portalBadgeCard.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
+                }
+                .start()
+        }
+    }
+
+    // =============================================================================================
+    // MAPA (texto + estrela)
+    // =============================================================================================
+
     private fun refreshMap(animated: Boolean, startFromZero: Boolean) {
         travelAnimator?.cancel()
 
@@ -248,22 +326,7 @@ class MapActivity : AppCompatActivity() {
         return poly
     }
 
-    private fun maybeOpenEnigmaPortal(score: Int) {
-        // ✅ Se tem run ativa, não auto abre (evita “teleport” irritante)
-        if (EnigmaPortalGate.hasActiveRun(this)) return
-
-        if (!EnigmaPortalGate.shouldAutoOpen(this, score)) return
-        EnigmaPortalGate.markAutoOpened(this)
-
-        startActivity(
-            Intent(this, EnigmaPortalActivity::class.java)
-                .putExtra(EnigmaPortalActivity.EXTRA_SCORE, score)
-        )
-    }
-
-    // ---------------------------
     // Progresso: 0..30 por nível, marcos 0/10/20/30
-    // ---------------------------
     private fun milestoneStage(c: Int): Int = (c / 10).coerceIn(0, 3)
 
     private fun computeGlobalMilestoneIndex(): Int {
@@ -285,9 +348,7 @@ class MapActivity : AppCompatActivity() {
         return levelOrder.last() to 30
     }
 
-    // ---------------------------
     // Coordenadas: fração -> px da imagem -> px na tela (imageMatrix)
-    // ---------------------------
     private fun fractionToImagePx(img: ImageView, fx: Float, fy: Float): Pt {
         val d = img.drawable ?: return Pt(0f, 0f)
         val xPx = fx.coerceIn(0f, 1f) * d.intrinsicWidth.toFloat()
@@ -301,9 +362,7 @@ class MapActivity : AppCompatActivity() {
         return Pt(pts[0] + img.paddingLeft, pts[1] + img.paddingTop)
     }
 
-    // ---------------------------
     // Polyline: ponto em t (0..1) por comprimento
-    // ---------------------------
     private fun pointAtT(poly: List<Pt>, t: Float): Pt {
         if (poly.isEmpty()) return Pt(0f, 0f)
         if (t <= 0f) return poly.first()
@@ -336,9 +395,7 @@ class MapActivity : AppCompatActivity() {
         return poly.last()
     }
 
-    // ---------------------------
     // UI helpers
-    // ---------------------------
     private fun ensureMeasured(v: View) {
         if (v.measuredWidth > 0 && v.measuredHeight > 0) return
         v.measure(
@@ -530,49 +587,6 @@ class MapActivity : AppCompatActivity() {
             override fun onAnimationEnd(animation: android.animation.Animator) = block()
         })
     }
-
-        private fun updatePortalBadge(score: Int) {
-            val req = EnigmaPortalGate.requiredScore()
-
-            if (score < req) {
-                portalBadgeCard.visibility = View.GONE
-                return
-            }
-
-            portalBadgeCard.visibility = View.VISIBLE
-
-            val hasRun = EnigmaPortalGate.hasActiveRun(this)   // ✅ NOVO
-            val left = EnigmaPortalGate.attemptsLeftToday(this)
-            val total = 3
-
-            txtPortalBadge.text = when {
-                hasRun -> "🌀 Portal: em andamento"
-                left > 0 -> "🌀 Portal: $left/$total"
-                else -> "🌀 Portal: 0/$total • Amanhã"
-            }
-
-            // visual
-            portalBadgeCard.alpha = when {
-                hasRun -> 1f
-                left > 0 -> 1f
-                else -> 0.6f
-            }
-
-            // (opcional) dar um “destaque” quando está em andamento
-            if (hasRun) {
-                portalBadgeCard.animate().cancel()
-                portalBadgeCard.scaleX = 1f
-                portalBadgeCard.scaleY = 1f
-                portalBadgeCard.animate()
-                    .scaleX(1.02f).scaleY(1.02f)
-                    .setDuration(220)
-                    .withEndAction {
-                        portalBadgeCard.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
-                    }
-                    .start()
-            }
-        }
-
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 }

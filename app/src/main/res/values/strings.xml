@@ -231,6 +231,84 @@
     <string name="level_unlocked_format">%1$s desbloqueado!</string>
     <string name="level_locked_format">🔒 %1$s bloqueado. Você precisa de %2$d pontos para liberar.</string>
 
+    <string name="premium_title_aprendiz">Aprendiz</string>
+    <string name="premium_title_estrategista">Estrategista</string>
+    <string name="premium_title_mestre">Mestre do Desafio</string>
+    <string name="premium_title_rei_daily">Rei do Daily</string>
+    <string name="premium_title_lenda">Lenda</string>
+
+
+    <string name="continuar_com_google">Continuar com Google</string>
+
+    <string name="secret_offer_title">🎁 Você ganhou um direito!</string>
+    <string name="secret_offer_desc">Escolha como usar sua recompensa agora.</string>
+
+    <string name="secret_offer_play_now">⚡ Jogar fase secreta agora</string>
+    <string name="secret_offer_clear_errors">🧼 Trocar por zerar erros</string>
+    <string name="secret_offer_save_for_later">💾 Guardar pra depois</string>
+
+    <string name="revive_offer_title">🛟 Reviver disponível!</string>
+    <string name="revive_offer_desc">Use seu direito para voltar com 1 chance (erros = max-1).</string>
+    <string name="revive_offer_revive_now">✅ Reviver agora</string>
+    <string name="revive_offer_no_thanks">❌ Não, obrigado</string>
+
+
+    <string name="settings_subtitle">Personalize sua experiência</string>
+    <string name="settings_premium_desc_full">Temas • Molduras • Títulos • Pets • Efeitos</string>
+
+
+    <string name="premium_desc_theme">Muda o visual geral do app</string>
+    <string name="premium_desc_frame">Borda premium no seu avatar</string>
+    <string name="premium_desc_title">Título exibido no perfil</string>
+    <string name="premium_desc_pet">Companheiro que evolui (nível 1..3)</string>
+    <string name="premium_desc_vfx">Efeito especial ao vencer</string>
+
+    <string name="settings_premium">Loja Premium</string>
+    <string name="settings_premium_desc">Temas, molduras, pets e efeitos</string>
+
+
+    <string name="best_score_label">Melhor score</string>
+        <string name="best_avg_time_label">Melhor tempo médio</string>
+
+        <!-- Premium - geral -->
+        <string name="premium_shop_title">Loja Premium</string>
+
+        <string name="premium_status_locked_coins">🔒 Bloqueado • %1$d moedas</string>
+        <string name="premium_status_achievement">🏆 Conquista • %1$s</string>
+        <string name="premium_status_free">🆓 Grátis</string>
+
+        <string name="premium_req_none">Sem requisito</string>
+        <string name="premium_req_daily_simple">Daily %1$d</string>
+        <string name="premium_req_daily_with_current">Daily %1$d (atual %2$d)</string>
+        <string name="premium_req_best_simple">Streak %1$d</string>
+        <string name="premium_req_best_with_current">Streak %1$d (melhor %2$d)</string>
+        <string name="premium_req_separator"> • </string>
+
+        <!-- Premium - botões/labels (adapter) -->
+        <string name="premium_selected">✅ Selecionado</string>
+        <string name="premium_unlocked">🔓 Desbloqueado</string>
+
+        <string name="premium_btn_buy">Comprar (%1$d)</string>
+        <string name="premium_btn_missing">Faltam %1$d</string>
+        <string name="premium_btn_achievement">Conquista</string>
+        <string name="premium_btn_applied">Selecionado</string>
+        <string name="premium_btn_apply">Aplicar</string>
+
+        <string name="premium_toast_bought_applied">Comprado e aplicado ✅</string>
+        <string name="premium_toast_applied">Aplicado ✅</string>
+
+        <!-- Pet -->
+        <string name="premium_pet_level">Nível: %1$d/3</string>
+        <string name="premium_btn_upgrade">Up %1$d (%2$d)</string>
+        <string name="premium_toast_pet_upgraded">Pet evoluiu! 🐾✨</string>
+
+        <!-- Seções (shop) -->
+        <string name="premium_section_themes">🎨 Temas</string>
+        <string name="premium_section_frames">🖼️ Molduras</string>
+        <string name="premium_section_titles">🏷️ Títulos</string>
+        <string name="premium_section_pets">🐾 Pets</string>
+        <string name="premium_section_vfx">✨ Efeitos (VFX)</string>
+
 
 
 

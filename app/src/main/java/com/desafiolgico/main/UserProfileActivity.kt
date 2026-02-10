@@ -12,6 +12,7 @@ import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.PremiumUi
 
 class UserProfileActivity : AppCompatActivity() {
 
@@ -25,72 +26,65 @@ class UserProfileActivity : AppCompatActivity() {
 
         GameDataManager.init(this)
 
-        loadUserData()
         setupButtons()
+        loadUserData()
     }
 
     override fun onResume() {
         super.onResume()
-        // Sempre recarrega os dados (nome + avatar) quando volta pra essa tela
         loadUserData()
     }
 
     private fun loadUserData() {
-        val (usernameFromGDM, photoFromGDM, avatarFromGDM) = GameDataManager.loadUserData(this)
+        // ✅ Fonte única do perfil: UserManager (GameDataManager já chama ele internamente, mas aqui padroniza)
+        val profile = UserManager.carregarDadosUsuario(this)
 
-        val userFromManager = UserManager.carregarDadosUsuario(this)
-        val avatarFromUserManager = userFromManager.avatarId.takeIf { it != 0 }
-
-        val prefs = getSharedPreferences("DesafioLogicoPrefs", MODE_PRIVATE)
-        val avatarFromPrefs = prefs.getInt("avatar", 0).takeIf { it != 0 }
-
-        val displayName = when {
-            !usernameFromGDM.isNullOrBlank() -> usernameFromGDM
-            userFromManager.name.isNotBlank() -> userFromManager.name
-            else -> getString(R.string.default_username)
-        }
+        val displayName =
+            profile.name.takeIf { it.isNotBlank() } ?: getString(R.string.default_username)
 
         binding.welcomeUsername.text = displayName
         binding.welcomeUsername.visibility = View.VISIBLE
+        binding.welcomeTextPrefix.text = getString(R.string.bem_vindo)
 
-        // ✅ Foto tem prioridade (usa GDM, e fallback no UserManager)
-        val finalPhoto = photoFromGDM.takeUnless { it.isNullOrBlank() } ?: userFromManager.photoUrl
-
-        // ✅ Escolhe o primeiro avatar que estiver desbloqueado
-        val candidateAvatars = listOfNotNull(avatarFromGDM, avatarFromUserManager, avatarFromPrefs)
-        val unlockedAvatar = candidateAvatars.firstOrNull { CoinManager.isAvatarUnlocked(this, it) }
+        // ✅ Regra fixa: FOTO > AVATAR desbloqueado > fallback
+        val photoUrl = profile.photoUrl
+        val avatarId = profile.avatarId.takeIf { it > 0 }
+        val avatarUnlocked = avatarId != null && CoinManager.isAvatarUnlocked(this, avatarId)
 
         when {
-            !finalPhoto.isNullOrBlank() -> {
+            !photoUrl.isNullOrBlank() -> {
                 Glide.with(this)
-                    .load(finalPhoto)
+                    .load(photoUrl)
                     .circleCrop()
                     .into(binding.logoImageView)
             }
-
-            unlockedAvatar != null -> {
-                binding.logoImageView.setImageResource(unlockedAvatar)
+            avatarUnlocked -> {
+                binding.logoImageView.setImageResource(avatarId!!)
             }
-
             else -> {
-                // melhor usar o grátis como padrão
                 binding.logoImageView.setImageResource(R.drawable.avatar1)
             }
         }
 
         binding.logoImageView.visibility = View.VISIBLE
-        binding.welcomeTextPrefix.text = getString(R.string.bem_vindo)
+
+        // ✅ aplica frame/tema/título se você estiver usando PremiumUi no app
+        runCatching {
+            PremiumUi.applyFrameToAvatar(binding.logoImageView, this)
+            PremiumUi.applyThemeToRoot(findViewById(android.R.id.content), this)
+            PremiumUi.applyTitleToUsername(binding.welcomeUsername, this, displayName)
+        }
     }
+
     private fun setupButtons() {
-        // Clicar no avatar abre a tela de seleção/compra de avatar
+        // Avatar -> seleção/compra
         binding.logoImageView.setOnClickListener {
             startActivity(Intent(this, AvatarSelectionActivity::class.java))
         }
 
-        // Botão "Continuar" vai pro jogo (outra tela que você já usa)
+        // Continuar -> jogo (nível padrão pode ser setado no TestActivity)
         binding.continueButton.setOnClickListener {
-            val intent = Intent(this, TestActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, TestActivity::class.java))
             finish()
         }
     }

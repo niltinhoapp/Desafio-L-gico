@@ -40,6 +40,8 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
+
+    private var loadingBreath: android.animation.ValueAnimator? = null
     private var dotsAnimator: android.animation.ValueAnimator? = null
 
     // ✅ Lazy: só cria quando realmente precisar (clique no login / uso do auth)
@@ -420,6 +422,29 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun startLoadingBreath() {
+        stopLoadingBreath()
+        loadingBreath = android.animation.ValueAnimator.ofFloat(1f, 1.02f).apply {
+            duration = 900
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            addUpdateListener {
+                val v = it.animatedValue as Float
+                binding.loadingCard.scaleX = v
+                binding.loadingCard.scaleY = v
+            }
+            start()
+        }
+    }
+
+    private fun stopLoadingBreath() {
+        loadingBreath?.cancel()
+        loadingBreath = null
+        binding.loadingCard.scaleX = 1f
+        binding.loadingCard.scaleY = 1f
+    }
+
+
     private fun startDots(base: String) {
         stopDots()
         dotsAnimator = android.animation.ValueAnimator.ofInt(0, 3).apply {
@@ -487,6 +512,16 @@ class LoginActivity : AppCompatActivity() {
                     binding.stepReadyText.setTextColor(0xFFFFFFFF.toInt())
                 }
             }
+            // Badges G/F/✓ (opcional, se existir no layout)
+            fun setBadgeActive(tv: android.widget.TextView, active: Boolean) {
+                tv.setBackgroundResource(if (active) R.drawable.bg_badge_active else R.drawable.bg_badge_inactive)
+                tv.alpha = if (active) 1f else 0.65f
+            }
+
+            setBadgeActive(binding.badgeGoogle, step == LoginStep.GOOGLE || step == LoginStep.FIREBASE || step == LoginStep.PREPARANDO)
+            setBadgeActive(binding.badgeFirebase, step == LoginStep.FIREBASE || step == LoginStep.PREPARANDO)
+            setBadgeActive(binding.badgeReady, step == LoginStep.PREPARANDO)
+
         } catch (_: Exception) {
             // ✅ não quebra nada se os steps não existirem ainda
         }

@@ -89,8 +89,7 @@ object VictoryFx {
             position = Position.Relative(0.5, 0.20)
         )
 
-        // ✅ Compatível com Konfetti 2.0.4
-        konfetti.start(listOf(party))
+        startKonfettiSafe(konfetti, party)
         playSoundSafe(appCtx, preset.soundRes)
 
         // ✅ some depois do efeito (com Runnable rastreável/cancelável)
@@ -115,7 +114,25 @@ object VictoryFx {
         }
     }
 
+    private fun startKonfettiSafe(konfetti: KonfettiView, party: Party) {
+        // Konfetti 2.x costuma aceitar start(listOf(party)).
+        // Alguns setups aceitam start(party). Tentamos os dois.
+        val ok = runCatching {
+            konfetti.start(listOf(party))
+            true
+        }.getOrElse { false }
+
+        if (ok) return
+
+        runCatching {
+            // fallback por reflexão (evita crash se assinatura mudar)
+            val m = konfetti.javaClass.methods.firstOrNull { it.name == "start" && it.parameterTypes.size == 1 }
+            if (m != null) m.invoke(konfetti, party)
+        }
+    }
+
     private fun stopKonfettiSafe(konfetti: KonfettiView) {
+        // Nem toda versão expõe stopGracefully; então tenta via reflexão.
         runCatching {
             val m = konfetti.javaClass.methods.firstOrNull {
                 it.name == "stopGracefully" && it.parameterTypes.isEmpty()

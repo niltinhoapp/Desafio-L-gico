@@ -133,6 +133,8 @@ class EnigmaPortalActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        EnigmaPortalGate.touchRun(this)
+
         // ✅ anti “pausar o tempo”: desconta tempo fora do app
         if (!finished) applyElapsedPenalty()
         startStabilityTimer()
@@ -141,6 +143,7 @@ class EnigmaPortalActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        EnigmaPortalGate.touchRun(this)
         timer?.cancel()
         saveRunState()
     }

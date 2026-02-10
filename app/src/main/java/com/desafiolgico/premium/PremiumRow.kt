@@ -10,16 +10,16 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import com.desafiolgico.utils.dp
-
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.desafiolgico.R
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.PremiumItem
 import com.desafiolgico.utils.PremiumManager
 import com.desafiolgico.utils.PremiumType
+import com.desafiolgico.utils.dp
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
@@ -53,9 +53,7 @@ class PremiumShopAdapter(
                 }
             }
 
-            override fun areContentsTheSame(oldItem: PremiumRow, newItem: PremiumRow): Boolean {
-                return oldItem == newItem
-            }
+            override fun areContentsTheSame(oldItem: PremiumRow, newItem: PremiumRow): Boolean = oldItem == newItem
         }
     }
 
@@ -107,25 +105,22 @@ class PremiumShopAdapter(
     // Header
     // -------------------------
     private class HeaderVH(view: View) : RecyclerView.ViewHolder(view) {
-        private val tv = (view as TextView)
-
-        fun bind(row: PremiumRow.Header) {
-            tv.text = row.title
-        }
+        private val tv = view as TextView
+        fun bind(row: PremiumRow.Header) { tv.text = row.title }
     }
 
     private fun buildHeaderView(ctx: Context): View {
         return TextView(ctx).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f)
             setTextColor(Color.WHITE)
-            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
+            setPadding(ctx.dp(12), ctx.dp(10), ctx.dp(12), ctx.dp(10))
             setBackgroundColor(Color.parseColor("#14FFFFFF"))
             layoutParams = RecyclerView.LayoutParams(
-                RecyclerView.LayoutParams.WRAP_CONTENT,
+                RecyclerView.LayoutParams.MATCH_PARENT,
                 RecyclerView.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = dp(ctx, 14)
-                bottomMargin = dp(ctx, 6)
+                topMargin = ctx.dp(14)
+                bottomMargin = ctx.dp(6)
             }
         }
     }
@@ -162,7 +157,7 @@ class PremiumShopAdapter(
             onPurchase: (PremiumItem) -> Unit,
             onApply: (PremiumItem) -> Unit,
             onUpgradePet: (String, Int) -> Unit
-         ) {
+        ) {
             val ctx = itemView.context
             val item = row.item
 
@@ -173,14 +168,14 @@ class PremiumShopAdapter(
             val cMuted = Color.parseColor("#D1D5DB")
             val cMuted2 = Color.parseColor("#94A3B8")
 
+            // (por enquanto nome/desc vêm do catalog; depois dá pra mover pra strings por id)
             name.text = item.name
-            desc.text = item.desc.takeIf { it.isNotBlank() } ?: defaultDesc(item)
+            val d = item.desc.trim()
+            desc.text = if (d.isNotBlank()) d else defaultDesc(ctx, item)
 
-            // Card stroke
-            card.strokeWidth = if (row.selected) ctx.dp ( 2) else ctx.dp(1)
+            card.strokeWidth = if (row.selected) ctx.dp(2) else ctx.dp(1)
             card.strokeColor = if (row.selected) cGold else cStrokeSoft
 
-            // Status
             status.setTextColor(
                 when {
                     row.selected -> cGold
@@ -191,12 +186,11 @@ class PremiumShopAdapter(
             )
 
             status.text = when {
-                row.selected -> "✅ Selecionado"
-                row.unlocked -> "🔓 Desbloqueado"
-                else -> item.statusTextSafe(ctx)
+                row.selected -> ctx.getString(R.string.premium_selected)
+                row.unlocked -> ctx.getString(R.string.premium_unlocked)
+                else -> item.statusTextSafe(ctx) // agora esse statusText já fica PT/EN (patch abaixo)
             }
 
-            // Main button
             mainBtn.setOnClickListener(null)
             mainBtn.isAllCaps = false
             mainBtn.minWidth = 0
@@ -209,7 +203,11 @@ class PremiumShopAdapter(
                     val falta = (item.priceCoins - row.coins).coerceAtLeast(0)
                     val pode = row.coins >= item.priceCoins
 
-                    mainBtn.text = if (pode) "Comprar (${item.priceCoins})" else "Faltam $falta"
+                    mainBtn.text = if (pode)
+                        ctx.getString(R.string.premium_btn_buy, item.priceCoins)
+                    else
+                        ctx.getString(R.string.premium_btn_missing, falta)
+
                     mainBtn.isEnabled = pode
                     mainBtn.alpha = if (pode) 1f else 0.7f
                     mainBtn.backgroundTintList = ColorStateList.valueOf(cGoldDeep)
@@ -217,33 +215,33 @@ class PremiumShopAdapter(
                     if (pode) {
                         mainBtn.setOnClickListener {
                             onPurchase(item)
-                            Toast.makeText(ctx, "Comprado e aplicado ✅", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(ctx, ctx.getString(R.string.premium_toast_bought_applied), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
 
                 !row.unlocked && item.priceCoins <= 0 -> {
-                    mainBtn.text = "Conquista"
+                    mainBtn.text = ctx.getString(R.string.premium_btn_achievement)
                     mainBtn.isEnabled = false
                     mainBtn.alpha = 0.75f
                     mainBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#334155"))
                 }
 
                 row.unlocked && row.selected -> {
-                    mainBtn.text = "Selecionado"
+                    mainBtn.text = ctx.getString(R.string.premium_btn_applied)
                     mainBtn.isEnabled = false
                     mainBtn.alpha = 0.85f
                     mainBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#1F2937"))
                 }
 
                 row.unlocked && !row.selected -> {
-                    mainBtn.text = "Aplicar"
+                    mainBtn.text = ctx.getString(R.string.premium_btn_apply)
                     mainBtn.isEnabled = true
                     mainBtn.alpha = 1f
                     mainBtn.backgroundTintList = ColorStateList.valueOf(cBlue)
                     mainBtn.setOnClickListener {
                         onApply(item)
-                        Toast.makeText(ctx, "Aplicado ✅", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, ctx.getString(R.string.premium_toast_applied), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -254,7 +252,7 @@ class PremiumShopAdapter(
                 petLevelTv.visibility = View.VISIBLE
                 petUpBtn.visibility = View.VISIBLE
 
-                petLevelTv.text = "Nível: $lvl/3"
+                petLevelTv.text = ctx.getString(R.string.premium_pet_level, lvl)
                 petLevelTv.setTextColor(cMuted)
 
                 if (lvl >= 3) {
@@ -265,14 +263,18 @@ class PremiumShopAdapter(
                     val coins = CoinManager.getCoins(ctx)
                     val pode = coins >= cost
 
-                    petUpBtn.text = if (pode) "Up $next ($cost)" else "Faltam ${cost - coins}"
+                    petUpBtn.text = if (pode)
+                        ctx.getString(R.string.premium_btn_upgrade, next, cost)
+                    else
+                        ctx.getString(R.string.premium_btn_missing, (cost - coins).coerceAtLeast(0))
+
                     petUpBtn.isEnabled = pode
                     petUpBtn.alpha = if (pode) 1f else 0.7f
                     petUpBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#7C3AED"))
 
                     petUpBtn.setOnClickListener {
                         onUpgradePet(item.id, cost)
-                        Toast.makeText(ctx, "Pet evoluiu! 🐾✨", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, ctx.getString(R.string.premium_toast_pet_upgraded), Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
@@ -281,12 +283,12 @@ class PremiumShopAdapter(
             }
         }
 
-        private fun defaultDesc(item: PremiumItem): String = when (item.type) {
-            PremiumType.THEME -> "Muda o visual geral do app"
-            PremiumType.FRAME -> "Borda premium no seu avatar"
-            PremiumType.TITLE -> "Título exibido no perfil"
-            PremiumType.PET -> "Companheiro que evolui (lvl 1..3)"
-            PremiumType.VFX -> "Efeito especial ao vencer"
+        private fun defaultDesc(ctx: Context, item: PremiumItem): String = when (item.type) {
+            PremiumType.THEME -> ctx.getString(R.string.premium_desc_theme)
+            PremiumType.FRAME -> ctx.getString(R.string.premium_desc_frame)
+            PremiumType.TITLE -> ctx.getString(R.string.premium_desc_title)
+            PremiumType.PET -> ctx.getString(R.string.premium_desc_pet)
+            PremiumType.VFX -> ctx.getString(R.string.premium_desc_vfx)
         }
 
         private fun petUpgradeCost(nextLevel: Int): Int = when (nextLevel) {
@@ -296,10 +298,9 @@ class PremiumShopAdapter(
         }
 
         private fun PremiumItem.statusTextSafe(ctx: Context): String {
-            // se você já tem item.statusText(context), use direto.
-            // Se não tiver, cai num texto genérico:
             return runCatching { this.statusText(ctx) }.getOrElse {
-                if (priceCoins > 0) "💰 ${priceCoins} moedas" else "Meta especial"
+                if (priceCoins > 0) ctx.getString(R.string.premium_status_locked_coins, priceCoins)
+                else ctx.getString(R.string.premium_status_achievement, ctx.getString(R.string.premium_req_none))
             }
         }
     }
@@ -309,19 +310,17 @@ class PremiumShopAdapter(
         val cStrokeSoft = Color.parseColor("#24FFFFFF")
 
         val card = MaterialCardView(ctx).apply {
-            radius = dp(ctx, 18).toFloat()
-            cardElevation = dp(ctx, 2).toFloat()
+            radius = ctx.dp(18).toFloat()
+            cardElevation = ctx.dp(2).toFloat()
             useCompatPadding = true
             setCardBackgroundColor(cGlassCard)
-            strokeWidth = dp(ctx, 1)
+            strokeWidth = ctx.dp(1)
             strokeColor = cStrokeSoft
-            setContentPadding(dp(ctx, 14), dp(ctx, 12), dp(ctx, 14), dp(ctx, 12))
+            setContentPadding(ctx.dp(14), ctx.dp(12), ctx.dp(14), ctx.dp(12))
             layoutParams = RecyclerView.LayoutParams(
                 RecyclerView.LayoutParams.MATCH_PARENT,
                 RecyclerView.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(ctx, 10)
-            }
+            ).apply { topMargin = ctx.dp(10) }
         }
 
         val wrap = LinearLayout(ctx).apply {
@@ -342,12 +341,12 @@ class PremiumShopAdapter(
         val desc = TextView(ctx).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
             setTextColor(Color.parseColor("#D1D5DB"))
-            setPadding(0, dp(ctx, 4), 0, 0)
+            setPadding(0, ctx.dp(4), 0, 0)
         }
 
         val status = TextView(ctx).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
-            setPadding(0, dp(ctx, 6), 0, 0)
+            setPadding(0, ctx.dp(6), 0, 0)
             setTextColor(Color.parseColor("#94A3B8"))
         }
 
@@ -365,14 +364,14 @@ class PremiumShopAdapter(
             minimumWidth = 0
             minHeight = 0
             minimumHeight = 0
-            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
+            setPadding(ctx.dp(12), ctx.dp(10), ctx.dp(12), ctx.dp(10))
             setTextColor(Color.WHITE)
             isAllCaps = false
         }
 
         val petLevelTv = TextView(ctx).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
-            setPadding(0, dp(ctx, 8), 0, dp(ctx, 2))
+            setPadding(0, ctx.dp(8), 0, ctx.dp(2))
             gravity = Gravity.END
             visibility = View.GONE
         }
@@ -382,7 +381,7 @@ class PremiumShopAdapter(
             minimumWidth = 0
             minHeight = 0
             minimumHeight = 0
-            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
+            setPadding(ctx.dp(12), ctx.dp(10), ctx.dp(12), ctx.dp(10))
             setTextColor(Color.WHITE)
             isAllCaps = false
             visibility = View.GONE
@@ -406,11 +405,4 @@ class PremiumShopAdapter(
         PremiumType.PET -> GameDataManager.getSelectedPet(ctx) == item.id
         PremiumType.VFX -> GameDataManager.getSelectedVfx(ctx) == item.id
     }
-
-    private fun dp(ctx: Context, value: Int): Int =
-        TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            value.toFloat(),
-            ctx.resources.displayMetrics
-        ).toInt()
 }

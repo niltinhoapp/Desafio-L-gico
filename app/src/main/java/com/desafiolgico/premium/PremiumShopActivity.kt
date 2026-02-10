@@ -14,7 +14,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.desafiolgico.R
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
@@ -57,22 +56,28 @@ class PremiumShopActivity : AppCompatActivity() {
 
         adapter = PremiumShopAdapter(
             onPurchase = { item ->
-                val ok = PremiumManager.purchase(this, item)
-                if (ok) PremiumManager.applySelected(this, item)
+                runCatching {
+                    val ok = PremiumManager.purchase(this, item)
+                    if (ok) PremiumManager.applySelected(this, item)
+                }
                 refreshUi()
             },
             onApply = { item ->
-                PremiumManager.applySelected(this, item)
+                runCatching { PremiumManager.applySelected(this, item) }
                 refreshUi()
             },
             onUpgradePet = { petId, cost ->
-                val ok = PremiumManager.upgradePet(this, petId, cost)
-                if (ok) refreshUi()
+                runCatching {
+                    val ok = PremiumManager.upgradePet(this, petId, cost)
+                    if (ok) refreshUi()
+                }
             }
         )
 
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
+        recycler.itemAnimator = null // menos “flicker” em updates rápidos
+        recycler.setHasFixedSize(false)
     }
 
     override fun onResume() {
@@ -81,13 +86,16 @@ class PremiumShopActivity : AppCompatActivity() {
     }
 
     private fun refreshUi() {
-        // libera automaticamente por conquista
-        PremiumCatalog.all().forEach { PremiumManager.unlockByAchievementIfPossible(applicationContext, it) }
+        // auto-unlock por conquista (não quebra a loja se algo falhar)
+        runCatching {
+            PremiumCatalog.all().forEach {
+                PremiumManager.unlockByAchievementIfPossible(applicationContext, it)
+            }
+        }
 
-        val coins = CoinManager.getCoins(this)
+        val coins = runCatching { CoinManager.getCoins(this) }.getOrElse { 0 }
         coinsText.text = "💰 $coins"
 
-        // monta lista (headers + itens) e manda pro adapter
         adapter.submitData(
             context = this,
             coins = coins,
@@ -144,7 +152,11 @@ class PremiumShopActivity : AppCompatActivity() {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             setTextColor(cWhite)
             setPadding(dp(10), 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
         }
 
         coinsText = TextView(this).apply {

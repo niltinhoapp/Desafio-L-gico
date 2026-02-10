@@ -12,21 +12,26 @@ import androidx.appcompat.app.AppCompatActivity
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityNextPhaseBinding
 import com.desafiolgico.utils.GameDataManager
+import kotlin.random.Random
 
 class NextPhaseActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityNextPhaseBinding
-    private var mediaPlayer: MediaPlayer? = null
 
-    private val handler = Handler(Looper.getMainLooper())
-    private var autoCloseMs = 6000L
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
 
-    private val autoCloseRunnable = Runnable {
-        if (!isFinishing) finish()
-    }
+    private var autoCloseMs: Long = 6000L
+    private var autoClosePosted = false
 
     private var pulseX: ObjectAnimator? = null
     private var pulseY: ObjectAnimator? = null
+
+    private var mediaPlayer: MediaPlayer? = null
+
+    private val autoCloseRunnable = Runnable {
+        autoClosePosted = false
+        if (!isFinishing && !isDestroyed) finish()
+    }
 
     private val curiosities = listOf(
         "🌊 Sabia que o coração de um camarão fica na cabeça?",
@@ -56,15 +61,12 @@ class NextPhaseActivity : AppCompatActivity() {
         binding = ActivityNextPhaseBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // ✅ Vem da fase secreta?
-        val fromSecret = intent.getBooleanExtra("FROM_SECRET", false)
-        val secretLevel = intent.getStringExtra("SECRET_LEVEL") ?: ""
-        val hits = intent.getIntExtra("HITS", 0)
+        // extras
+        val fromSecret = intent.getBooleanExtra(EXTRA_FROM_SECRET, false)
+        val secretLevel = intent.getStringExtra(EXTRA_SECRET_LEVEL).orEmpty()
 
-        // ✅ 3s no modo secreto (pedido)
         autoCloseMs = if (fromSecret) 3000L else 6000L
 
-        // Título inteligente
         val title = if (fromSecret) {
             when (secretLevel) {
                 GameDataManager.SecretLevels.RELAMPAGO -> "⚡ Curiosidade Relâmpago"
@@ -76,34 +78,80 @@ class NextPhaseActivity : AppCompatActivity() {
             "✨ Curiosidade rápida"
         }
 
-
-
         binding.phaseTextView.text = title
-        binding.curiosityTextView.text = curiosities.random()
+        binding.curiosityTextView.text = pickCuriosity()
 
-        // Fade-in leve (não atrapalha leitura)
         binding.curiosityTextView.alpha = 0f
         binding.curiosityTextView.animate()
             .alpha(1f)
             .setDuration(220)
             .start()
 
-        // Som curtinho
         playSound(R.raw.correct_sound)
-
-        // Botão com pulso bem suave
         startPulse()
 
         binding.continueButton.setOnClickListener {
-            handler.removeCallbacks(autoCloseRunnable)
+            cancelAutoClose()
             playSound(R.raw.button_click)
             finish()
         }
 
+        postAutoClose()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // se voltou e ainda está aberto, garante autoclose e pulse
+        startPulse()
+        postAutoClose()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        cancelAutoClose()
+        stopPulse()
+        pauseSound()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cancelAutoClose()
+        stopPulse()
+        releaseSound()
+    }
+
+    // =============================================================================================
+    // Curiosity
+    // =============================================================================================
+
+    private fun pickCuriosity(): String {
+        if (curiosities.isEmpty()) return "✨ Curiosidade rápida"
+        return curiosities[Random.nextInt(curiosities.size)]
+    }
+
+    // =============================================================================================
+    // Auto close
+    // =============================================================================================
+
+    private fun postAutoClose() {
+        if (autoClosePosted) return
+        autoClosePosted = true
         handler.postDelayed(autoCloseRunnable, autoCloseMs)
     }
 
+    private fun cancelAutoClose() {
+        if (!autoClosePosted) return
+        handler.removeCallbacks(autoCloseRunnable)
+        autoClosePosted = false
+    }
+
+    // =============================================================================================
+    // Pulse
+    // =============================================================================================
+
     private fun startPulse() {
+        if (pulseX?.isRunning == true || pulseY?.isRunning == true) return
+
         stopPulse()
 
         pulseX = ObjectAnimator.ofFloat(binding.continueButton, "scaleX", 1f, 1.04f, 1f).apply {
@@ -122,49 +170,55 @@ class NextPhaseActivity : AppCompatActivity() {
     }
 
     private fun stopPulse() {
-        try {
-            pulseX?.cancel()
-        } catch (e: Exception) {
-            Log.w("NextPhaseActivity", "Falha ao cancelar pulseX", e)
+        runCatching { pulseX?.cancel() }.onFailure {
+            Log.w(TAG, "Falha ao cancelar pulseX", it)
         }
-        try {
-            pulseY?.cancel()
-        } catch (e: Exception) {
-            Log.w("NextPhaseActivity", "Falha ao cancelar pulseY", e)
+        runCatching { pulseY?.cancel() }.onFailure {
+            Log.w(TAG, "Falha ao cancelar pulseY", it)
         }
         pulseX = null
         pulseY = null
     }
 
+    // =============================================================================================
+    // Sound
+    // =============================================================================================
+
     private fun playSound(resId: Int) {
-        try {
-            mediaPlayer?.release()
-            val mp = MediaPlayer.create(this, resId)
+        releaseSound()
+        runCatching {
+            val mp = MediaPlayer.create(this, resId) ?: return
             mediaPlayer = mp
             mp.setOnCompletionListener {
-                try { it.release() } catch (_: Exception) {}
+                runCatching { it.release() }
                 if (mediaPlayer === it) mediaPlayer = null
             }
             mp.start()
-        } catch (e: Exception) {
-            Log.w("NextPhaseActivity", "⚠️ Falha ao tocar som: ${e.localizedMessage}")
+        }.onFailure {
+            Log.w(TAG, "⚠️ Falha ao tocar som", it)
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        try { mediaPlayer?.let { if (it.isPlaying) it.pause() } } catch (e: Exception) {
-            Log.w("NextPhaseActivity", "Falha ao pausar MediaPlayer", e)
+    private fun pauseSound() {
+        runCatching {
+            mediaPlayer?.let { if (it.isPlaying) it.pause() }
+        }.onFailure {
+            Log.w(TAG, "Falha ao pausar MediaPlayer", it)
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        handler.removeCallbacks(autoCloseRunnable)
-        stopPulse()
-        try { mediaPlayer?.release() } catch (e: Exception) {
-            Log.w("NextPhaseActivity", "Falha ao liberar MediaPlayer", e)
-        }
+    private fun releaseSound() {
+        val mp = mediaPlayer ?: return
         mediaPlayer = null
+        runCatching { if (mp.isPlaying) mp.stop() }
+        runCatching { mp.release() }
+    }
+
+    companion object {
+        private const val TAG = "NextPhaseActivity"
+
+        const val EXTRA_FROM_SECRET = "FROM_SECRET"
+        const val EXTRA_SECRET_LEVEL = "SECRET_LEVEL"
+        const val EXTRA_HITS = "HITS" // mantido (mesmo se não usar)
     }
 }
