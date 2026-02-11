@@ -1,4 +1,15 @@
 import org.gradle.kotlin.dsl.libs
+import java.io.FileInputStream
+import java.util.Properties
+
+val keystoreProps = Properties()
+val keystorePropsFile = rootProject.file("keystore.properties")
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(FileInputStream(keystorePropsFile))
+}
+
+fun ks(name: String): String? =
+    keystoreProps.getProperty(name)?.takeIf { it.isNotBlank() }
 
 plugins {
     alias(libs.plugins.android.application)
@@ -20,8 +31,8 @@ android {
         applicationId = "com.desafiolgico"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.1.0"
+        versionCode = 14
+        versionName = "1.1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -29,28 +40,36 @@ android {
     }
     signingConfigs {
         create("release") {
-            storeFile = file("../keystore/desafio_lgico_25.jks")
-            // ajuste o caminho
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            val storeFilePath = ks("storeFile") ?: "../keystore/desafio_lgico_25.jks"
+            val storePass = ks("storePassword") ?: ks("KEYSTORE_PASSWORD")
+            val alias = ks("keyAlias") ?: ks("KEY_ALIAS")
+            val keyPass = ks("keyPassword") ?: ks("KEY_PASSWORD")
+
+            require(!storePass.isNullOrBlank()) { "keystore.properties: faltou storePassword" }
+            require(!alias.isNullOrBlank()) { "keystore.properties: faltou keyAlias" }
+            require(!keyPass.isNullOrBlank()) { "keystore.properties: faltou keyPassword" }
+
+            storeFile = file(storeFilePath)     // ✅ seu caminho atual funciona
+            storePassword = storePass
+            keyAlias = alias
+            keyPassword = keyPass
         }
     }
 
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+          //  applicationIdSuffix = ".debug"
+           // versionNameSuffix = "-debug"
 
             // (opcional) trocar nome do app no launcher
-            resValue("string", "app_name", "Desafio Lógico (Debug)")
+          //  resValue("string", "app_name", "Desafio Lógico (Debug)")
 
             isMinifyEnabled = false
             isShrinkResources = false
 
             manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
-            resValue("string", "banner_ad_unit_id", "ca-app-pub-3940256099942544/6300978111")
+            resValue("string", "banner_ad_unit_id", "ca-app-pub-3940256099942544/9214589741")
             resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-3940256099942544/5224354917")
 
         }

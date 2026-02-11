@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityMainBinding
 import com.desafiolgico.settings.SettingsActivity
+import com.desafiolgico.utils.EnigmaPortalGate
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
@@ -132,7 +133,11 @@ class MainActivity : AppCompatActivity() {
         applyPremiumTheme()
 
         levelManager.checkAndSaveLevelUnlocks(showToast = true)
-        levelManager.updateButtonStates(binding.intermediateButton, binding.advancedButton, binding.expertButton)
+        levelManager.updateButtonStates(
+            binding.intermediateButton,
+            binding.advancedButton,
+            binding.expertButton
+        )
 
         notifyNewUnlocksIfAny()
 
@@ -143,6 +148,18 @@ class MainActivity : AppCompatActivity() {
         if (binding.btnSettingsMain.visibility == View.VISIBLE) startGlow(binding.btnSettingsMain)
 
         bgMusic?.let { if (!it.isPlaying) it.start() }
+
+        val score = GameDataManager.getOverallTotalScore(this).coerceAtLeast(0)
+        if (EnigmaPortalGate.consumeUnlockNotificationIfNeeded(this, score)) {
+            Toast.makeText(
+                this,
+                "🌀 Portal desbloqueado! Vá no Mapa para entrar.",
+                Toast.LENGTH_LONG
+            ).show()
+
+
+        }
+
     }
 
     override fun onPause() {

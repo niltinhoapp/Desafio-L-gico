@@ -3,7 +3,6 @@ package com.desafiolgico
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
-import com.desafiolgico.utils.AdMobInitializer
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.CrashlyticsHelper
 import java.util.concurrent.atomic.AtomicBoolean
@@ -23,16 +22,19 @@ class App : Application() {
 
                 // ✅ depois que a UI já está na tela (fora do cold start crítico)
                 activity.window.decorView.post {
-                    // 1) Ads (idempotente via AtomicBoolean no initializer)
-                 //   AdMobInitializer.ensureInitialized(applicationContext)
 
-                    // 2) Multiplicador (se você decidiu persistir)
+                    // 1) Multiplicador (persistido)
                     CoinManager.loadMultiplier(applicationContext)
 
-                    // 3) Crashlytics (em thread separada, como você já fez)
+                    // 2) Crashlytics (em thread separada)
                     Thread {
+                        // debug = false aqui (produção)
                         CrashlyticsHelper.initFast(applicationContext, enableInDebug = false)
                     }.start()
+
+                    // ✅ AdMob: NÃO inicializa aqui pra não deixar o login lento.
+                    // Você inicializa só quando entrar numa tela que mostra anúncio (ex: TestActivity).
+                    // Exemplo: AdMobInitializer.ensureInitialized(applicationContext)
                 }
 
                 // não precisa mais ouvir callbacks

@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.desafiolgico.R
 import com.desafiolgico.information.OnboardingActivity
+import com.desafiolgico.premium.PremiumShopActivity
 import com.desafiolgico.profile.AvatarSelectionActivity
 import com.desafiolgico.settings.SettingsActivity
 import com.desafiolgico.utils.CoinManager
@@ -26,6 +27,7 @@ import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,14 +38,23 @@ class BoasVindasActivity : AppCompatActivity() {
 
     private lateinit var userNameText: TextView
     private lateinit var userAvatarImage: ImageView
+
+    private lateinit var btnContinue: MaterialButton
     private lateinit var btnNewGame: MaterialButton
+    private lateinit var btnMapa: MaterialButton
     private lateinit var btnSettings: MaterialButton
 
-    // ✅ NOVOS (opcionais: se não existir no XML, não crasha)
+    // ✅ Resumo / glow (se não existir no XML, não crasha)
     private var avatarGlow: View? = null
+    private var statsCard: MaterialCardView? = null
+
     private var txtTotalScore: TextView? = null
     private var txtNivelAtual: TextView? = null
     private var txtStreak: TextView? = null
+
+    private var lblTotalScore: TextView? = null
+    private var lblNivelAtual: TextView? = null
+    private var lblStreak: TextView? = null
 
     private var glowAnimator: ValueAnimator? = null
 
@@ -67,16 +78,11 @@ class BoasVindasActivity : AppCompatActivity() {
                         user.photoUrl,
                         selectedAvatar
                     )
-
-                    GameDataManager.saveUserData(
-                        this,
-                        user.name,
-                        user.photoUrl,
-                        selectedAvatar
-                    )
+                    GameDataManager.saveUserData(this, user.name, user.photoUrl, selectedAvatar)
                 }
                 loadWelcomeUI()
-                loadStatsAsync() // ✅ atualiza stats também
+                loadStatsAsync()
+                updateButtonsState()
             }
         }
 
@@ -101,23 +107,15 @@ class BoasVindasActivity : AppCompatActivity() {
             return
         }
 
-        // ✅ agora sim, estamos ficando nessa tela
+        // ✅ Estamos ficando nessa tela
         Thread { CrashlyticsHelper.setGameState(applicationContext) }.start()
 
-        // Views...
-        userNameText = findViewById(R.id.userNameText)
-        userAvatarImage = findViewById(R.id.userAvatarImage)
-        btnNewGame = findViewById(R.id.btnNewGame)
-        btnSettings = findViewById(R.id.btnSettings)
-
-        // ✅ novos IDs (se não tiver no XML, fica null e seguimos)
-        avatarGlow = findViewById(R.id.avatarGlow)
-        txtTotalScore = findViewById(R.id.txtTotalScore)
-        txtNivelAtual = findViewById(R.id.txtNivelAtual)
-        txtStreak = findViewById(R.id.txtStreak)
+        bindViews()
+        bindClicks()
 
         loadWelcomeUI()
 
+        // Se não tem foto e não tem avatar desbloqueado, força escolher avatar
         val (_, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
         val hasPhoto = !photoUrl.isNullOrBlank()
         val hasUnlockedAvatar = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
@@ -125,20 +123,15 @@ class BoasVindasActivity : AppCompatActivity() {
             avatarLauncher.launch(Intent(this, AvatarSelectionActivity::class.java))
         }
 
-        btnNewGame.setOnClickListener {
-            resetGameProgress()
-            goToMain()
-        }
-
-        btnSettings.setOnClickListener { anchor ->
-            showSettingsMenu(anchor)
-        }
+        loadStatsAsync()
+        updateButtonsState()
     }
 
     override fun onResume() {
         super.onResume()
         startGlowPulse()
         loadStatsAsync()
+        updateButtonsState()
     }
 
     override fun onPause() {
@@ -146,8 +139,111 @@ class BoasVindasActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    private fun bindViews() {
+        userNameText = findViewById(R.id.userNameText)
+        userAvatarImage = findViewById(R.id.userAvatarImage)
+
+        btnContinue = findViewById(R.id.btnContinue)
+        btnNewGame = findViewById(R.id.btnNewGame)
+        btnMapa = findViewById(R.id.btnMapa)
+        btnSettings = findViewById(R.id.btnSettings)
+
+        avatarGlow = findViewById(R.id.avatarGlow)
+        statsCard = findViewById(R.id.statsCard)
+
+        txtTotalScore = findViewById(R.id.txtTotalScore)
+        txtNivelAtual = findViewById(R.id.txtNivelAtual)
+        txtStreak = findViewById(R.id.txtStreak)
+
+        lblTotalScore = findViewById(R.id.lblTotalScore)
+        lblNivelAtual = findViewById(R.id.lblNivelAtual)
+        lblStreak = findViewById(R.id.lblStreak)
+    }
+
+    private fun bindClicks() {
+        userAvatarImage.setOnClickListener {
+            avatarLauncher.launch(Intent(this, AvatarSelectionActivity::class.java))
+        }
+
+        btnContinue.setOnClickListener {
+            openContinue()
+        }
+
+        btnMapa.setOnClickListener {
+            startActivity(Intent(this, MapActivity::class.java))
+        }
+
+        btnNewGame.setOnClickListener {
+            confirmNewGame()
+        }
+
+        btnSettings.setOnClickListener { anchor ->
+            showSettingsMenu(anchor)
+        }
+
+        statsCard?.setOnClickListener {
+            if (!isPremiumUser()) {
+                startActivity(Intent(this, PremiumShopActivity::class.java))
+            }
+        }
+    }
+
     // =============================================================================================
-    // GLOW PULSANDO (premium, bem leve)
+    // CONTINUAR / NOVO JOGO
+    // =============================================================================================
+
+    private fun updateButtonsState() {
+        val totalScore = runCatching { GameDataManager.getOverallTotalScore(this) }.getOrDefault(0)
+
+        // Se quiser, pode considerar "progresso" por acertos também:
+        val hasAnyProgress = totalScore > 0 || runCatching { hasAnyCorrects() }.getOrDefault(false)
+
+        // Continuar sempre funciona: se não tem progresso, vira “Começar”
+        btnContinue.text = if (hasAnyProgress) "Continuar" else "Começar"
+        btnContinue.isEnabled = true
+        btnContinue.alpha = 1f
+
+        // Novo jogo: se não tem progresso, some (opcional, fica mais coerente)
+        btnNewGame.visibility = if (hasAnyProgress) View.VISIBLE else View.GONE
+    }
+
+    private fun hasAnyCorrects(): Boolean {
+        for (lvl in levelOrder) {
+            if (GameDataManager.getCorrectForLevel(this, lvl) > 0) return true
+        }
+        return false
+    }
+
+    private fun openContinue() {
+        val levelToStart = computeCurrentLevelName().ifBlank { GameDataManager.Levels.INICIANTE }
+
+        // ✅ Continue começa no nível “atual” (o TestActivity já cuida de restore/backup se existir)
+        startActivity(
+            Intent(this, TestActivity::class.java)
+                .putExtra("level", levelToStart)
+        )
+        finish()
+    }
+
+    private fun confirmNewGame() {
+        AlertDialog.Builder(this)
+            .setTitle("Novo jogo")
+            .setMessage("Isso reinicia seu progresso de fase (índices/último nível). Continuar?")
+            .setPositiveButton("Sim") { _, _ ->
+                resetGameProgress()
+                startActivity(
+                    Intent(this, TestActivity::class.java)
+                        .putExtra("level", GameDataManager.Levels.INICIANTE)
+                        .putExtra("NEW_GAME", true)
+                )
+                finish()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    // =============================================================================================
+    // GLOW PULSANDO (leve)
     // =============================================================================================
 
     private fun startGlowPulse() {
@@ -184,7 +280,7 @@ class BoasVindasActivity : AppCompatActivity() {
     }
 
     // =============================================================================================
-    // STATS (sem travar UI)
+    // STATS (sem travar UI) + PRO coerente
     // =============================================================================================
 
     private fun loadStatsAsync() {
@@ -199,9 +295,30 @@ class BoasVindasActivity : AppCompatActivity() {
                 Triple(totalScore, nivel, streak)
             }
 
-            txtTotalScore?.text = fmtNumber(data.first)
-            txtNivelAtual?.text = data.second
-            txtStreak?.text = data.third.toString()
+            val premium = isPremiumUser()
+
+            if (!premium) {
+                // “PRO” travado (bonito e honesto)
+                txtTotalScore?.text = "—"
+                txtNivelAtual?.text = "—"
+                txtStreak?.text = "—"
+
+                lblTotalScore?.text = "Pontuação (PRO)"
+                lblNivelAtual?.text = "Nível (PRO)"
+                lblStreak?.text = "Streak (PRO)"
+
+                statsCard?.alpha = 0.65f
+            } else {
+                txtTotalScore?.text = fmtNumber(data.first)
+                txtNivelAtual?.text = data.second
+                txtStreak?.text = data.third.toString()
+
+                lblTotalScore?.text = "Pontuação"
+                lblNivelAtual?.text = "Nível"
+                lblStreak?.text = "Streak"
+
+                statsCard?.alpha = 1f
+            }
         }
     }
 
@@ -214,33 +331,29 @@ class BoasVindasActivity : AppCompatActivity() {
     }
 
     /**
-     * ✅ “Safe” (não quebra compile):
-     * tenta pegar streak do seu ScoreManager OU SecurePrefs (se existir),
-     * e se não achar, retorna 0.
+     * ✅ Safe: usa reflexão pra não depender do nome do método no ScoreManager.
+     * Se não achar, retorna 0.
      */
     private fun getStreakSafe(): Int {
-        // 1) tenta ScoreManager(ctx).getStreak() / getCurrentStreak()...
         runCatching {
             val cls = Class.forName("com.desafiolgico.utils.ScoreManager")
             val ctor = cls.getConstructor(Context::class.java)
             val inst = ctor.newInstance(this)
             val m = cls.methods.firstOrNull {
-                it.parameterCount == 0 && it.returnType == Int::class.javaPrimitiveType &&
+                it.parameterCount == 0 &&
+                    it.returnType == Int::class.javaPrimitiveType &&
                     it.name.lowercase() in listOf("getstreak", "getcurrentstreak", "currentstreak", "streak")
             }
             val v = (m?.invoke(inst) as? Int) ?: 0
             return v.coerceAtLeast(0)
         }
-
-        // 2) tenta SecurePrefs.getInt(ctx,"streak",0) (se você usa SecurePrefs)
-        runCatching {
-            val sp = Class.forName("com.desafiolgico.utils.SecurePrefs")
-            val m = sp.getMethod("getInt", Context::class.java, String::class.java, Int::class.javaPrimitiveType)
-            val v = (m.invoke(null, this, "streak", 0) as? Int) ?: 0
-            return v.coerceAtLeast(0)
-        }
-
         return 0
+    }
+
+    private fun isPremiumUser(): Boolean {
+        // ✅ Ajuste aqui para o seu “flag” real de premium.
+        // Ex.: return PremiumManager.isPremium(this)
+        return getSharedPreferences("AppPrefs", MODE_PRIVATE).getBoolean("is_premium", false)
     }
 
     private fun fmtNumber(v: Int): String {
@@ -249,7 +362,7 @@ class BoasVindasActivity : AppCompatActivity() {
     }
 
     // =============================================================================================
-    // SEU CÓDIGO ORIGINAL
+    // MENU SETTINGS (mantive)
     // =============================================================================================
 
     private fun showSettingsMenu(anchor: View) {
@@ -257,14 +370,26 @@ class BoasVindasActivity : AppCompatActivity() {
         popup.menuInflater.inflate(R.menu.menu_boas_vindas, popup.menu)
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_continue -> { goToMain(); true }
-                R.id.action_settings -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
+                R.id.action_continue -> {
+                    openContinue()
+                    true
+                }
+                R.id.action_settings -> {
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                    true
+                }
                 R.id.action_tutorial -> {
                     startActivity(Intent(this, OnboardingActivity::class.java).putExtra("FROM_SETTINGS", true))
                     true
                 }
-                R.id.action_switch_account -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
-                R.id.action_delete_account -> { confirmDeleteAccount(); true }
+                R.id.action_switch_account -> {
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                    true
+                }
+                R.id.action_delete_account -> {
+                    confirmDeleteAccount()
+                    true
+                }
                 else -> false
             }
         }
@@ -288,6 +413,10 @@ class BoasVindasActivity : AppCompatActivity() {
             .show()
     }
 
+    // =============================================================================================
+    // RESET (mantive)
+    // =============================================================================================
+
     private fun resetGameProgress() {
         GameDataManager.clearLastQuestionIndex(this, GameDataManager.Levels.INICIANTE)
         GameDataManager.clearLastQuestionIndex(this, GameDataManager.Levels.INTERMEDIARIO)
@@ -300,10 +429,9 @@ class BoasVindasActivity : AppCompatActivity() {
         GameDataManager.clearUltimoNivelNormal(this)
     }
 
-    private fun goToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
-        finish()
-    }
+    // =============================================================================================
+    // UI (mantive)
+    // =============================================================================================
 
     private fun loadWelcomeUI() {
         val (username, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
@@ -323,11 +451,9 @@ class BoasVindasActivity : AppCompatActivity() {
                     .circleCrop()
                     .into(userAvatarImage)
             }
-
             avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId) -> {
                 Glide.with(this).load(avatarResId).circleCrop().into(userAvatarImage)
             }
-
             else -> {
                 Glide.with(this).load(R.drawable.avatar1).circleCrop().into(userAvatarImage)
             }

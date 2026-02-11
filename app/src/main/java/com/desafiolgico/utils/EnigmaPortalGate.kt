@@ -35,12 +35,13 @@ object EnigmaPortalGate {
     // PRO: metadados da RUN (anti run fantasma)
     private const val KEY_RUN_START_TS = "portal_run_start_ts"
     private const val KEY_RUN_LAST_TOUCH_TS = "portal_run_last_touch_ts"
+    private const val KEY_UNLOCK_NOTIFIED = "portal_unlock_notified"
 
     // TTL da RUN: se ficar travada (crash / kill), liberamos automaticamente depois disso
     // (30 min é um bom equilíbrio; pode ajustar)
     private const val RUN_TTL_MS = 30L * 60L * 1000L
 
-    fun requiredScore(): Int = 100
+    fun requiredScore(): Int = 1000
 
     private fun todayKey(): String {
         val df = SimpleDateFormat("yyyyMMdd", Locale.US)
@@ -51,6 +52,27 @@ object EnigmaPortalGate {
      * ✅ Reset diário (chame em MapActivity e no Portal).
      * Premium: se mudou o dia, zera tentativas + flags e limpa run antiga.
      */
+
+
+
+        /**
+         * Retorna true SOMENTE na primeira vez que o jogador atinge o score mínimo.
+         * Já marca como "notificado" por dentro.
+         */
+        fun consumeUnlockNotificationIfNeeded(ctx: Context, score: Int): Boolean {
+            // mantém seus resets diários (tentativas/run)
+            touchToday(ctx)
+
+            val req = requiredScore()
+            if (score < req) return false
+
+            val already = SecurePrefs.getBoolean(ctx, KEY_UNLOCK_NOTIFIED, false)
+            if (already) return false
+
+            SecurePrefs.putBoolean(ctx, KEY_UNLOCK_NOTIFIED, true)
+            return true
+        }
+
     fun touchToday(ctx: Context) {
         val today = todayKey()
         val saved = SecurePrefs.getString(ctx, KEY_DAY, null)

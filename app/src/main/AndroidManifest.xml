@@ -7,16 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
-
-    <!-- ⚙️ Permissões legadas (Android 12L e anteriores) -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32"
-        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application
         android:name=".App"
@@ -30,6 +21,7 @@
         android:theme="@style/Theme.DesafioLógico"
         tools:targetApi="34">
 
+        <!-- 📦 FileProvider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -45,7 +37,8 @@
             android:name="com.google.android.gms.ads.MobileAdsInitProvider"
             android:authorities="${applicationId}.mobileadsinitprovider"
             tools:node="remove" />
-        <!-- 🚫 Impede o WorkManager de inicializar no cold start via AndroidX Startup -->
+
+        <!-- 🚫 Impede o WorkManager de inicializar via AndroidX Startup -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
@@ -54,17 +47,15 @@
                 android:name="androidx.work.WorkManagerInitializer"
                 tools:node="remove" />
         </provider>
-        <!-- 🚫 Evita Firebase iniciar sozinho no cold start (Provider das libs) -->
+
+        <!-- ✅ Firebase: NÃO remova no release (evita quebra de Auth/Crashlytics/Analytics) -->
+        <!-- Se quiser remover só no debug, faça isso em src/debug/AndroidManifest.xml -->
+        <!--
         <provider
             android:name="com.google.firebase.provider.FirebaseInitProvider"
             android:authorities="${applicationId}.firebaseinitprovider"
             tools:node="remove" />
-
-
-
-
-
-
+        -->
 
         <!-- 🚀 Entrada do app (Launcher) -->
         <activity
@@ -82,10 +73,9 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
-        <activity android:name=".main.SecretOfferActivity" />
-
-
-
+        <activity
+            android:name=".main.SecretOfferActivity"
+            android:exported="false" />
 
         <activity
             android:name=".main.MapActivity"
@@ -100,29 +90,21 @@
             android:name=".main.RecordsActivity"
             android:exported="false" />
 
-
-
-
-
         <activity
             android:name=".main.LocalRecordsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
-
 
         <activity
             android:name=".main.SecretTransitionActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 
-
-        <!-- 🌍 Seleção de idioma (não é launcher) -->
         <activity
             android:name=".settings.LanguageSelectionActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize|stateHidden" />
 
-        <!-- 👋 Boas-vindas -->
         <activity
             android:name=".main.BoasVindasActivity"
             android:exported="false"
@@ -132,37 +114,46 @@
             android:name=".settings.SettingsActivity"
             android:exported="false" />
 
-
-
-
-        <!-- 💡 Onboarding -->
         <activity
             android:name=".information.OnboardingActivity"
             android:exported="false"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustPan|stateHidden" />
 
-        <!-- 🧠 Principal -->
-        <activity android:name=".main.MainActivity" android:exported="false" />
-        <activity android:name=".main.TestActivity" android:exported="false" />
-        <activity android:name=".main.ResultOrGameOverActivity" android:exported="false" />
-        <activity android:name=".main.RewardsActivity" android:exported="false" />
-        <activity android:name=".main.NextPhaseActivity" android:exported="false" />
-        <activity android:name=".settings.DeleteAccountActivity" android:exported="false" />
+        <activity
+            android:name=".main.MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".main.TestActivity"
+            android:exported="false" />
+        <activity
+            android:name=".main.ResultOrGameOverActivity"
+            android:exported="false" />
+        <activity
+            android:name=".main.RewardsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".main.NextPhaseActivity"
+            android:exported="false" />
+        <activity
+            android:name=".settings.DeleteAccountActivity"
+            android:exported="false" />
 
-        <!-- 🧍 Perfil -->
-        <activity android:name=".profile.AvatarSelectionActivity" android:exported="false" />
+        <activity
+            android:name=".profile.AvatarSelectionActivity"
+            android:exported="false" />
 
         <activity
             android:name=".main.DailyChallengeActivity"
             android:exported="false" />
 
-        <activity android:name=".main.ExpertChallengeActivity"
+        <activity
+            android:name=".main.ExpertChallengeActivity"
             android:exported="false" />
 
-
-        <!-- 🌐 Termos -->
-        <activity android:name=".auth.WebViewActivity" android:exported="false" />
+        <activity
+            android:name=".auth.WebViewActivity"
+            android:exported="false" />
 
         <!-- 🔔 Firebase Notifications -->
         <meta-data
@@ -174,12 +165,8 @@
 
         <!-- 📢 AdMob Config -->
         <meta-data
-        android:name="com.google.android.gms.ads.APPLICATION_ID"
-        android:value="${ADMOB_APP_ID}" />
-
-        <meta-data
-            android:name="com.google.android.gms.ads.AD_MANAGER_APP"
-            android:value="true" />
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${ADMOB_APP_ID}" />
 
         <!-- 🧩 AdServices compatível (Android 13+) -->
         <property

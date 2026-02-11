@@ -12,7 +12,9 @@ object AdMobInitializer {
     fun ensureInitialized(context: Context) {
         if (!started.compareAndSet(false, true)) return
         MobileAds.initialize(context.applicationContext) {
-            Log.i(TAG, "✅ AdMob inicializado (async).")
+            if (com.desafiolgico.BuildConfig.DEBUG) {
+                Log.i(TAG, "✅ AdMob inicializado (async).")
+            }
         }
     }
 }

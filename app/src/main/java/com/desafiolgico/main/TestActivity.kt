@@ -32,6 +32,7 @@ import com.desafiolgico.databinding.ActivityTestBinding
 import com.desafiolgico.model.Question
 import com.desafiolgico.model.QuestionManager
 import com.desafiolgico.profile.AvatarSelectionActivity
+import com.desafiolgico.utils.AdMobInitializer
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
@@ -88,6 +89,14 @@ class TestActivity : AppCompatActivity() {
     private var lastStreakUi: Int = 0
 
     private var streakAnimator: ValueAnimator? = null
+
+    private var answeredInLevel = 0
+    private var totalAnswerTimeMs = 0L
+    private var questionShownAtMs = 0L
+
+    // ✅ só pra RECORDS (normal). Não mistura com secreto.
+    private var levelAnsweredCount = 0
+    private var levelTimeAccumulatedMs = 0L
 
 
     private var scoreAnimator: ValueAnimator? = null
@@ -245,7 +254,8 @@ class TestActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         GameDataManager.init(this)
-        MobileAds.initialize(this) {}
+
+        AdMobInitializer.ensureInitialized(applicationContext)
 
         overlayContainer = binding.overlayContainer
         rootLayout = binding.rootLayoutTest
@@ -382,6 +392,9 @@ class TestActivity : AppCompatActivity() {
         // SETUP UI / TARGETS
         // =========================================================================================
         currentLevelLoaded = levelToLoad
+        levelAnsweredCount = 0
+        levelTimeAccumulatedMs = 0L
+
 
         if (isSecretLevel(currentLevelLoaded)) {
             binding.streakTextView.visibility = View.GONE
@@ -720,6 +733,7 @@ class TestActivity : AppCompatActivity() {
             ensureLastOptionVisible(extraBottomDp = 18)
         }, 90L)
 
+        markQuestionShownNow()
         startTimer()
         updateQuestionsRemaining()
     }
@@ -786,141 +800,156 @@ class TestActivity : AppCompatActivity() {
      * FIXES IMPORTANTES:
      * - Oferta do secreto é avaliada SEMPRE no acerto (pontuando OU revisão), e NUNCA no erro.
      */
-    private fun checkAnswer(selectedIndex: Int) {
-        if (currentQuestionIndex >= questions.size) return
-        if (answerLocked) return
 
-        val selectedBtn = optionButtons.getOrNull(selectedIndex)
-        if (selectedBtn == null || selectedBtn.visibility != View.VISIBLE) return
+        private fun checkAnswer(selectedIndex: Int) {
+            if (currentQuestionIndex >= questions.size) return
+            if (answerLocked) return
 
-        answerLocked = true
-        pauseTimer()
-        setOptionsEnabled(false)
+            val selectedBtn = optionButtons.getOrNull(selectedIndex)
+            if (selectedBtn == null || selectedBtn.visibility != View.VISIBLE) return
 
-        val q = questions[currentQuestionIndex]
-        val isCorrect = selectedIndex == q.correctAnswerIndex
+            answerLocked = true
+            pauseTimer()
+            setOptionsEnabled(false)
 
-        val oldScore = scoreManager.getOverallScore()
-        val levelNow = currentLevel()
-        val isSecretNow = isSecretLevel(levelNow)
-        val qKey = questionKey(q)
+            val q = questions[currentQuestionIndex]
+            val isCorrect = selectedIndex == q.correctAnswerIndex
 
-        paintButtonsForAnswer(selectedIndex, q.correctAnswerIndex)
+            val oldScore = scoreManager.getOverallScore()
+            val levelNow = currentLevel()
+            val isSecretNow = isSecretLevel(levelNow)
+            val qKey = questionKey(q)
 
-        val spent = (totalTimeInMillis - remainingTimeInMillis).coerceAtLeast(0L)
-        questionsAnswered++
-        totalTimeAccumulated += spent
+            paintButtonsForAnswer(selectedIndex, q.correctAnswerIndex)
 
-        if (isCorrect) {
-            val totalDaQuestao = when (levelNow) {
-                GameDataManager.Levels.INTERMEDIARIO -> 20_000L
-                GameDataManager.Levels.AVANCADO -> 15_000L
-                GameDataManager.Levels.EXPERIENTE -> 15_000L
-                else -> 30_000L
+            val spent = (totalTimeInMillis - remainingTimeInMillis).coerceAtLeast(0L)
+
+            // ✅ mantém seus acumuladores atuais (se você usa no RESULT)
+            questionsAnswered++
+            totalTimeAccumulated += spent
+
+            // ✅ RECORDS: conta tempo/questões SOMENTE no normal
+            if (!isSecretNow) {
+                levelAnsweredCount++
+                levelTimeAccumulatedMs += spent
             }
 
-            if (isSecretNow) {
-                playCorrectSfx()
-                scoreManager.addScoreSecret(
-                    remainingTimeInMillis = remainingTimeInMillis,
-                    totalTimeInMillis = totalDaQuestao
-                )
+            if (isCorrect) {
+                val totalDaQuestao = when (levelNow) {
+                    GameDataManager.Levels.INTERMEDIARIO -> 20_000L
+                    GameDataManager.Levels.AVANCADO -> 15_000L
+                    GameDataManager.Levels.EXPERIENTE -> 15_000L
+                    else -> 30_000L
+                }
 
-                val newScore = scoreManager.getOverallScore()
-                val delta = newScore - oldScore
-                runScoreLevel += delta
+                if (isSecretNow) {
+                    playCorrectSfx()
+                    scoreManager.addScoreSecret(
+                        remainingTimeInMillis = remainingTimeInMillis,
+                        totalTimeInMillis = totalDaQuestao
+                    )
 
-                showFloatingChip("✔ +${delta.coerceAtLeast(0)} pts", R.drawable.ic_check_circle, true)
-                secretHitsInRow += 1
+                    val newScore = scoreManager.getOverallScore()
+                    val delta = newScore - oldScore
+                    runScoreLevel += delta
+
+                    showFloatingChip("✔ +${delta.coerceAtLeast(0)} pts", R.drawable.ic_check_circle, true)
+                    secretHitsInRow += 1
+                } else {
+                    val eligibleForPoints =
+                        newThisRunKeys.contains(qKey) && markScoredIfFirstTime(levelNow, qKey)
+
+                    if (eligibleForPoints) {
+                        handleCorrectAnswerAward(levelNow, totalDaQuestao)
+                        if (isFinishing || isDestroyed) return
+
+                        val newScore = scoreManager.getOverallScore()
+                        val delta = newScore - oldScore
+                        runScoreLevel += delta
+
+                        val streakNow = scoreManager.currentStreakLive.value ?: 0
+                        showFloatingChip(
+                            "✔ +${delta.coerceAtLeast(0)} pts • 🔥 $streakNow",
+                            R.drawable.ic_check_circle,
+                            true
+                        )
+
+                        maybePrepareSecretOffer(levelNow, streakNow)
+                    } else {
+                        // revisão: +streak, +0 pts
+                        scoreManager.onCorrectAnswer()
+                        playCorrectSfx()
+
+                        val streakNow = scoreManager.currentStreakLive.value ?: 0
+                        showFloatingChip("✔ Revisão • +0 pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
+
+                        maybePrepareSecretOffer(levelNow, streakNow)
+                    }
+                }
+
+                glowQuestionCard(success = true)
+                flashFx(success = true)
             } else {
-                val eligibleForPoints =
-                    newThisRunKeys.contains(qKey) && markScoredIfFirstTime(levelNow, qKey)
+                // ERRO
+                if (isSecretNow) {
+                    playWrongSfx()
+                    secretHitsInRow = 0
+                    vibrateWrong()
 
-                if (eligibleForPoints) {
-                    handleCorrectAnswerAward(levelNow, totalDaQuestao)
-                    if (isFinishing || isDestroyed) return
+                    scoreManager.onWrongAnswerSecret()
+                    wrongAnswersCount++
+
+                    val newScore = scoreManager.getOverallScore()
+                    val delta = newScore - oldScore
+                    runScoreLevel += delta
+
+                    showFloatingChip("✖ Errou", R.drawable.ic_delete, false)
+                } else {
+                    handleWrongAnswer()
 
                     val newScore = scoreManager.getOverallScore()
                     val delta = newScore - oldScore
                     runScoreLevel += delta
 
                     val streakNow = scoreManager.currentStreakLive.value ?: 0
-                    showFloatingChip(
-                        "✔ +${delta.coerceAtLeast(0)} pts • 🔥 $streakNow",
-                        R.drawable.ic_check_circle,
-                        true
-                    )
-
-                    maybePrepareSecretOffer(levelNow, streakNow)
-                } else {
-                    // revisão: +streak, +0 pts
-                    scoreManager.onCorrectAnswer()
-                    playCorrectSfx()
-
-                    val streakNow = scoreManager.currentStreakLive.value ?: 0
-                    showFloatingChip("✔ Revisão • +0 pts • 🔥 $streakNow", R.drawable.ic_check_circle, true)
-
-                    maybePrepareSecretOffer(levelNow, streakNow)
+                    showFloatingChip("✖ Errou • 🔥 $streakNow", R.drawable.ic_delete, false)
                 }
+
+                glowQuestionCard(success = false)
+                shake(selectedBtn)
+                flashFx(success = false)
             }
 
-            glowQuestionCard(success = true)
-            flashFx(success = true)
-        } else {
-            // ERRO
-            if (isSecretNow) {
-                playWrongSfx()
-                secretHitsInRow = 0
-                vibrateWrong()
-
-                scoreManager.onWrongAnswerSecret()
-                wrongAnswersCount++
-
-                val newScore = scoreManager.getOverallScore()
-                val delta = newScore - oldScore
-                runScoreLevel += delta
-
-                showFloatingChip("✖ Errou", R.drawable.ic_delete, false)
-            } else {
-                handleWrongAnswer()
-
-                val newScore = scoreManager.getOverallScore()
-                val delta = newScore - oldScore
-                runScoreLevel += delta
-
-                val streakNow = scoreManager.currentStreakLive.value ?: 0
-                showFloatingChip("✖ Errou • 🔥 $streakNow", R.drawable.ic_delete, false)
+            // ✅ ATUALIZA RECORDS NA HORA (só no normal)
+            if (!isSecretNow) {
+                updateLiveRecordsForLevel(levelNow)
             }
 
-            glowQuestionCard(success = false)
-            shake(selectedBtn)
-            flashFx(success = false)
+            // atualizações extras apenas no normal
+            if (!isSecretNow) {
+                checkPremiumUnlocksInGame()
+                updateSecretProgressUi(scoreManager.currentStreakLive.value ?: 0)
+            }
+
+            // ✅ Se marcou uma secreta pra oferecer, abre a escolha e NÃO avança agora
+            pendingSecretOfferLevel?.let { secretLevel ->
+                pendingSecretOfferLevel = null
+                pendingWasCorrectForAdvance = isCorrect
+                secretOfferTriggeredThisRun = true
+                offerLauncher.launch(SecretOfferActivity.intentSecret(this, secretLevel))
+                return
+            }
+
+            // ✅ Game over: oferece revive antes
+            if (wrongAnswersCount >= maxWrongAnswers) {
+                if (maybeOfferReviveIfGameOver()) return
+                showEndOfGameDialog()
+                return
+            }
+
+            advanceToNextQuestionWithDelayOrCuriosity(isCorrect)
         }
 
-        // atualizações extras apenas no normal
-        if (!isSecretNow) {
-            checkPremiumUnlocksInGame()
-            updateSecretProgressUi(scoreManager.currentStreakLive.value ?: 0)
-        }
-
-        // ✅ Se marcou uma secreta pra oferecer, abre a escolha e NÃO avança agora
-        pendingSecretOfferLevel?.let { secretLevel ->
-            pendingSecretOfferLevel = null
-            pendingWasCorrectForAdvance = isCorrect
-            secretOfferTriggeredThisRun = true
-            offerLauncher.launch(SecretOfferActivity.intentSecret(this, secretLevel))
-            return
-        }
-
-        // ✅ Game over: oferece revive antes
-        if (wrongAnswersCount >= maxWrongAnswers) {
-            if (maybeOfferReviveIfGameOver()) return
-            showEndOfGameDialog()
-            return
-        }
-
-        advanceToNextQuestionWithDelayOrCuriosity(isCorrect)
-    }
 
     private fun maybePrepareSecretOffer(levelNow: String, streakNow: Int) {
         if (secretOfferTriggeredThisRun) return
@@ -1453,6 +1482,18 @@ class TestActivity : AppCompatActivity() {
         lastStreakUi = newStreak
     }
 
+    private fun updateLiveRecordsForLevel(levelKey: String) {
+        // best score (pela run atual do nível)
+        LocalRecordsManager.updateBestScoreForLevel(this, levelKey, runScoreLevel)
+
+        // best avg time (média da run atual do nível)
+        if (levelAnsweredCount > 0) {
+            val avgMs = (levelTimeAccumulatedMs / levelAnsweredCount).coerceAtLeast(0L)
+            LocalRecordsManager.updateBestAvgTimeForLevel(this, levelKey, avgMs)
+        }
+    }
+
+
     /**
      * ✅ Score: conta animada + pop quando sobe / shake quando desce.
      */
@@ -1674,6 +1715,26 @@ class TestActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun markQuestionShownNow() {
+        questionShownAtMs = android.os.SystemClock.elapsedRealtime()
+    }
+
+    private fun onAnsweredUpdateLiveRecords() {
+        if (isSecretLevel(currentLevelLoaded)) return
+
+        val now = android.os.SystemClock.elapsedRealtime()
+        val spentMs = (now - questionShownAtMs).coerceAtLeast(0L)
+
+        answeredInLevel++
+        totalAnswerTimeMs += spentMs
+        val avgMs = (totalAnswerTimeMs / answeredInLevel).coerceAtLeast(0L)
+
+        // runScoreLevel = sua pontuação do nível nessa run
+        LocalRecordsManager.updateBestScoreForLevel(this, currentLevelLoaded, runScoreLevel)
+        LocalRecordsManager.updateBestAvgTimeForLevel(this, currentLevelLoaded, avgMs)
+    }
+
 
     private fun checkPremiumUnlocksInGame() {
         val ctx = applicationContext
@@ -2016,11 +2077,9 @@ class TestActivity : AppCompatActivity() {
     // ADMOB
     // =============================================================================================
 
-    private fun rewardedUnitId(): String =
-        if (BuildConfig.DEBUG) TEST_REWARDED_ID else PROD_REWARDED_ID
+    private fun rewardedUnitId(): String = getString(R.string.admob_rewarded_ad_unit_id)
+    private fun bannerUnitId(): String = getString(R.string.banner_ad_unit_id)
 
-    private fun bannerUnitId(): String =
-        if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
 
     private fun setupBannerAdaptive() {
         if (bannerLoaded) return
