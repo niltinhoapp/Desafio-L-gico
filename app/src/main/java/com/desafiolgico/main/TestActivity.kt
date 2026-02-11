@@ -18,6 +18,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -52,6 +53,7 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.material.button.MaterialButton
@@ -80,6 +82,19 @@ class TestActivity : AppCompatActivity() {
     private lateinit var overlayContainer: ViewGroup
     private lateinit var konfettiView: KonfettiView
     private val optionButtons = mutableListOf<MaterialButton>()
+
+    // ✅ Guarda o último valor real (não depende do texto do TextView)
+    private var lastScoreUi: Int = 0
+    private var lastStreakUi: Int = 0
+
+    private var streakAnimator: ValueAnimator? = null
+
+
+    private var scoreAnimator: ValueAnimator? = null
+    private var fxOverlay: View? = null
+    private var defaultQuestionStrokeColor: Int? = null
+    private var defaultQuestionStrokeWidth: Int? = null
+    private var lastCelebratedStreak = -1
 
     // --- Secret offer / revive ---
     private var secretOfferTriggeredThisRun = false
@@ -173,12 +188,7 @@ class TestActivity : AppCompatActivity() {
     private var rewardedAd: RewardedAd? = null
     private var bannerLoaded = false
 
-    // --- FX ---
-    private var scoreAnimator: ValueAnimator? = null
-    private var fxOverlay: View? = null
-    private var defaultQuestionStrokeColor: Int? = null
-    private var defaultQuestionStrokeWidth: Int? = null
-    private var lastCelebratedStreak = -1
+
 
     // Control: limpar backup depois que o normal voltou e iniciou com sucesso
     private var shouldClearBackupAfterStart = false
@@ -235,6 +245,7 @@ class TestActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         GameDataManager.init(this)
+        MobileAds.initialize(this) {}
 
         overlayContainer = binding.overlayContainer
         rootLayout = binding.rootLayoutTest
@@ -258,6 +269,7 @@ class TestActivity : AppCompatActivity() {
         loadRewardedAd()
         loadUserHeader()
         observeScoreManager()
+        initPontuacaoUI()
 
         binding.logoImageView.setOnClickListener {
             startActivity(Intent(this, AvatarSelectionActivity::class.java))
@@ -463,6 +475,7 @@ class TestActivity : AppCompatActivity() {
         countDownTimer?.cancel()
         scoreAnimator?.cancel()
         VictoryFx.release()
+        streakAnimator?.cancel()
         super.onDestroy()
     }
 
@@ -1396,57 +1409,189 @@ class TestActivity : AppCompatActivity() {
             getString(R.string.perguntas_restantes_format, left)
     }
 
-    private fun configurarPontuacao() {
-        val oldScore = try {
-            binding.scoreTextView.text.replace("[^0-9-]".toRegex(), "").toInt()
-        } catch (_: Exception) {
-            0
-        }
 
-        val newScore = scoreManager.getOverallScore()
-        animateScoreChange(oldScore, newScore)
+    /**
+     * Chame 1x no onCreate() (depois do binding) para setar base sem animação.
+     */
+    private fun initPontuacaoUI() {
+        lastScoreUi = scoreManager.getOverallScore()
+        binding.scoreTextView.text = getString(R.string.pontos_format, lastScoreUi)
 
-        val currentStreak = scoreManager.currentStreakLive.value ?: 0
-        binding.streakTextView.text = getString(R.string.streak_format, currentStreak)
+        lastStreakUi = scoreManager.currentStreakLive.value ?: 0
+        binding.streakTextView.text = getString(R.string.streak_format, lastStreakUi)
+        val scoreNow = scoreManager.overallScoreLive.value ?: scoreManager.getOverallScore()
+             val streakNow = scoreManager.currentStreakLive.value ?: 0
 
-        if (!isSecretLevel(currentLevel())) binding.streakTextView.visibility = View.VISIBLE
-        else binding.streakTextView.visibility = View.GONE
+             lastScoreUi = scoreNow
+             lastStreakUi = streakNow
+
+             binding.scoreTextView.text = getString(R.string.pontos_format, scoreNow)
+             binding.streakTextView.text = getString(R.string.streak_format, streakNow)
     }
 
+    /**
+     * ✅ Atualiza e anima quando houver mudança (PRO: subir vs descer).
+     * Chame sempre que ganhar/perder pontos ou mudar streak.
+     */
+    private fun configurarPontuacao() {
+        val newScore = scoreManager.getOverallScore()
+        animateScoreChange(lastScoreUi, newScore)
+        lastScoreUi = newScore
+
+        val newStreak = scoreManager.currentStreakLive.value ?: 0
+        val showStreak = !isSecretLevel(currentLevel())
+
+        binding.streakTextView.visibility = if (showStreak) View.VISIBLE else View.GONE
+
+        if (showStreak) {
+            animateStreakChange(lastStreakUi, newStreak)
+        } else {
+            // segredo: só atualiza texto, sem animar
+            binding.streakTextView.text = getString(R.string.streak_format, newStreak)
+        }
+
+        lastStreakUi = newStreak
+    }
+
+    /**
+     * ✅ Score: conta animada + pop quando sobe / shake quando desce.
+     */
     private fun animateScoreChange(oldScore: Int, newScore: Int) {
         val tv = binding.scoreTextView
+
         if (oldScore == newScore) {
             tv.text = getString(R.string.pontos_format, newScore)
             return
         }
 
+        val delta = newScore - oldScore
+        val diff = abs(delta)
+
+        // duração ajustada: diferença grande = anima um pouco mais
+        val duration = (240 + diff * 8).coerceIn(320, 820).toLong()
+
+        // cancela qualquer animação anterior
         scoreAnimator?.cancel()
+        tv.animate().cancel()
+        tv.translationX = 0f
+        tv.scaleX = 1f
+        tv.scaleY = 1f
 
-        val diff = abs(newScore - oldScore)
-        val duration = (260 + diff * 10).coerceIn(420, 900).toLong()
-
+        // anima o número
         scoreAnimator = ValueAnimator.ofInt(oldScore, newScore).apply {
             this.duration = duration
             interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener {
-                tv.text = getString(R.string.pontos_format, it.animatedValue as Int)
+            addUpdateListener { anim ->
+                val v = anim.animatedValue as Int
+                tv.text = getString(R.string.pontos_format, v)
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationStart(animation: Animator) {
-                    tv.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).start()
+                    if (delta > 0) {
+                        // ganho: pop
+                        tv.animate().scaleX(1.08f).scaleY(1.08f).setDuration(120).start()
+                    } else {
+                        // perda: shake leve (sem ficar feio)
+                        tv.animate()
+                            .translationXBy(8f).setDuration(40)
+                            .withEndAction {
+                                tv.animate()
+                                    .translationXBy(-16f).setDuration(70)
+                                    .withEndAction {
+                                        tv.animate().translationX(0f).setDuration(60).start()
+                                    }
+                                    .start()
+                            }
+                            .start()
+                    }
                 }
 
                 override fun onAnimationEnd(animation: Animator) {
-                    tv.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+                    tv.animate().scaleX(1f).scaleY(1f).setDuration(160).start()
                 }
 
                 override fun onAnimationCancel(animation: Animator) {
-                    tv.scaleX = 1f; tv.scaleY = 1f
+                    tv.translationX = 0f
+                    tv.scaleX = 1f
+                    tv.scaleY = 1f
                 }
             })
         }
+
         scoreAnimator?.start()
     }
+
+    /**
+     * ✅ Streak: muda texto + wiggle quando sobe / shake quando desce.
+     */
+    private fun animateStreakChange(oldStreak: Int, newStreak: Int) {
+        val tv = binding.streakTextView
+
+        if (oldStreak == newStreak) {
+            tv.text = getString(R.string.streak_format, newStreak)
+            return
+        }
+
+        val delta = newStreak - oldStreak
+
+        streakAnimator?.cancel()
+        tv.animate().cancel()
+        tv.translationX = 0f
+        tv.rotation = 0f
+        tv.scaleX = 1f
+        tv.scaleY = 1f
+
+        // opcional: se quiser "contar" a streak como número, descomenta:
+        // streakAnimator = ValueAnimator.ofInt(oldStreak, newStreak).apply { ... }
+
+        tv.text = getString(R.string.streak_format, newStreak)
+
+        if (delta > 0) {
+            // ganho: pop + wiggle premium
+            tv.animate().scaleX(1.10f).scaleY(1.10f).setDuration(140).withEndAction {
+                tv.animate().rotation(6f).setDuration(80).withEndAction {
+                    tv.animate().rotation(-6f).setDuration(120).withEndAction {
+                        tv.animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(160).start()
+                    }.start()
+                }.start()
+            }.start()
+        } else {
+            // perda: shake
+            tv.animate()
+                .translationXBy(8f).setDuration(40)
+                .withEndAction {
+                    tv.animate()
+                        .translationXBy(-16f).setDuration(70)
+                        .withEndAction {
+                            tv.animate().translationX(0f).setDuration(60).start()
+                        }
+                        .start()
+                }
+                .start()
+        }
+    }
+
+    /**
+     * ✅ Utilitário genérico (se quiser usar pra moedas/pontos/etc).
+     */
+    private fun animateCount(
+        from: Int,
+        to: Int,
+        duration: Long,
+        onUpdate: (Int) -> Unit,
+        currentAnimator: ValueAnimator?,
+        storeAnimator: (ValueAnimator?) -> Unit
+    ) {
+        currentAnimator?.cancel()
+
+        val anim = ValueAnimator.ofInt(from, to).apply {
+            this.duration = duration
+            addUpdateListener { onUpdate(it.animatedValue as Int) }
+        }
+        storeAnimator(anim)
+        anim.start()
+    }
+
 
     private fun updateCoinsUI() {
         val coins = CoinManager.getCoins(this)
@@ -1486,10 +1631,14 @@ class TestActivity : AppCompatActivity() {
     }
 
     private fun observeScoreManager() {
+
         scoreManager.overallScoreLive.observe(this) { total ->
+            // Persistência da sessão
             SecurePrefs.putInt(this, KEY_SESSION_SCORE, total)
 
-            configurarPontuacao()
+            // ✅ anima usando o valor novo do observer
+            animateScoreChange(lastScoreUi, total)
+            lastScoreUi = total
 
             // evita toasts de unlock dentro do secreto
             if (!isSecretLevel(currentLevel())) {
@@ -1499,12 +1648,19 @@ class TestActivity : AppCompatActivity() {
         }
 
         scoreManager.currentStreakLive.observe(this) { streak ->
+            // ✅ Se for secreto: oculta e mantém cache
             if (isSecretLevel(currentLevel())) {
                 binding.streakTextView.visibility = View.GONE
+                lastStreakUi = streak
                 return@observe
             }
 
-            configurarPontuacao()
+            binding.streakTextView.visibility = View.VISIBLE
+
+            // ✅ anima usando o valor novo do observer
+            animateStreakChange(lastStreakUi, streak)
+            lastStreakUi = streak
+
             updateSecretProgressUi(streak)
 
             LocalRecordsManager.updateBestStreakOfDay(this, streak)
@@ -1709,6 +1865,7 @@ class TestActivity : AppCompatActivity() {
         totalQuestions = questions.size
 
         configurarPontuacao()
+        initPontuacaoUI()
         updateQuestionsRemaining()
 
         if (questions.isNotEmpty()) displayQuestion(true) else finish()
@@ -1866,37 +2023,52 @@ class TestActivity : AppCompatActivity() {
         if (BuildConfig.DEBUG) TEST_BANNER_ID else PROD_BANNER_ID
 
     private fun setupBannerAdaptive() {
-        adView = binding.adView
         if (bannerLoaded) return
         bannerLoaded = true
 
-        adView.visibility = View.INVISIBLE
-        adView.adUnitId = bannerUnitId()
-
         val container = binding.adContainer
+        container.removeAllViews() // ✅ garante que não duplica
+
         container.post {
             if (isFinishing || isDestroyed) return@post
 
-            val widthPx = max(1, container.width)
-            val density = resources.displayMetrics.density
-            val widthDp = (widthPx / density).toInt().coerceAtLeast(320)
+            val widthPx = container.width.takeIf { it > 0 }
+                ?: resources.displayMetrics.widthPixels
+            val adWidthDp = (widthPx / resources.displayMetrics.density).toInt()
 
-            val adaptiveSize =
-                AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, widthDp)
+            val banner = AdView(this).apply {
+                adUnitId = bannerUnitId() // ✅ aqui pode (vai setar 1x só)
+                setAdSize(
+                    AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
+                        this@TestActivity,
+                        adWidthDp
+                    )
+                )
+                adListener = object : AdListener() {
+                    override fun onAdLoaded() {
+                        visibility = View.VISIBLE
+                    }
 
-            adView.setAdSize(adaptiveSize)
-
-            adView.adListener = object : AdListener() {
-                override fun onAdLoaded() {
-                    adView.visibility = View.VISIBLE
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        visibility = View.GONE
+                        android.util.Log.e("ADS", "Banner failed: ${error.code} - ${error.message}")
+                    }
                 }
-
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    adView.visibility = View.INVISIBLE
-                }
+                visibility = View.GONE
             }
 
-            adView.loadAd(AdRequest.Builder().build())
+            container.addView(
+                banner,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+
+            banner.loadAd(AdRequest.Builder().build())
+
+            // ✅ guarda referência pra pausar/resumir/destroy
+            adView = banner
         }
     }
 

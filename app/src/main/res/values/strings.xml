@@ -327,4 +327,9 @@
 
     <string name="select_language">Selecione seu idioma</string>
     <string name="portugues_brasil">Português (Brasil)</string>
+
+        <string name="admob_banner_unit_id">ca-app-pub-3940256099942544/6300978111</string>
+
+
+
 </resources>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Base do papel -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp"/>
+            <gradient
+                android:startColor="#FFF7E6"
+                android:endColor="#FFEFD2"
+                android:angle="90"/>
+        </shape>
+    </item>
+
+    <!-- Sombra interna leve -->
+    <item android:left="1dp" android:top="1dp" android:right="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="17dp"/>
+            <solid android:color="#10FFFFFF"/>
+        </shape>
+    </item>
+
+    <!-- Dobra central (book fold) -->
+    <item android:left="50dp" android:right="50dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#1A000000"
+                android:centerColor="#00FFFFFF"
+                android:endColor="#1A000000"
+                android:angle="0"/>
+            <size android:height="1dp"/>
+        </shape>
+    </item>
+
+</layer-list>

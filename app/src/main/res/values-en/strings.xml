@@ -53,6 +53,9 @@
     <string name="secret_offer_desc">Choose how to use your reward now.</string>
 
 
+        <string name="admob_banner_unit_id">ca-app-pub-3940256099942544/6300978111</string>
+
+
         <string name="continuar_com_google">Continue with Google</string>
     <string name="secret_offer_play_now">⚡ Play secret stage now</string>
     <string name="secret_offer_clear_errors">🧼 Exchange to clear mistakes</string>

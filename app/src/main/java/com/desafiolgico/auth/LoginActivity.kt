@@ -526,4 +526,5 @@ class LoginActivity : AppCompatActivity() {
             // ✅ não quebra nada se os steps não existirem ainda
         }
     }
+    
 }
