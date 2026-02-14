@@ -1,10 +1,11 @@
 package com.desafiolgico.information
 
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.view.View
 import android.view.animation.DecelerateInterpolator
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.viewpager2.widget.ViewPager2
@@ -14,6 +15,7 @@ import com.desafiolgico.adapters.OnboardingItem
 import com.desafiolgico.databinding.ActivityOnboardingBinding
 import com.desafiolgico.main.BoasVindasActivity
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.tabs.TabLayoutMediator
 
 class OnboardingActivity : AppCompatActivity() {
@@ -24,28 +26,33 @@ class OnboardingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // ✅ Edge-to-Edge safe
+        binding.onboardingRoot.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         // 🔹 Fundo animado
         animateGradientBackground()
 
-        // 🔹 Música ambiente suave
-        introSound = MediaPlayer.create(this, R.raw.intro_soft_music).apply {
+        // 🔹 Música ambiente suave (segura)
+        introSound = MediaPlayer.create(this, R.raw.intro_soft_music)?.apply {
             isLooping = true
             setVolume(0.5f, 0.5f)
             start()
         }
 
-        // 🔹 Recupera nível selecionado (caso venha de outra tela)
+        // 🔹 Recupera nível selecionado
         val level = intent.getStringExtra("LEVEL") ?: "Iniciante"
 
-        // 🔹 Configura conteúdo do tutorial
+        // 🔹 Adapter
         onboardingAdapter = OnboardingAdapter(getOnboardingItems(level))
         binding.viewPager.adapter = onboardingAdapter
 
-        // 🔹 Tabs (títulos)
+        // 🔹 Tabs
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> "Introdução"
@@ -55,13 +62,9 @@ class OnboardingActivity : AppCompatActivity() {
             }
         }.attach()
 
-        // 🔹 Botões e progresso
         setupNavigationButtons()
     }
 
-    /**
-     * Conteúdo dinâmico do tutorial conforme o nível
-     */
     private fun getOnboardingItems(level: String): List<OnboardingItem> {
         val levelDesc = when (level) {
             "Iniciante" -> "🌱 Ideal para começar sua jornada lógica com tranquilidade."
@@ -89,23 +92,23 @@ class OnboardingActivity : AppCompatActivity() {
                 R.drawable.capajogo,
                 "Funcionalidades Principais",
                 """
-                ✅ **Responda Rápido:** O tempo é limitado — pense e aja!
-                🎵 **Efeitos e Sons:** Feedback imersivo para cada acerto ou erro.
-                💎 **Streaks:** Acertos seguidos valem multiplicadores de pontos.
-                🌟 **Bônus Dourado:** A cada 20 acertos consecutivos, uma celebração épica!
+                ✅ Responda Rápido: O tempo é limitado — pense e aja!
+                🎵 Efeitos e Sons: Feedback imersivo para cada acerto ou erro.
+                💎 Streaks: Acertos seguidos valem multiplicadores de pontos.
+                🌟 Bônus Dourado: A cada 20 acertos consecutivos, uma celebração épica!
                 """.trimIndent()
             ),
             OnboardingItem(
                 R.drawable.onboarding_image3,
                 "Níveis e Regras",
                 """
-                📊 **Níveis de dificuldade:**
+                📊 Níveis de dificuldade:
                 - Iniciante → 5 erros permitidos.
                 - Intermediário → 3 erros.
                 - Avançado → apenas 2 erros.
-                - Experiente -> apenas 3 erros.
+                - Experiente → apenas 3 erros.
 
-                ⏱️ **Tempo por pergunta:**
+                ⏱️ Tempo por pergunta:
                 - Iniciante: 30s | Intermediário: 25s | Avançado: 15s
                 """.trimIndent()
             ),
@@ -113,18 +116,15 @@ class OnboardingActivity : AppCompatActivity() {
                 R.drawable.capajogo,
                 "Pronto para Começar?",
                 """
-                🌟 **Agora é com você!**
+                🌟 Agora é com você!
                 Continue aprendendo e evoluindo a cada rodada.
 
-                🚀 Toque em **Vamos lá!** e comece o Desafio Lógico agora mesmo!
+                🚀 Toque em Vamos lá! e comece o Desafio Lógico agora mesmo!
                 """.trimIndent()
             )
         )
     }
 
-    /**
-     * Configura os botões "Pular" e "Próximo"
-     */
     private fun setupNavigationButtons() {
         binding.btnNext.setOnClickListener {
             val currentItem = binding.viewPager.currentItem
@@ -135,22 +135,18 @@ class OnboardingActivity : AppCompatActivity() {
             }
         }
 
-
-
-        // Atualiza botão e barra de progresso conforme página
         binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                val progress = ((position + 1).toFloat() / onboardingAdapter.itemCount * 100).toInt()
+                val progress =
+                    ((position + 1).toFloat() / onboardingAdapter.itemCount * 100).toInt()
                 binding.onboardingProgress.progress = progress
+
                 binding.btnNext.text =
                     if (position == onboardingAdapter.itemCount - 1) "Vamos lá!" else "Próximo"
             }
         })
     }
 
-    /**
-     * Animação de transição suave entre páginas
-     */
     private fun animateToNextPage(currentItem: Int) {
         binding.viewPager.animate()
             .translationX(-100f)
@@ -169,48 +165,39 @@ class OnboardingActivity : AppCompatActivity() {
             .start()
     }
 
-    /**
-     * Gradiente de fundo animado
-     */
     private fun animateGradientBackground() {
-        val background = binding.root.background
-        if (background is android.graphics.drawable.AnimationDrawable) {
-            background.setEnterFadeDuration(1500)
-            background.setExitFadeDuration(3000)
-            background.start()
+        val bg = binding.onboardingRoot.background
+        if (bg is AnimationDrawable) {
+            bg.setEnterFadeDuration(1500)
+            bg.setExitFadeDuration(3000)
+            bg.start()
         }
     }
 
-    /**
-     * Salva preferências e retorna à tela principal
-     */
     private fun savePreferencesAndFinish() {
+        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        prefs.edit {
+            putBoolean("onboarding_completed", true)
+            putBoolean("always_show_onboarding", binding.checkBoxAlwaysShow.isChecked)
+            putString("last_level_seen", intent.getStringExtra("LEVEL") ?: "Iniciante")
+        }
 
-            val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-            prefs.edit {
-                putBoolean("onboarding_completed", true)
-                putBoolean("always_show_onboarding", binding.checkBoxAlwaysShow.isChecked)
-                putString("last_level_seen", intent.getStringExtra("LEVEL") ?: "Iniciante")
+        // ✅ encerra o som com segurança
+        runCatching {
+            introSound?.let { mp ->
+                if (mp.isPlaying) mp.stop()
+                mp.release()
             }
+        }
+        introSound = null
 
-            // ✅ encerra o som com segurança
-            try {
-                introSound?.let { mp ->
-                    if (mp.isPlaying) mp.stop()
-                    mp.release()
-                }
-            } catch (_: Exception) {}
-            introSound = null
-
-            val fromSettings = intent.getBooleanExtra("FROM_SETTINGS", false)
-
-            if (fromSettings) {
-                finish()
-            } else {
-                startActivity(Intent(this, BoasVindasActivity::class.java))
-                finish()
-            }
-
+        val fromSettings = intent.getBooleanExtra("FROM_SETTINGS", false)
+        if (fromSettings) {
+            finish()
+        } else {
+            startActivity(Intent(this, BoasVindasActivity::class.java))
+            finish()
+        }
     }
 
     override fun onPause() {
@@ -225,7 +212,7 @@ class OnboardingActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        introSound?.release()
+        runCatching { introSound?.release() }
         introSound = null
     }
 }

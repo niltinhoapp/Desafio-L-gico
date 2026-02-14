@@ -7,10 +7,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_onboarding_gradient"
     android:fillViewport="true"
-    android:overScrollMode="never">
+    android:overScrollMode="never"
+    android:clipToPadding="false">
 
+    <!-- Container para aplicar:
+         1) padding do design (20dp)
+         2) insets via código (status/nav) -->
     <LinearLayout
-        android:id="@+id/avatarSelectionLayout"
+        android:id="@+id/contentContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -48,8 +52,8 @@
                         android:layout_height="22dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_coin_small"
-                        app:tint="@color/portal_gold"
-                        android:contentDescription="@string/moedas_0" />
+                        android:contentDescription="@string/moedas_0"
+                        app:tint="@color/portal_gold" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -182,4 +186,5 @@
             android:layout_height="18dp" />
 
     </LinearLayout>
+
 </ScrollView>

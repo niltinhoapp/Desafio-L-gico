@@ -155,7 +155,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Pontuação "
+                    android:text="Pontuação"
                     android:textColor="@color/settings_chevron_tint"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -191,7 +191,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Nível "
+                    android:text="Nível"
                     android:textColor="@color/settings_chevron_tint"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -227,7 +227,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Streak "
+                    android:text="Streak"
                     android:textColor="@color/settings_chevron_tint"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -265,40 +265,36 @@
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         android:textSize="18sp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
         app:cornerRadius="16dp"
-        app:backgroundTint="@color/button_default"
         app:strokeWidth="1dp"
         app:strokeColor="@color/settings_card_stroke"
         app:rippleColor="@color/white_20"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
+        app:backgroundTint="@color/settings_card_bg"
         app:layout_constraintTop_toBottomOf="@id/btnContinue"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 🗺️ Mapa / Níveis (premium) -->
+    <!-- 🗺️ Mapa / Níveis (CTA padrão + verde ao clicar) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnMapa"
         android:layout_width="0dp"
-        android:layout_height="52dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:text="Mapa"
+        android:text="Mapa / Níveis"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         android:textSize="18sp"
-        android:gravity="center"
-        android:paddingStart="16dp"
-        android:paddingEnd="14dp"
         android:insetTop="0dp"
         android:insetBottom="0dp"
-        app:backgroundTint="@color/button_default"
+        app:cornerRadius="16dp"
         app:strokeWidth="1dp"
         app:strokeColor="@color/settings_card_stroke"
-        app:cornerRadius="16dp"
         app:rippleColor="@color/white_20"
+        app:backgroundTint="@color/btn_map_bg_selector"
         app:layout_constraintTop_toBottomOf="@id/btnNewGame"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

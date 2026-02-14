@@ -20,6 +20,7 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.VictoryFx
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import nl.dionsegijn.konfetti.xml.KonfettiView
 
 class ResultOrGameOverActivity : AppCompatActivity() {
@@ -71,12 +72,20 @@ class ResultOrGameOverActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        applyEdgeToEdge(lightSystemBarIcons = false)
 
         binding = ActivityResultOrGameOverBinding.inflate(layoutInflater)
+
+        // aplique padding ANTES do setContentView (ok aplicar antes ou depois, mas assim fica limpo)
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
         setContentView(binding.root)
 
-        // includes com viewBinding
+
+
+
+    // includes com viewBinding
         resultBinding = binding.resultContainer
         gameOverBinding = binding.gameOverContainer
 

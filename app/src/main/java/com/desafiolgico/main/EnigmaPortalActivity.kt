@@ -17,6 +17,8 @@ import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityEnigmaPortalBinding
 import com.desafiolgico.utils.EnigmaPortalGate
 import com.desafiolgico.utils.SecurePrefs
+import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.card.MaterialCardView
 import kotlin.math.abs
 
@@ -86,10 +88,18 @@ class EnigmaPortalActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ✅ Edge-to-edge primeiro
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityEnigmaPortalBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.toolbarPortal.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
+        // ✅ padding no root da tela
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
+
+    binding.toolbarPortal.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         binding.toolbarPortal.setNavigationOnClickListener { finish() }
 
         val score = intent.getIntExtra(EXTRA_SCORE, 0)
@@ -322,7 +332,7 @@ class EnigmaPortalActivity : AppCompatActivity() {
         if (finished) return
 
         // 60s, mas a estabilidade é o “HP” (cai 1 por segundo)
-        timer = object : CountDownTimer(60_000L, 1000L) {
+        timer = object : CountDownTimer(100_000L, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
                 if (finished) return
                 stability = (stability - 1).coerceAtLeast(0)

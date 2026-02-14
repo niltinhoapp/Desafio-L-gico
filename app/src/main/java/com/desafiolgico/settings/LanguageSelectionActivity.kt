@@ -16,6 +16,7 @@ import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.applyEdgeToEdge
 import androidx.core.content.edit
 import com.desafiolgico.auth.LoginActivity
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class LanguageSelectionActivity : AppCompatActivity() {
 
@@ -37,39 +38,47 @@ class LanguageSelectionActivity : AppCompatActivity() {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
-        setContentView(R.layout.activity_language_selection)
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
 
-        fromSettings = intent.getBooleanExtra(EXTRA_FROM_SETTINGS, false)
+            // ✅ Edge-to-edge (ajuste conforme seu fundo)
+            applyEdgeToEdge(lightSystemBarIcons = false)
 
-        rowPortuguese = findViewById(R.id.rowPortuguese)
-        rowEnglish = findViewById(R.id.rowEnglish)
-        checkPortuguese = findViewById(R.id.checkPortuguese)
-        checkEnglish = findViewById(R.id.checkEnglish)
-        languageSummary = findViewById(R.id.languageSummary)
-        btnConfirm = findViewById(R.id.btnConfirmLanguage)
+            setContentView(R.layout.activity_language_selection)
 
-        val currentLang = LanguageHelper.getLanguage(this)
-        selectedLanguageCode = currentLang
+            // ✅ Insets (top+bottom) para não colar em status/nav bar
+            findViewById<android.view.View>(android.R.id.content)
+                .applySystemBarsPadding(applyTop = true, applyBottom = true)
 
-        updateSelectionUI()
+            fromSettings = intent.getBooleanExtra(EXTRA_FROM_SETTINGS, false)
 
-        rowPortuguese.setOnClickListener {
-            selectedLanguageCode = LanguageHelper.LANGUAGE_PORTUGUESE
+            rowPortuguese = findViewById(R.id.rowPortuguese)
+            rowEnglish = findViewById(R.id.rowEnglish)
+            checkPortuguese = findViewById(R.id.checkPortuguese)
+            checkEnglish = findViewById(R.id.checkEnglish)
+            languageSummary = findViewById(R.id.languageSummary)
+            btnConfirm = findViewById(R.id.btnConfirmLanguage)
+
+            val currentLang = LanguageHelper.getLanguage(this)
+            selectedLanguageCode = currentLang
+
             updateSelectionUI()
+
+            rowPortuguese.setOnClickListener {
+                selectedLanguageCode = LanguageHelper.LANGUAGE_PORTUGUESE
+                updateSelectionUI()
+            }
+
+            rowEnglish.setOnClickListener {
+                selectedLanguageCode = LanguageHelper.LANGUAGE_ENGLISH
+                updateSelectionUI()
+            }
+
+            btnConfirm.setOnClickListener {
+                applySelectedLanguage()
+            }
         }
 
-        rowEnglish.setOnClickListener {
-            selectedLanguageCode = LanguageHelper.LANGUAGE_ENGLISH
-            updateSelectionUI()
-        }
-
-        btnConfirm.setOnClickListener {
-            applySelectedLanguage()
-        }
-    }
 
     private fun updateSelectionUI() {
         val isPortuguese = selectedLanguageCode.startsWith("pt", ignoreCase = true)

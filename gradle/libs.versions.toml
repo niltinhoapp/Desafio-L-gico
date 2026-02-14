@@ -1,69 +1,104 @@
 [versions]
+# Build / Plugins
 agp = "8.7.3"
-firebaseBom = "32.9.0" # Versão segura para Kotlin 1.9.24
-kotlin = "1.9.24" # Versão solicitada pelo usuário
+kotlin = "2.2.0"
+googleGmsGoogleServices = "4.4.2"
+
+# Firebase (BOM)
+firebaseBom = "34.9.0"
+
+# AndroidX / UI
 coreKtx = "1.15.0"
 appcompat = "1.7.0"
 activity = "1.9.3"
 constraintlayout = "2.2.0"
 recyclerview = "1.3.2"
 material = "1.13.0"
+
+# (se você NÃO usa Compose, pode remover material3Android / animationCore / remoteCreationCore)
 material3Android = "1.3.1"
+animationCore = "1.9.3"
+remoteCreationCore = "1.0.0-alpha01"
+
+# Media / UI libs
 glide = "4.16.0"
-playServicesAuth = "21.1.0" # Downgrade para evitar conflito de metadados
-playServicesAds = "22.6.0" # Downgrade para evitar conflito de metadados
 lottie = "6.6.10"
 konfettiXmlVersion = "2.0.4"
-androidxLifecycle = "2.8.7"
-retrofit = "2.11.0"
-converterGson = "2.11.0"
 coil = "2.7.0"
+
+# Google Play Services
+playServicesAuth = "21.1.0"
+playServicesAds = "24.9.0"
+
+# Architecture
+androidxLifecycle = "2.8.7"
 room = "2.6.1"
 kotlinxCoroutines = "1.9.0"
-animationCore = "1.9.3"
+
+# Networking
+retrofit = "2.11.0"
+converterGson = "2.11.0"
+
+# Tests
 espressoCore = "3.6.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
-googleGmsGoogleServices = "4.4.2"
-firebaseAuthKtx = "24.0.1"
-firebaseAuthCommon = "9.8.0"
-remoteCreationCore = "1.0.0-alpha01"
+
 
 [libraries]
+# AndroidX
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
-material-v1130 = { group = "com.google.android.material", name = "material", version.ref = "material" }
-androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
 
-# CORREÇÃO CRÍTICA: Usando 'module' para maior clareza de artefato (BOM gerencia a versão)
+# Material
+material-v1130 = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# Compose (opcional — remova se não usa)
+androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
+androidx-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
+androidx-remote-creation-core = { group = "androidx.compose.remote", name = "remote-creation-core", version.ref = "remoteCreationCore" }
+
+# Firebase (BOM + módulos sem versão)
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
 firebase-database-ktx = { module = "com.google.firebase:firebase-database-ktx" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 
+# Google Play Services
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
+
+# UI / Images / Animations
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
+compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 konfetti-xml-v204 = { module = "nl.dionsegijn:konfetti-xml", version.ref = "konfettiXmlVersion" }
+coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
+
+# Lifecycle
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
 androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "androidxLifecycle" }
+
+# Coroutines
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+
+# Networking
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "converterGson" }
-coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
+
+# Room
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-androidx-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+# Tests
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
-firebase-auth-common = { group = "com.google.firebase", name = "firebase-auth-common", version.ref = "firebaseAuthCommon" }
-androidx-remote-creation-core = { group = "androidx.compose.remote", name = "remote-creation-core", version.ref = "remoteCreationCore" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

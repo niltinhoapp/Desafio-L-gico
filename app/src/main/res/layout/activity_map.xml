@@ -2,11 +2,13 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mapRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/gradient_2">
 
+    <!-- Toolbar com espaço para status bar (edge-to-edge safe) -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbarMap"
         android:layout_width="0dp"
@@ -15,99 +17,127 @@
         android:title="Mapa"
         android:titleTextColor="@android:color/white"
         app:navigationIconTint="@android:color/white"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        app:contentInsetStartWithNavigation="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_max="680dp"
+        app:layout_constraintHorizontal_bias="0.5"
+        tools:ignore="HardcodedText" />
 
-    <FrameLayout
-        android:id="@+id/mapContainer"
+    <!-- Container central (não estica demais em tablet / landscape) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/mapCenter"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:clipChildren="false"
-        android:clipToPadding="false"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
         app:layout_constraintTop_toBottomOf="@id/toolbarMap"
         app:layout_constraintBottom_toTopOf="@id/txtMapProgress"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_max="720dp">
 
-        <ImageView
-            android:id="@+id/imgMap"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter"
-            android:src="@drawable/mapa_pa" />
-
-        <!-- Overlay tem que ter o MESMO tamanho do imgMap -->
+        <!-- Área do mapa mantém proporção via fitCenter -->
         <FrameLayout
-            android:id="@+id/overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:id="@+id/mapContainer"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
             android:clipChildren="false"
-            android:clipToPadding="false">
-
-            <View
-                android:id="@+id/starGlow"
-                android:layout_width="92dp"
-                android:layout_height="92dp"
-                android:background="@drawable/bg_glow_soft"
-                android:visibility="gone" />
-
-            <View
-                android:id="@+id/starPing"
-                android:layout_width="92dp"
-                android:layout_height="92dp"
-                android:background="@drawable/bg_ping_ring"
-                android:visibility="gone" />
+            android:clipToPadding="false"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <ImageView
-                android:id="@+id/imgStar"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:contentDescription="Star"
-                android:src="@drawable/star_outline_layer"
-                 />
+                android:id="@+id/imgMap"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/mapa_pa"
+                android:contentDescription="@null" />
 
-        </FrameLayout>
-        <!-- Badge do Portal (canto superior direito) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/portalBadgeCard"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|end"
-            android:layout_margin="12dp"
-            app:cardCornerRadius="18dp"
-            app:cardElevation="10dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="#33FFFFFF"
-            app:cardBackgroundColor="#1E233A"
-            android:visibility="gone">
+            <!-- Overlay tem que ter o MESMO tamanho do imgMap -->
+            <FrameLayout
+                android:id="@+id/overlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false">
 
-            <TextView
-                android:id="@+id/txtPortalBadge"
+                <View
+                    android:id="@+id/starGlow"
+                    android:layout_width="92dp"
+                    android:layout_height="92dp"
+                    android:background="@drawable/bg_glow_soft"
+                    android:visibility="gone" />
+
+                <View
+                    android:id="@+id/starPing"
+                    android:layout_width="92dp"
+                    android:layout_height="92dp"
+                    android:background="@drawable/bg_ping_ring"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/imgStar"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/star_outline_layer"
+                    android:contentDescription="@string/app_name" />
+            </FrameLayout>
+
+            <!-- Badge do Portal (canto superior direito) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/portalBadgeCard"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="8dp"
-                android:text="🌀 Portal: 3/3"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-        </com.google.android.material.card.MaterialCardView>
+                android:layout_gravity="top|end"
+                android:layout_margin="12dp"
+                android:visibility="gone"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="10dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#33FFFFFF"
+                app:cardBackgroundColor="#1E233A">
 
-    </FrameLayout>
+                <TextView
+                    android:id="@+id/txtPortalBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:text="🌀 Portal: 3/3"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:ignore="HardcodedText" />
+            </com.google.android.material.card.MaterialCardView>
 
+        </FrameLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Rodapé com margem e espaço para navegação -->
     <TextView
         android:id="@+id/txtMapProgress"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:padding="12dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="8dp"
         android:textColor="@android:color/white"
         android:textSize="14sp"
         android:alpha="0.9"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_max="720dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

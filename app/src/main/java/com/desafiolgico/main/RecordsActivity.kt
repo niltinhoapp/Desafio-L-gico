@@ -8,6 +8,8 @@ import com.desafiolgico.databinding.ActivityRecordsBinding
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class RecordsActivity : AppCompatActivity() {
 
@@ -20,7 +22,16 @@ class RecordsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // ✅ Edge-to-edge (tela escura -> ícones claros)
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityRecordsBinding.inflate(layoutInflater)
+
+        // ✅ Insets: empurra conteúdo pra fora de status/nav bar
+        // Se seu XML tiver contentContainer, aplique nele; senão, no root.
+        // binding.contentContainer.applySystemBarsPadding(true, true)
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
         setContentView(binding.root)
 
         GameDataManager.init(this)

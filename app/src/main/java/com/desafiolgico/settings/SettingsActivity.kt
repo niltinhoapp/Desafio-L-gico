@@ -14,6 +14,7 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.PremiumThemes
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -31,8 +32,14 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // Se sua tela é escura na maior parte do tempo:
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         setContentView(R.layout.activity_settings)
+
+        findViewById<View>(android.R.id.content)
+            .applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         // ✅ init primeiro
         GameDataManager.init(this)
@@ -49,7 +56,9 @@ class SettingsActivity : AppCompatActivity() {
         PremiumThemes.apply(
             activity = this,
             root = findViewById(android.R.id.content),
-            cardViews = listOf(rowLanguage, rowAvatar, rowPremium, rowTutorial, rowSwitchAccount, rowDeleteAccount)
+            cardViews = listOf(
+                rowLanguage, rowAvatar, rowPremium, rowTutorial, rowSwitchAccount, rowDeleteAccount
+            )
         )
 
         btnBackSettings.setOnClickListener {
@@ -91,7 +100,6 @@ class SettingsActivity : AppCompatActivity() {
 
         // Trocar conta
         rowSwitchAccount.setOnClickListener {
-            // OBS: se você quiser só “deslogar” sem apagar tudo, troque resetAll por um método de logout/sessão.
             GameDataManager.resetAll(this)
             startActivity(Intent(this, LoginActivity::class.java))
             finish()

@@ -9,6 +9,7 @@ import com.desafiolgico.databinding.ActivitySecretOfferBinding
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.SecretRightManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class SecretOfferActivity : AppCompatActivity() {
 
@@ -18,12 +19,19 @@ class SecretOfferActivity : AppCompatActivity() {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        applyEdgeToEdge(lightSystemBarIcons = false)
 
         binding = ActivitySecretOfferBinding.inflate(layoutInflater)
+
+        // aplique padding ANTES do setContentView (ok aplicar antes ou depois, mas assim fica limpo)
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
         setContentView(binding.root)
+
 
         val mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_SECRET_UNLOCK
         val secretLevelId = intent.getStringExtra(EXTRA_SECRET_LEVEL_ID)

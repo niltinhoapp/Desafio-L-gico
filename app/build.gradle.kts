@@ -1,4 +1,3 @@
-import org.gradle.kotlin.dsl.libs
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -11,12 +10,16 @@ if (keystorePropsFile.exists()) {
 fun ks(name: String): String? =
     keystoreProps.getProperty(name)?.takeIf { it.isNotBlank() }
 
+val isReleaseTask = gradle.startParameter.taskNames.any {
+    it.contains("Release", ignoreCase = true)
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 
-    // Room (KSP)
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    // ✅ KSP compatível com Kotlin 2.2.0
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
 
     // Firebase
     alias(libs.plugins.google.gms.google.services)
@@ -31,49 +34,42 @@ android {
         applicationId = "com.desafiolgico"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.1.4"
-
+        versionCode = 15
+        versionName = "1.1.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-
     }
+
     signingConfigs {
         create("release") {
-            val storeFilePath = ks("storeFile") ?: "../keystore/desafio_lgico_25.jks"
+            val ksFile = rootProject.file("keystore/desafio_lgico_25.jks")
+            storeFile = ksFile
+
             val storePass = ks("storePassword") ?: ks("KEYSTORE_PASSWORD")
-            val alias = ks("keyAlias") ?: ks("KEY_ALIAS")
+            val alias = ks("keyAlias") ?: ks("KEY_ALIAS") ?: "key0"
             val keyPass = ks("keyPassword") ?: ks("KEY_PASSWORD")
 
-            require(!storePass.isNullOrBlank()) { "keystore.properties: faltou storePassword" }
-            require(!alias.isNullOrBlank()) { "keystore.properties: faltou keyAlias" }
-            require(!keyPass.isNullOrBlank()) { "keystore.properties: faltou keyPassword" }
+            if (isReleaseTask) {
+                require(ksFile.exists()) { "Keystore não encontrado: ${ksFile.absolutePath}" }
+                require(!storePass.isNullOrBlank()) { "Faltando storePassword (ou KEYSTORE_PASSWORD)" }
+                require(!keyPass.isNullOrBlank()) { "Faltando keyPassword (ou KEY_PASSWORD)" }
+            }
 
-            storeFile = file(storeFilePath)     // ✅ seu caminho atual funciona
             storePassword = storePass
             keyAlias = alias
             keyPassword = keyPass
         }
     }
 
-
     buildTypes {
         debug {
-          //  applicationIdSuffix = ".debug"
-           // versionNameSuffix = "-debug"
-
-            // (opcional) trocar nome do app no launcher
-          //  resValue("string", "app_name", "Desafio Lógico (Debug)")
-
             isMinifyEnabled = false
             isShrinkResources = false
 
+            // AdMob TESTE
             manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
             resValue("string", "banner_ad_unit_id", "ca-app-pub-3940256099942544/9214589741")
             resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-3940256099942544/5224354917")
-
         }
-
 
         release {
             isMinifyEnabled = false
@@ -84,15 +80,12 @@ android {
                 "proguard-rules.pro"
             )
 
-            // ✅ App ID REAL (release) — o seu:
+            // AdMob REAL
             manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-4958622518589705~1887040194"
-
-            // (Opcional) IDs em strings por buildType (produção)
             resValue("string", "banner_ad_unit_id", "ca-app-pub-4958622518589705/1734854735")
-
             resValue("string", "admob_rewarded_ad_unit_id", "ca-app-pub-4958622518589705/3051012274")
 
-            signingConfig = signingConfigs.getByName("release") // só se existir!
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -108,8 +101,6 @@ android {
     buildFeatures {
         viewBinding = true
         dataBinding = true
-
-        // ✅ garante geração do BuildConfig (para BuildConfig.DEBUG existir)
         buildConfig = true
     }
 
@@ -123,14 +114,13 @@ android {
         }
     }
 
-    // 🔧 (mantive como você tinha) força versões para evitar conflitos
+    // 🔧 força versões (mantenha só o necessário)
     configurations.all {
         resolutionStrategy {
             force("org.jetbrains:annotations:23.0.0")
             force("androidx.room:room-runtime:2.6.1")
             force("androidx.room:room-common:2.6.1")
             force("androidx.sqlite:sqlite:2.4.0")
-            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
         }
     }
 }
@@ -143,38 +133,41 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.recyclerview)
     implementation(libs.material.v1130)
-    implementation(libs.androidx.material3.android)
 
-    // 🔥 Firebase (BOM + módulos)
-    implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-database-ktx")
-    implementation("com.google.firebase:firebase-crashlytics")
+    // ✅ Firebase (só 1 BOM: a do TOML)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.crashlytics)
 
-    // Login Google + Credential Manager
+    // ✅ Google Login + Credential Manager
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+
+    // ✅ Google Play Services
+    implementation(libs.play.services.auth)
+
+    // ✅ Ads: deixe APENAS UM jeito (via TOML)
+    implementation(libs.play.services.ads)
+    // ❌ NÃO usar play-services-ads-api
+    // ❌ NÃO duplicar com "implementation("com.google.android.gms:play-services-ads:24.9.0")"
 
     // UI e animações
     implementation(libs.lottie)
     implementation(libs.konfetti.xml.v204)
     implementation(libs.glide)
+    implementation(libs.coil)
 
     // Arquitetura
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("androidx.security:security-crypto:1.1.0")
+
     // HTTP e JSON
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
-
-    // Google Play Services
-    implementation(libs.play.services.ads)
-    implementation(libs.play.services.auth)
 
     // Room
     implementation(libs.androidx.room.runtime)
@@ -182,9 +175,6 @@ dependencies {
 
     // Navegação e Browser
     implementation("androidx.browser:browser:1.6.0")
-
-    // Imagens
-    implementation(libs.coil)
 
     // Testes
     testImplementation(libs.junit)

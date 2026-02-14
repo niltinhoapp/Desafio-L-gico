@@ -2,73 +2,86 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
     android:background="@drawable/bg_onboarding_gradient">
 
-    <!-- Texto informativo -->
-    <TextView
-        android:id="@+id/tvDeleteInfo"
+    <!-- Container com padding do design (24dp). Insets serão aplicados via código aqui. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contentContainer"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/voc_pode_optar_por_excluir"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:gravity="center"
+        android:layout_height="0dp"
+        android:padding="24dp"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="100dp" />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- Excluir apenas dados -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnDeleteDataOnly"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/excluir_apenas_meus_dados"
+        <!-- Texto informativo -->
+        <TextView
+            android:id="@+id/tvDeleteInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/voc_pode_optar_por_excluir"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:layout_marginTop="100dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-        android:backgroundTint="@color/button_default"
-        android:textColor="@android:color/black"
-        android:textStyle="bold"
-        app:cornerRadius="12dp"
-        app:strokeWidth="2dp"
-        app:layout_constraintTop_toBottomOf="@id/tvDeleteInfo"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="40dp" />
+        <!-- Excluir apenas dados -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteDataOnly"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/excluir_apenas_meus_dados"
+            android:layout_marginTop="40dp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            app:cornerRadius="12dp"
+            app:strokeWidth="2dp"
+            app:layout_constraintTop_toBottomOf="@id/tvDeleteInfo"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Excluir conta e dados -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnDeleteAccount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/excluir_conta_e_dados"
-        app:strokeWidth="2dp"
-        android:backgroundTint="@color/button_default"
-        android:textColor="@android:color/black"
-        android:textStyle="bold"
-        app:cornerRadius="12dp"
-        app:layout_constraintTop_toBottomOf="@id/btnDeleteDataOnly"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp" />
+        <!-- Excluir conta e dados -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteAccount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/excluir_conta_e_dados"
+            android:layout_marginTop="20dp"
+            android:backgroundTint="@color/button_default"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            app:cornerRadius="12dp"
+            app:strokeWidth="2dp"
+            app:layout_constraintTop_toBottomOf="@id/btnDeleteDataOnly"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Botão Voltar -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnBack"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/voltar"
-        android:textColor="@android:color/white"
-        android:textStyle="bold"
-        android:backgroundTint="@android:color/transparent"
-        app:strokeWidth="2dp"
-        app:strokeColor="@android:color/white"
-        app:cornerRadius="12dp"
-        app:layout_constraintTop_toBottomOf="@id/btnDeleteAccount"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="32dp" />
+        <!-- Botão Voltar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/voltar"
+            android:layout_marginTop="32dp"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:backgroundTint="@android:color/transparent"
+            app:strokeWidth="2dp"
+            app:strokeColor="@android:color/white"
+            app:cornerRadius="12dp"
+            app:layout_constraintTop_toBottomOf="@id/btnDeleteAccount"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -18,6 +18,8 @@ import androidx.core.view.updateLayoutParams
 import com.desafiolgico.R
 import com.desafiolgico.utils.EnigmaPortalGate
 import com.desafiolgico.utils.GameDataManager
+import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
 import kotlin.math.floor
@@ -95,7 +97,10 @@ class MapActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        applyEdgeToEdge(lightSystemBarIcons = false)
         setContentView(R.layout.activity_map)
+        findViewById<View>(R.id.mapRoot).applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
 
@@ -112,7 +117,6 @@ class MapActivity : AppCompatActivity() {
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        // ✅ clique no badge: abre se (tem run ativa) OU (atingiu score mínimo)
         portalBadgeCard.setOnClickListener { openPortalFromBadge() }
     }
 
@@ -359,8 +363,9 @@ class MapActivity : AppCompatActivity() {
     private fun drawableToViewPoint(img: ImageView, xPx: Float, yPx: Float): Pt {
         val pts = floatArrayOf(xPx, yPx)
         img.imageMatrix.mapPoints(pts)
-        return Pt(pts[0] + img.paddingLeft, pts[1] + img.paddingTop)
+        return Pt(pts[0], pts[1])
     }
+
 
     // Polyline: ponto em t (0..1) por comprimento
     private fun pointAtT(poly: List<Pt>, t: Float): Pt {

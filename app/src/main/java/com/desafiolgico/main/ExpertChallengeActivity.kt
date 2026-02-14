@@ -24,6 +24,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.desafiolgico.R
+import com.desafiolgico.databinding.ActivityEnigmaPortalBinding
 import com.desafiolgico.databinding.ActivityExpertChallengeBinding
 import com.desafiolgico.model.Question
 import com.desafiolgico.model.QuestionManager
@@ -31,6 +32,7 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.ScoreManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.button.MaterialButton
 
 class ExpertChallengeActivity : AppCompatActivity() {
@@ -71,22 +73,30 @@ class ExpertChallengeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge UMA vez, antes do setContentView
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
+        // ✅ Binding certo (Expert)
         binding = ActivityExpertChallengeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // ✅ padding de system bars no ROOT desta tela (ou no content container se existir)
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
         applySystemBarInsets()
 
-        // ✅ Pergunta 100% legível (rola dentro do card)
+        // ✅ Pergunta 100% legível (rola dentro do TextView)
         binding.questionTextView.apply {
-            movementMethod = ScrollingMovementMethod()
+            movementMethod = android.text.method.ScrollingMovementMethod()
             isVerticalScrollBarEnabled = false
             ellipsize = null
-            maxLines = 14
+            // dica: deixa ilimitado e controla pelo layout/scroll, ou use um valor alto
+            maxLines = 50
         }
 
-        // Torre: calcula deslocamento máximo após layout
+        // ✅ Torre: calcula deslocamento máximo após layout
         binding.progressTower.post {
             val towerHeight = binding.towerBackground.height
             val starHeight = binding.starIndicator.height
@@ -100,15 +110,15 @@ class ExpertChallengeActivity : AppCompatActivity() {
 
         questionManager = QuestionManager(LanguageHelper.getLanguage(this))
         scoreManager = ScoreManager(this)
+
         binding.btnBack.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java).apply {
-                // limpa a pilha e abre a Main como topo
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
-            startActivity(intent)
+            startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
+            )
             finish()
         }
-
 
         setupOptions()
         loadQuestions()

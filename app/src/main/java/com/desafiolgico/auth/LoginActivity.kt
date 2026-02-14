@@ -1,6 +1,9 @@
 package com.desafiolgico.auth
 
 import android.content.Intent
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.SpannableString
@@ -27,6 +30,8 @@ import com.desafiolgico.utils.CrashlyticsHelper
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
+import com.desafiolgico.utils.dp
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
@@ -40,11 +45,15 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
-
-    private var loadingBreath: android.animation.ValueAnimator? = null
     private var dotsAnimator: android.animation.ValueAnimator? = null
+    private var timeoutJob: kotlinx.coroutines.Job? = null
 
-    // ✅ Lazy: só cria quando realmente precisar (clique no login / uso do auth)
+    // ==== Blur safe state ====
+    private var blurDisabledForThisSession = false
+    private var blurApplied = false
+    private var blurRetryCount = 0
+
+    // ✅ Lazy: só cria quando realmente precisar (e inicializa Firebase aqui)
     private val auth: FirebaseAuth by lazy(LazyThreadSafetyMode.NONE) {
         FirebaseApp.initializeApp(applicationContext)
         FirebaseAuth.getInstance()
@@ -56,6 +65,8 @@ class LoginActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "LoginActivity"
+        private const val BLUR_MAX_RETRIES = 2
+
         private const val URL_TERMOS_DE_SERVICO = "https://www.desafiologico.com/terms"
         private const val URL_POLITICA_DE_PRIVACIDADE = "https://www.desafiologico.com/privacy"
     }
@@ -65,104 +76,104 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val t0 = SystemClock.elapsedRealtime()
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
 
-        FirebaseApp.initializeApp(applicationContext)
-
-        val opts = FirebaseApp.getInstance().options
-        Log.e("FBKEY", "appId=${opts.applicationId}")
-        Log.e("FBKEY", "apiKey=${opts.apiKey}")
-        Log.e("FBKEY", "projectId=${opts.projectId}")
-
+        applyEdgeToEdge(lightSystemBarIcons = false)
 
         val tInflate = SystemClock.elapsedRealtime()
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
         Log.d(TAG, "⏱ inflate+setContentView: ${SystemClock.elapsedRealtime() - tInflate}ms")
 
-        // ✅ segura a animação no primeiro frame (melhora abertura)
+        // Insets
+        binding.loginRootLayout.applySystemBarsPadding(applyTop = true, applyBottom = false)
+        binding.legalLinksLayout.applySystemBarsPadding(applyTop = false, applyBottom = true)
+
+        // respiro no scroll
+        binding.loginScroll.setPadding(
+            binding.loginScroll.paddingLeft,
+            binding.loginScroll.paddingTop,
+            binding.loginScroll.paddingRight,
+            binding.loginScroll.paddingBottom + dp(8)
+        )
+
+        // segura lottie até o primeiro frame (mais suave no cold start)
         binding.lottieAnimationView.cancelAnimation()
         binding.lottieAnimationView.progress = 0f
         binding.lottieAnimationView.isVisible = false
 
         Choreographer.getInstance().postFrameCallback {
+            Log.d(TAG, "🎬 first frame: ${SystemClock.elapsedRealtime() - t0}ms desde onCreate()")
             binding.lottieAnimationView.isVisible = true
             binding.lottieAnimationView.playAnimation()
         }
 
-
+        // convidado via flag
         binding.guestButton.isVisible = resources.getBoolean(R.bool.show_guest)
 
-        // ✅ mede o tempo real até o 1º frame
-        Choreographer.getInstance().postFrameCallback {
-            Log.d(TAG, "🎬 first frame: ${SystemClock.elapsedRealtime() - t0}ms desde onCreate()")
-        }
-
-        // ✅ Links legais fora do caminho crítico do 1º frame
+        // Links legais fora do caminho crítico
         binding.root.post {
             val tLinks = SystemClock.elapsedRealtime()
             setupLegalLinks()
             Log.d(TAG, "⏱ setupLegalLinks(post): ${SystemClock.elapsedRealtime() - tLinks}ms")
         }
 
+        // Clique Google
         binding.signInButton.setOnClickListener {
-            setLoading(true, "Conectando com o Google", "Aguarde um instante")
+            setLoading(true)
             setStep(LoginStep.GOOGLE)
+            startDots()      // pega o texto atual e só anima os pontos
+            startTimeoutUX() // opcional: troca texto se demorar
             signInWithCredentialManager()
         }
 
+        // Clique Convidado (faz tudo antes e só então navega)
+        binding.guestButton.setOnClickListener {
+            setLoading(true)
+            setStep(LoginStep.PREPARANDO)
+            startDots()
+            startTimeoutUX()
 
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    ensureGameData()
+                    GameDataManager.setActiveUserId(this@LoginActivity, "guest_mode")
 
-            binding.guestButton.setOnClickListener {
-                setLoading(true, "Entrando como convidado", "Preparando sua sessão")
-                setStep(LoginStep.PREPARANDO)
+                    GameDataManager.saveUserData(
+                        context = this@LoginActivity,
+                        username = "Convidado",
+                        photoUrl = null,
+                        avatarId = R.drawable.avatar1
+                    )
 
-                // troca de tela primeiro (percepção melhor)
-                goToNextAfterLogin()
+                    UserManager.salvarDadosUsuario(
+                        context = this@LoginActivity,
+                        nome = "Convidado",
+                        email = "guest@desafiologico.com",
+                        photoUrl = null,
+                        avatarId = R.drawable.avatar1
+                    )
 
-                // gravações em background depois (com cancelamento automático)
-                lifecycleScope.launch {
-                    withContext(Dispatchers.IO) {
-                        ensureGameData()
+                    getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
+                        .putBoolean("is_guest_mode", true)
+                        .apply()
 
-                        // ✅ tudo que é "persistência / init" fica no IO
-                        GameDataManager.setActiveUserId(this@LoginActivity, "guest_mode")
-
-                        GameDataManager.saveUserData(
-                            context = this@LoginActivity,
-                            username = "Convidado",
-                            photoUrl = null,
-                            avatarId = R.drawable.avatar1
-                        )
-
-                        UserManager.salvarDadosUsuario(
-                            context = this@LoginActivity,
-                            nome = "Convidado",
-                            email = "guest@desafiologico.com",
-                            photoUrl = null,
-                            avatarId = R.drawable.avatar1
-                        )
-
-                        getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
-                            .putBoolean("is_guest_mode", true)
-                            .apply()
-
-                        AdMobInitializer.ensureInitialized(applicationContext)
-                    }
-
-                    // (opcional) se quiser dar “ok” final e ainda estiver vivo:
-                    if (!isFinishing && !isDestroyed) {
-                        // setLoading(false) etc, se fizer sentido no seu fluxo
-                    }
+                    AdMobInitializer.ensureInitialized(applicationContext)
                 }
-            }
 
+                stopTimeoutUX()
+                setLoading(false)
+                goToNextAfterLogin()
+            }
+        }
     }
 
-    private fun ensureGameData() {
-        val t = SystemClock.elapsedRealtime()
-        GameDataManager.init(applicationContext)
-        Log.d(TAG, "⏱ GameDataManager.init(lazy): ${SystemClock.elapsedRealtime() - t}ms")
+    override fun onStop() {
+        super.onStop()
+        stopDots()
+        stopTimeoutUX()
+        setBlurEnabled(false)
+        blurApplied = false
+        blurRetryCount = 0
     }
 
     // =============================================================================================
@@ -201,11 +212,6 @@ class LoginActivity : AppCompatActivity() {
     // =============================================================================================
 
     private fun signInWithCredentialManager() {
-        setStep(LoginStep.GOOGLE)
-        val tCM = SystemClock.elapsedRealtime()
-        val cm = credentialManager
-        Log.d(TAG, "⏱ CredentialManager.create(lazy): ${SystemClock.elapsedRealtime() - tCM}ms")
-
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
             .setAutoSelectEnabled(false)
@@ -219,7 +225,7 @@ class LoginActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val response: GetCredentialResponse = withContext(Dispatchers.IO) {
-                    cm.getCredential(this@LoginActivity, request)
+                    credentialManager.getCredential(this@LoginActivity, request)
                 }
                 handleCredentialResponse(response)
             } catch (e: GetCredentialException) {
@@ -230,69 +236,53 @@ class LoginActivity : AppCompatActivity() {
                 showError("Erro inesperado no login.")
             }
         }
-
     }
 
     private fun handleCredentialResponse(response: GetCredentialResponse) {
         val credential: Credential = response.credential
+
         when (credential) {
             is CustomCredential -> {
                 if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                     val idToken = googleIdTokenCredential.idToken
 
-                    // ✅ próxima etapa
                     setStep(LoginStep.FIREBASE)
-                    binding.loginLoadingTitle.text = "Validando sua conta"
-                    binding.loginLoadingText.text = "Finalizando autenticação"
+                    // mantém os dots, só muda o texto base
+                    startDots()
 
                     signInWithFirebase(idToken, googleIdTokenCredential)
                 } else {
-                    Log.w(TAG, "Tipo CustomCredential não suportado: ${credential.type}")
                     showError("Provedor não suportado.")
                 }
             }
 
-            else -> {
-                Log.w(TAG, "Credential não suportada: ${credential::class.java.simpleName}")
-                showError("Provedor não suportado.")
-            }
+            else -> showError("Provedor não suportado.")
         }
     }
 
     // =============================================================================================
-    // FIREBASE
+    // FIREBASE AUTH
     // =============================================================================================
 
     private fun signInWithFirebase(idToken: String, googleCred: GoogleIdTokenCredential) {
-        setStep(LoginStep.FIREBASE)
-
-        val tAuth = SystemClock.elapsedRealtime()
-        val firebase = auth
-        Log.d(TAG, "⏱ FirebaseAuth.getInstance(lazy): ${SystemClock.elapsedRealtime() - tAuth}ms")
-
         val credential = GoogleAuthProvider.getCredential(idToken, null)
 
-        firebase.signInWithCredential(credential).addOnCompleteListener(this) { task ->
+        auth.signInWithCredential(credential).addOnCompleteListener(this) { task ->
             if (!task.isSuccessful) {
                 Log.e(TAG, "FirebaseAuth falhou", task.exception)
-                showError("Falha na autenticação: ${task.exception?.localizedMessage ?: "tente novamente"}")
+                showError("Falha na autenticação. Tente novamente.")
                 return@addOnCompleteListener
             }
 
             val user = task.result.user
 
-            // ✅ etapa final (preparando ambiente)
             setStep(LoginStep.PREPARANDO)
-            binding.loginLoadingTitle.text = "Preparando sua sessão"
-            binding.loginLoadingText.text = "Carregando seus dados"
+            startDots()
 
-            // 1) Dados do jogo e userId ativo
             ensureGameData()
             GameDataManager.setActiveUserId(this, user?.uid)
-            Log.d(TAG, "✅ Firebase login OK. UID=${user?.uid}")
 
-            // 2) Dados do usuário
             val username = googleCred.displayName
                 ?: user?.displayName
                 ?: user?.email
@@ -301,11 +291,9 @@ class LoginActivity : AppCompatActivity() {
             val photoUrl = googleCred.profilePictureUri?.toString()
                 ?: user?.photoUrl?.toString()
 
-            // 3) Mantém avatar salvo
             val (_, _, savedAvatar) = GameDataManager.loadUserData(this)
             val avatarToUse = savedAvatar ?: R.drawable.avatar1
 
-            // 4) Persiste
             GameDataManager.saveUserData(
                 context = this,
                 username = username,
@@ -325,7 +313,6 @@ class LoginActivity : AppCompatActivity() {
                 .putBoolean("is_guest_mode", false)
                 .apply()
 
-            // 5) Crashlytics
             CrashlyticsHelper.setUserContext(
                 context = applicationContext,
                 userId = GameDataManager.currentUserId,
@@ -333,19 +320,15 @@ class LoginActivity : AppCompatActivity() {
                 username = username
             )
 
-            // Background (não trava UI)
             Thread { CrashlyticsHelper.setGameState(applicationContext) }.start()
-
-            // 6) AdMob pós login
             AdMobInitializer.ensureInitialized(applicationContext)
-
-            // 7) UMP (não duplicar)
             Thread { CrashlyticsHelper.enrichWithUmp(applicationContext) }.start()
 
             Toast.makeText(this, "Bem-vindo, $username!", Toast.LENGTH_SHORT).show()
 
-            // ✅ desliga overlay antes de trocar de tela
-            setLoading(false, "", "")
+            stopTimeoutUX()
+            stopDots()
+            setLoading(false)
             goToNextAfterLogin()
         }
     }
@@ -371,82 +354,78 @@ class LoginActivity : AppCompatActivity() {
     }
 
     // =============================================================================================
-    // UI: LOADING / ETAPAS
+    // UI: LOADING
     // =============================================================================================
 
     private fun showError(message: String) {
-        setLoading(false, "", "")
+        stopTimeoutUX()
+        stopDots()
+        setLoading(false)
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun setLoading(show: Boolean, title: String, baseText: String) {
+    private fun setLoading(show: Boolean) {
         binding.loginLoadingOverlay.visibility = if (show) View.VISIBLE else View.GONE
-        binding.loginLoadingTitle.text = title
-        binding.loginLoadingText.text = baseText
-
         binding.signInButton.isEnabled = !show
         binding.guestButton.isEnabled = !show
 
         if (show) {
-            startDots(baseText)
-            applyBlurIfPossible(true)
+            // blur via wrapper (safe p/ minSdk)
+            binding.loginScroll.post { setBlurEnabled(true) }
 
-            // ✅ some com o conteúdo atrás (foco total no overlay)
+            val dim = 0.35f // ou 0.45f se quiser ainda mais claro
             binding.loginScroll.animate()
-                .alpha(0.08f)
-                .scaleX(0.98f)
-                .scaleY(0.98f)
+                .alpha(dim)
+                .scaleX(0.985f)
+                .scaleY(0.985f)
                 .setDuration(160)
                 .start()
 
-            // card entra “premium”
+
             binding.loadingCard.scaleX = 0.96f
             binding.loadingCard.scaleY = 0.96f
             binding.loadingCard.alpha = 0f
-            binding.loadingCard.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180).start()
+            binding.loadingCard.animate()
+                .alpha(1f).scaleX(1f).scaleY(1f)
+                .setDuration(180)
+                .start()
 
+            binding.legalLinksLayout.isVisible = false
         } else {
-            stopDots()
-            applyBlurIfPossible(false)
+            binding.loginScroll.post { setBlurEnabled(false) }
 
-            // ✅ volta o conteúdo
             binding.loginScroll.animate()
-                .alpha(if (show) 0.06f else 1f)
-                .scaleX(if (show) 0.98f else 1f)
-                .scaleY(if (show) 0.98f else 1f)
+                .alpha(1f).scaleX(1f).scaleY(1f)
                 .setDuration(160)
                 .start()
 
-            binding.legalLinksLayout.isVisible = !show
-
+            binding.legalLinksLayout.isVisible = true
         }
     }
 
-    private fun startLoadingBreath() {
-        stopLoadingBreath()
-        loadingBreath = android.animation.ValueAnimator.ofFloat(1f, 1.02f).apply {
-            duration = 900
-            repeatCount = android.animation.ValueAnimator.INFINITE
-            repeatMode = android.animation.ValueAnimator.REVERSE
-            addUpdateListener {
-                val v = it.animatedValue as Float
-                binding.loadingCard.scaleX = v
-                binding.loadingCard.scaleY = v
+    private fun setStep(step: LoginStep) = runCatching {
+        // Textos “clean” (sem falar Firebase/Google pro usuário)
+        when (step) {
+            LoginStep.GOOGLE -> {
+                binding.loginLoadingTitle.text = "Conectando sua conta…"
+                binding.loginLoadingText.text = "Só um instante"
             }
-            start()
+
+            LoginStep.FIREBASE -> {
+                binding.loginLoadingTitle.text = "Entrando…"
+                binding.loginLoadingText.text = "Validando suas informações"
+            }
+
+            LoginStep.PREPARANDO -> {
+                binding.loginLoadingTitle.text = "Preparando tudo…"
+                binding.loginLoadingText.text = "Quase pronto"
+            }
         }
     }
 
-    private fun stopLoadingBreath() {
-        loadingBreath?.cancel()
-        loadingBreath = null
-        binding.loadingCard.scaleX = 1f
-        binding.loadingCard.scaleY = 1f
-    }
-
-
-    private fun startDots(base: String) {
+    private fun startDots() {
         stopDots()
+        val base = binding.loginLoadingText.text.toString().trimEnd('.', ' ')
         dotsAnimator = android.animation.ValueAnimator.ofInt(0, 3).apply {
             duration = 900
             repeatCount = android.animation.ValueAnimator.INFINITE
@@ -463,68 +442,104 @@ class LoginActivity : AppCompatActivity() {
         dotsAnimator = null
     }
 
-    private fun applyBlurIfPossible(enable: Boolean) {
-        // ✅ Blur premium só no Android 12+ (API 31)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val radius = if (enable) 18f else 0f
-            val effect = android.graphics.RenderEffect.createBlurEffect(
-                radius, radius, android.graphics.Shader.TileMode.CLAMP
-            )
-            binding.loginScroll.setRenderEffect(if (enable) effect else null)
+    // Opcional: UX se demorar (6s)
+    private fun startTimeoutUX() {
+        stopTimeoutUX()
+        timeoutJob = lifecycleScope.launch {
+            kotlinx.coroutines.delay(6000)
+            if (binding.loginLoadingOverlay.isVisible) {
+                binding.loginLoadingText.text = "Isso pode levar alguns segundos"
+                startDots()
+            }
         }
     }
 
-    private fun setStep(step: LoginStep) {
-        // Se você ainda não adicionou os steps no XML, isso aqui pode crashar.
-        // Então: só tenta atualizar se existirem no binding (compile-time garante, mas depende do XML).
+    private fun stopTimeoutUX() {
+        timeoutJob?.cancel()
+        timeoutJob = null
+    }
+
+    // =============================================================================================
+    // GAME DATA
+    // =============================================================================================
+
+    private fun ensureGameData() {
+        val t = SystemClock.elapsedRealtime()
+        GameDataManager.init(applicationContext)
+        Log.d(TAG, "⏱ GameDataManager.init(lazy): ${SystemClock.elapsedRealtime() - t}ms")
+    }
+
+    // =============================================================================================
+    // BLUR — SEM WARNING DE API 31
+    // =============================================================================================
+
+    private fun isSamsung(): Boolean {
+        val m = (Build.MANUFACTURER ?: "").lowercase()
+        return m.contains("samsung")
+    }
+
+    private fun setBlurEnabled(enable: Boolean) {
+        if (!::binding.isInitialized) return
+        if (isFinishing || isDestroyed) return
+
+        // ✅ Samsung: não tenta blur (evita crash nativo)
+        if (isSamsung()) {
+            blurDisabledForThisSession = true
+            blurApplied = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching { binding.loginScroll.setRenderEffect(null) }
+            }
+            return
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+
+        // main thread
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            runOnUiThread { setBlurEnabled(enable) }
+            return
+        }
+
+        val target = binding.loginScroll
+
+        if (blurDisabledForThisSession) {
+            runCatching { target.setRenderEffect(null) }
+            blurApplied = false
+            return
+        }
+
+        if (!enable) {
+            runCatching { target.setRenderEffect(null) }
+            blurApplied = false
+            return
+        }
+
+        if (!target.isAttachedToWindow || !target.isHardwareAccelerated) {
+            if (blurRetryCount < BLUR_MAX_RETRIES) {
+                blurRetryCount++
+                target.post { setBlurEnabled(true) }
+            }
+            return
+        }
+        blurRetryCount = 0
+
+        if (blurApplied) return
+
         try {
-            val active = R.drawable.bg_step_dot_active
-            val inactive = R.drawable.bg_step_dot_inactive
-
-            when (step) {
-                LoginStep.GOOGLE -> {
-                    binding.stepGoogleDot.setBackgroundResource(active)
-                    binding.stepFirebaseDot.setBackgroundResource(inactive)
-                    binding.stepReadyDot.setBackgroundResource(inactive)
-
-                    binding.stepGoogleText.setTextColor(0xFFFFFFFF.toInt())
-                    binding.stepFirebaseText.setTextColor(0xB3FFFFFF.toInt())
-                    binding.stepReadyText.setTextColor(0xB3FFFFFF.toInt())
-                }
-
-                LoginStep.FIREBASE -> {
-                    binding.stepGoogleDot.setBackgroundResource(active)
-                    binding.stepFirebaseDot.setBackgroundResource(active)
-                    binding.stepReadyDot.setBackgroundResource(inactive)
-
-                    binding.stepGoogleText.setTextColor(0xFFFFFFFF.toInt())
-                    binding.stepFirebaseText.setTextColor(0xFFFFFFFF.toInt())
-                    binding.stepReadyText.setTextColor(0xB3FFFFFF.toInt())
-                }
-
-                LoginStep.PREPARANDO -> {
-                    binding.stepGoogleDot.setBackgroundResource(active)
-                    binding.stepFirebaseDot.setBackgroundResource(active)
-                    binding.stepReadyDot.setBackgroundResource(active)
-
-                    binding.stepGoogleText.setTextColor(0xFFFFFFFF.toInt())
-                    binding.stepFirebaseText.setTextColor(0xFFFFFFFF.toInt())
-                    binding.stepReadyText.setTextColor(0xFFFFFFFF.toInt())
-                }
-            }
-            // Badges G/F/✓ (opcional, se existir no layout)
-            fun setBadgeActive(tv: android.widget.TextView, active: Boolean) {
-                tv.setBackgroundResource(if (active) R.drawable.bg_badge_active else R.drawable.bg_badge_inactive)
-                tv.alpha = if (active) 1f else 0.65f
-            }
-
-            setBadgeActive(binding.badgeGoogle, step == LoginStep.GOOGLE || step == LoginStep.FIREBASE || step == LoginStep.PREPARANDO)
-            setBadgeActive(binding.badgeFirebase, step == LoginStep.FIREBASE || step == LoginStep.PREPARANDO)
-            setBadgeActive(binding.badgeReady, step == LoginStep.PREPARANDO)
-
-        } catch (_: Exception) {
-            // ✅ não quebra nada se os steps não existirem ainda
+            val radius = 18f
+            val effect = RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP)
+            target.setRenderEffect(effect)
+            blurApplied = true
+        } catch (e: IllegalArgumentException) {
+            blurDisabledForThisSession = true
+            blurApplied = false
+            runCatching { target.setRenderEffect(null) }
+            Log.w(TAG, "Blur desativado (device bug): ${e.message}", e)
+        } catch (t: Throwable) {
+            blurDisabledForThisSession = true
+            blurApplied = false
+            runCatching { target.setRenderEffect(null) }
+            Log.w(TAG, "Blur falhou e foi desativado: ${t.message}", t)
         }
     }
-    
 }

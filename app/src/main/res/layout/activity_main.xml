@@ -8,8 +8,6 @@
     android:background="@drawable/bg_onboarding_gradient"
     android:paddingStart="@dimen/padding_screen_horizontal"
     android:paddingEnd="@dimen/padding_screen_horizontal"
-    android:paddingTop="@dimen/padding_screen_top"
-    android:paddingBottom="@dimen/padding_screen_bottom"
     android:animateLayoutChanges="true">
 
     <!-- Lottie Intro -->
@@ -108,6 +106,7 @@
         android:layout_height="0dp"
         android:visibility="gone"
         android:fillViewport="true"
+        android:clipToPadding="false"
         android:layout_marginTop="@dimen/spacing_medium"
         android:layout_marginBottom="@dimen/spacing_small"
         app:layout_constraintTop_toBottomOf="@id/btnRecordsMain"
@@ -145,7 +144,6 @@
                 android:id="@+id/mapButton"
                 style="@style/LevelButton"
                 android:text="🗺️ Mapa" />
-
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/exitButton"

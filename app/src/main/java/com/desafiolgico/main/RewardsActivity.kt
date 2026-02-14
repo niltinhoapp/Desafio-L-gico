@@ -20,6 +20,7 @@ import com.desafiolgico.databinding.ActivityRewardsBinding
 import com.desafiolgico.utils.AdMobInitializer
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -68,17 +69,25 @@ class RewardsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge ANTES do setContentView
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityRewardsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // ✅ aplica insets SOMENTE no content (root fica “livre” pro konfetti cobrir tudo)
+        binding.contentRewards.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
+        // ✅ Ads init
         AdMobInitializer.ensureInitialized(applicationContext)
 
+        // ✅ UI
         binding.backButton.setOnClickListener { finish() }
         binding.earnCoinsButton.setOnClickListener { onEarnClick() }
 
         atualizarSaldo()
-        renderState(UiState.LOADING, "Carregando anúncio...")
+        renderState(UiState.LOADING, getString(R.string.rewards_loading))
 
         loadRewardedAd(force = true)
     }
@@ -98,6 +107,8 @@ class RewardsActivity : AppCompatActivity() {
         cancelAutoRetry()
         cancelCooldown()
         cancelConfettiHide()
+
+        rewardedAd = null
         super.onDestroy()
     }
 
@@ -122,15 +133,17 @@ class RewardsActivity : AppCompatActivity() {
         cancelAutoRetry()
         cancelCooldown()
 
-        state = UiState.LOADING
-        renderState(UiState.LOADING, "Carregando anúncio...")
+        rewardedAd = null
 
-        // ✅ timeout para não “prender” a UI
+        state = UiState.LOADING
+        renderState(UiState.LOADING, getString(R.string.rewards_loading))
+
+        // ✅ timeout (SAFE: só muda pra RETRY se ainda estiver LOADING)
         timeoutRunnable = Runnable {
-            if (rewardedAd == null && !(isFinishing || isDestroyed)) {
+            if (state == UiState.LOADING && rewardedAd == null && !(isFinishing || isDestroyed)) {
                 Log.w(TAG, "Timeout carregando anúncio. Liberando UI para retry.")
                 state = UiState.RETRY
-                renderState(UiState.RETRY, "Tentar novamente")
+                renderState(UiState.RETRY, getString(R.string.rewards_retry))
             }
         }.also {
             mainHandler.postDelayed(it, LOAD_TIMEOUT_MS)
@@ -141,8 +154,9 @@ class RewardsActivity : AppCompatActivity() {
             rewardedUnitId(),
             AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
-
                 override fun onAdLoaded(ad: RewardedAd) {
+                    if (isFinishing || isDestroyed) return
+
                     rewardedAd = ad
                     loadAttempts = 0
                     cancelTimeout()
@@ -154,12 +168,14 @@ class RewardsActivity : AppCompatActivity() {
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
+                    if (isFinishing || isDestroyed) return
+
                     rewardedAd = null
                     cancelTimeout()
 
                     Log.w(TAG, "Falha no load: ${error.message}")
                     state = UiState.RETRY
-                    renderState(UiState.RETRY, "Tentar novamente")
+                    renderState(UiState.RETRY, getString(R.string.rewards_retry))
 
                     scheduleAutoRetry()
                 }
@@ -190,20 +206,22 @@ class RewardsActivity : AppCompatActivity() {
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                if (isFinishing || isDestroyed) return
+
                 Log.w(TAG, "Falha ao exibir anúncio: ${adError.message}")
                 rewardedAd = null
                 state = UiState.RETRY
-                renderState(UiState.RETRY, "Tentar novamente")
+                renderState(UiState.RETRY, getString(R.string.rewards_retry))
 
                 Toast.makeText(this@RewardsActivity, "Falha ao exibir anúncio.", Toast.LENGTH_SHORT)
                     .show()
+
                 startCooldownThenLoad()
             }
 
             override fun onAdDismissedFullScreenContent() {
                 rewardedAd = null
                 if (isFinishing || isDestroyed) return
-
                 startCooldownThenLoad()
             }
         }
@@ -212,7 +230,7 @@ class RewardsActivity : AppCompatActivity() {
     private fun showRewardedAd() {
         val ad = rewardedAd ?: run {
             state = UiState.RETRY
-            renderState(UiState.RETRY, "Tentar novamente")
+            renderState(UiState.RETRY, getString(R.string.rewards_retry))
             loadRewardedAd(force = true)
             return
         }
@@ -222,7 +240,7 @@ class RewardsActivity : AppCompatActivity() {
         cancelCooldown()
 
         state = UiState.SHOWING
-        renderState(UiState.SHOWING, "Abrindo anúncio...")
+        renderState(UiState.SHOWING, getString(R.string.rewards_opening))
 
         ad.show(this) { rewardItem ->
             val amount = rewardItem.amount.takeIf { it > 0 } ?: GAME_REWARD_AMOUNT
@@ -250,16 +268,14 @@ class RewardsActivity : AppCompatActivity() {
                 seconds--
                 if (seconds <= 0) {
                     state = UiState.LOADING
-                    renderState(UiState.LOADING, "Carregando anúncio...")
+                    renderState(UiState.LOADING, getString(R.string.rewards_loading))
                     loadRewardedAd(force = true)
                 } else {
                     renderState(UiState.COOLDOWN, "Aguarde $seconds s...")
                     mainHandler.postDelayed(this, 1000L)
                 }
             }
-        }.also {
-            mainHandler.postDelayed(it, 1000L)
-        }
+        }.also { mainHandler.postDelayed(it, 1000L) }
     }
 
     private fun renderState(newState: UiState, text: String) {
@@ -305,9 +321,7 @@ class RewardsActivity : AppCompatActivity() {
                 if (vib.hasVibrator()) {
                     val ms = 260L
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vib.vibrate(
-                            VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE)
-                        )
+                        vib.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
                     } else {
                         @Suppress("DEPRECATION") vib.vibrate(ms)
                     }
@@ -342,9 +356,7 @@ class RewardsActivity : AppCompatActivity() {
             konfettiView.start(listOf(party))
 
             cancelConfettiHide()
-            confettiHideRunnable = Runnable {
-                konfettiView.visibility = View.GONE
-            }.also {
+            confettiHideRunnable = Runnable { konfettiView.visibility = View.GONE }.also {
                 konfettiView.postDelayed(it, 3200L)
             }
         } catch (e: Exception) {

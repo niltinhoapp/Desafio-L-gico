@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.desafiolgico.databinding.ActivityDeleteAccountBinding
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.firebase.auth.FirebaseAuth
 
 class DeleteAccountActivity : AppCompatActivity() {
@@ -17,8 +18,16 @@ class DeleteAccountActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge (tela escura -> ícones claros)
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityDeleteAccountBinding.inflate(layoutInflater)
+
+        // ✅ Insets: empurra conteúdo pra fora de status/nav bar
+        // Se seu XML tiver contentContainer, prefira: binding.contentContainer...
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
         setContentView(binding.root)
 
         // Excluir apenas dados locais
@@ -30,9 +39,10 @@ class DeleteAccountActivity : AppCompatActivity() {
         binding.btnDeleteAccount.setOnClickListener {
             confirmAccountDeletion()
         }
+
         // Botão Voltar
         binding.btnBack.setOnClickListener {
-            finish() // Fecha a tela e volta automaticamente para BoasVindasActivity
+            finish()
         }
     }
 

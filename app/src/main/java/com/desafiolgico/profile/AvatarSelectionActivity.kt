@@ -15,6 +15,7 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class AvatarSelectionActivity : AppCompatActivity() {
 
@@ -29,8 +30,14 @@ class AvatarSelectionActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge (tela escura -> ícones claros)
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityAvatarSelectionBinding.inflate(layoutInflater)
+
+       binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
         setContentView(binding.root)
 
         setupRecyclerView()

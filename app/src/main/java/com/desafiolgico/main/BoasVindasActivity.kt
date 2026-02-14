@@ -26,6 +26,7 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.Dispatchers
@@ -91,41 +92,45 @@ class BoasVindasActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
-        setContentView(R.layout.activity_boas_vindas)
+            super.onCreate(savedInstanceState)
 
-        // Onboarding (somente se NÃO completou)
-        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
-        if (!onboardingCompleted) {
-            startActivity(
-                Intent(this, OnboardingActivity::class.java)
-                    .putExtra("FROM_SETTINGS", false)
-            )
-            finish()
-            return
+         applyEdgeToEdge(lightSystemBarIcons = false) // fundo escuro/gradiente
+
+            setContentView(R.layout.activity_boas_vindas)
+
+            findViewById<View>(R.id.containerBoasVindas)
+                .applySystemBarsPadding(applyTop = true, applyBottom = true)
+
+            // Onboarding (somente se NÃO completou)
+            val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+            val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
+            if (!onboardingCompleted) {
+                startActivity(
+                    Intent(this, OnboardingActivity::class.java)
+                        .putExtra("FROM_SETTINGS", false)
+                )
+                finish()
+                return
+            }
+
+            Thread { CrashlyticsHelper.setGameState(applicationContext) }.start()
+
+            bindViews()
+            bindClicks()
+
+            loadWelcomeUI()
+
+            val (_, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
+            val hasPhoto = !photoUrl.isNullOrBlank()
+            val hasUnlockedAvatar = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
+            if (!hasPhoto && !hasUnlockedAvatar) {
+                avatarLauncher.launch(Intent(this, AvatarSelectionActivity::class.java))
+            }
+
+            loadStatsAsync()
+            updateButtonsState()
         }
 
-        // ✅ Estamos ficando nessa tela
-        Thread { CrashlyticsHelper.setGameState(applicationContext) }.start()
-
-        bindViews()
-        bindClicks()
-
-        loadWelcomeUI()
-
-        // Se não tem foto e não tem avatar desbloqueado, força escolher avatar
-        val (_, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
-        val hasPhoto = !photoUrl.isNullOrBlank()
-        val hasUnlockedAvatar = avatarResId != null && CoinManager.isAvatarUnlocked(this, avatarResId)
-        if (!hasPhoto && !hasUnlockedAvatar) {
-            avatarLauncher.launch(Intent(this, AvatarSelectionActivity::class.java))
-        }
-
-        loadStatsAsync()
-        updateButtonsState()
-    }
 
     override fun onResume() {
         super.onResume()
@@ -188,6 +193,36 @@ class BoasVindasActivity : AppCompatActivity() {
         }
     }
 
+    private fun targetForLevel(level: String): Int = when (level) {
+        GameDataManager.Levels.INICIANTE -> 30
+        GameDataManager.Levels.INTERMEDIARIO -> 25
+        GameDataManager.Levels.AVANCADO -> 20
+        GameDataManager.Levels.EXPERIENTE -> 15
+        else -> 30
+    }
+
+    private fun computeCurrentLevelName(): String {
+        for (lvl in levelOrder) {
+            val c = GameDataManager.getCorrectForLevel(this, lvl)
+            if (c < targetForLevel(lvl)) return lvl
+        }
+        return levelOrder.last()
+    }
+
+    private fun openContinue() {
+        val levelToStart = computeCurrentLevelName().ifBlank { GameDataManager.Levels.INICIANTE }
+
+        val target = if (levelToStart == GameDataManager.Levels.EXPERIENTE) {
+            ExpertChallengeActivity::class.java
+        } else {
+            TestActivity::class.java
+        }
+
+        startActivity(Intent(this, target).putExtra("level", levelToStart))
+        finish()
+    }
+
+
     // =============================================================================================
     // CONTINUAR / NOVO JOGO
     // =============================================================================================
@@ -214,16 +249,7 @@ class BoasVindasActivity : AppCompatActivity() {
         return false
     }
 
-    private fun openContinue() {
-        val levelToStart = computeCurrentLevelName().ifBlank { GameDataManager.Levels.INICIANTE }
 
-        // ✅ Continue começa no nível “atual” (o TestActivity já cuida de restore/backup se existir)
-        startActivity(
-            Intent(this, TestActivity::class.java)
-                .putExtra("level", levelToStart)
-        )
-        finish()
-    }
 
     private fun confirmNewGame() {
         AlertDialog.Builder(this)
@@ -322,13 +348,7 @@ class BoasVindasActivity : AppCompatActivity() {
         }
     }
 
-    private fun computeCurrentLevelName(): String {
-        for (lvl in levelOrder) {
-            val c = GameDataManager.getCorrectForLevel(this, lvl)
-            if (c < 30) return lvl
-        }
-        return levelOrder.last()
-    }
+
 
     /**
      * ✅ Safe: usa reflexão pra não depender do nome do método no ScoreManager.

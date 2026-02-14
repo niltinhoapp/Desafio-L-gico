@@ -2,7 +2,6 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-
     android:id="@+id/rootLayoutTest"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -14,15 +13,14 @@
         android:id="@+id/petView"
         android:layout_width="46dp"
         android:layout_height="46dp"
-        android:layout_marginEnd="8dp"
         android:layout_marginTop="18dp"
+        android:layout_marginEnd="8dp"
         android:elevation="10dp"
         android:scaleType="fitCenter"
         android:visibility="visible"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toStartOf="@id/logoImageView"
         tools:srcCompat="@drawable/pet_owl_1" />
-
 
     <!-- 👤 Avatar do Usuário -->
     <ImageView
@@ -44,21 +42,21 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="8dp"
         android:ellipsize="end"
-        android:maxLines="1"
-        android:text="@string/username"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
         android:fontFamily="@font/roboto_mediu"
+        android:maxLines="1"
         android:shadowColor="#80000000"
         android:shadowDx="2"
         android:shadowDy="2"
         android:shadowRadius="3"
+        android:text="@string/username"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
         app:layout_constraintTop_toTopOf="@id/logoImageView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/logoImageView"
         app:layout_constraintBottom_toTopOf="@id/levelTextViewWrapper" />
 
-    <!-- 🏅 Nível -->
+    <!-- 🏅 Nível (mantive o wrapper que você já usa pra inflar/trocar) -->
     <FrameLayout
         android:id="@+id/levelTextViewWrapper"
         android:layout_width="wrap_content"
@@ -66,27 +64,10 @@
         android:layout_marginTop="8dp"
         app:layout_constraintTop_toBottomOf="@id/logoImageView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/levelTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="18dp"
-            android:paddingVertical="8dp"
-            android:background="@drawable/bg_level_badge"
-            android:text="@string/level_beginner"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"
-            android:fontFamily="@font/roboto_mediu"
-            android:shadowColor="#88000000"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="4" />
-    </FrameLayout>
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- ✅ CONTAINER do conteúdo (Scroll + Lottie sobreposto) -->
-    <FrameLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contentContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -100,10 +81,15 @@
         <!-- 📜 Área de Perguntas -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/gameElementsScrollView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
             android:clipToPadding="false"
-            android:paddingBottom="24dp">
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <LinearLayout
                 android:id="@+id/gameElements"
@@ -111,8 +97,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="16dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="24dp">
+                android:paddingTop="8dp">
 
                 <!-- 🧩 Pergunta -->
                 <com.google.android.material.card.MaterialCardView
@@ -146,20 +131,31 @@
 
                 <!-- ✅ Os botões de resposta entram aqui via inflateOptionButtons() -->
 
+                <!-- ✅ Espaçador (evita que a última resposta fique “atrás” do HUD) -->
+                <View
+                    android:id="@+id/bottomSpacer"
+                    android:layout_width="match_parent"
+                    android:layout_height="140dp" />
+
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
         <!-- ✈️ Lottie Intro (fica por cima do Scroll quando visível) -->
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottieAnimationView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
             android:scaleType="centerCrop"
             android:visibility="gone"
             app:lottie_autoPlay="true"
             app:lottie_loop="false"
-            app:lottie_rawRes="@raw/airplane_explosion1" />
-    </FrameLayout>
+            app:lottie_rawRes="@raw/airplane_explosion1"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- 🧭 Indicadores -->
     <LinearLayout
@@ -209,7 +205,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:drawableStart="@drawable/ic_star_points"
+                app:drawableStartCompat="@drawable/ic_star_points"
                 android:drawablePadding="6dp"
                 android:text="@string/pontos_format"
                 android:textColor="@android:color/white"
@@ -233,7 +229,7 @@
                 android:shadowRadius="3" />
         </LinearLayout>
 
-        <!-- ⭐ Progresso para fase secreta (fica AQUI, não dentro da linha horizontal) -->
+        <!-- ⭐ Progresso para fase secreta -->
         <LinearLayout
             android:id="@+id/secretProgressLayout"
             android:layout_width="match_parent"
@@ -276,7 +272,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:drawableStart="@drawable/ic_coin_small"
+                app:drawableStartCompat="@drawable/ic_coin_small"
                 android:drawablePadding="4dp"
                 android:text="@string/moedas_0"
                 android:textColor="@color/gold_color"
@@ -297,22 +293,25 @@
 
     </LinearLayout>
 
-    <!-- ✅ Banner FIXO (não empurra), compatível com Adaptive -->
+    <!-- ✅ Banner FIXO (não corta) -->
     <FrameLayout
         android:id="@+id/adContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:minHeight="60dp"
+        android:background="#141B2C"
+        android:clipToPadding="false"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-
-
-
-
+        <!-- Onde o AdView entra (via código) -->
+        <FrameLayout
+            android:id="@+id/adInner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </FrameLayout>
-
 
     <!-- 🎉 Efeito Konfetti (overlay) -->
     <nl.dionsegijn.konfetti.xml.KonfettiView
@@ -325,18 +324,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 🧩 Overlay AAA (chips, curiosidades, moedas animadas) -->
+    <!-- 🧩 Overlay AAA -->
     <FrameLayout
         android:id="@+id/overlayContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:clickable="false"
         android:focusable="false"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

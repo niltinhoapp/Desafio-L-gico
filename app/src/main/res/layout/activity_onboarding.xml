@@ -2,53 +2,58 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/root"
+    android:id="@+id/onboardingRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_onboarding_gradient">
+    android:background="@drawable/bg_onboarding_gradient"
+    android:clipToPadding="false">
 
-    <!-- 🌀 ViewPager2: controla as páginas do onboarding -->
+    <!-- 🌀 ViewPager2 -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:padding="16dp"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/tabLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- ☑️ CheckBox "Mostrar sempre ao iniciar" -->
+    <!-- ☑️ Mostrar sempre ao iniciar -->
     <CheckBox
         android:id="@+id/checkBoxAlwaysShow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/mostrar_sempre_ao_iniciar"
-        android:textColor="@color/white"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
+        android:textColor="@android:color/white"
         android:checked="false"
         android:padding="8dp"
-        android:buttonTint="@color/white"
+        android:buttonTint="@android:color/white"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="6dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 🔘 TabLayout: indicadores das páginas -->
+    <!-- 🔘 Indicadores -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        app:tabIndicatorColor="@android:color/black"
-        app:tabSelectedTextColor="@android:color/black"
-        app:tabTextColor="@color/background_color"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        app:tabIndicatorColor="@android:color/white"
+        app:tabSelectedTextColor="@android:color/white"
+        app:tabTextColor="#99FFFFFF"
         app:layout_constraintTop_toBottomOf="@id/viewPager"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/onboardingProgress"
-        android:contentDescription="@string/indicadores_de_pagina" />
+        app:layout_constraintBottom_toTopOf="@id/onboardingProgress" />
 
-    <!-- 📈 Barra de progresso inferior -->
+    <!-- 📈 Progresso -->
     <ProgressBar
         android:id="@+id/onboardingProgress"
         style="?android:attr/progressBarStyleHorizontal"
@@ -56,16 +61,17 @@
         android:layout_height="6dp"
         android:max="100"
         android:progress="0"
-        android:progressTint="@color/white"
         android:indeterminate="false"
+        android:progressTint="@android:color/white"
+        android:progressBackgroundTint="#33FFFFFF"
         app:layout_constraintBottom_toTopOf="@id/buttonContainer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 🎯 Botões de navegação -->
+    <!-- 🎯 Botão -->
     <LinearLayout
         android:id="@+id/buttonContainer"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
@@ -74,16 +80,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNext"
-            style="?attr/materialButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/proximo"
-            android:textColor="@android:color/black"
-            android:backgroundTint="@color/button_default" />
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:cornerRadius="16dp"
+            app:backgroundTint="@color/button_default" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

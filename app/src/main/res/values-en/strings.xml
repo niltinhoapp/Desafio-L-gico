@@ -331,9 +331,17 @@
 
     <string name="game_over_score_only">💥 Game Over! Your final score: %1$d</string>
 
+        <string name="rewards_loading">Loading ad…</string>
+        <string name="rewards_retry">Try again</string>
+        <string name="rewards_opening">Opening ad…</string>
+
+        <!-- optional -->
+        <string name="rewards_earn_prefix">🎁 Watch and earn</string>
+        <string name="rewards_earn_suffix">coins</string>
 
 
-        <string name="level_expert">Expert</string>
+
+    <string name="level_expert">Expert</string>
 
         <!-- Level unlock/lock messages -->
         <string name="level_unlocked_format">%1$s unlocked!</string>
@@ -345,5 +353,8 @@
     <string name="portugues_brasil">Portuguese (Brazil)</string>
     <string name="default_username">Jogador</string>
     <string name="welcome_user_format">Bem-vindo, %1$s!</string>
+    <string name="conectando_sua_conta">Conectando sua conta…</string>
+    <string name="barra">/</string>
+    <string name="s_um_instante">Só um instante.</string>
 
 </resources>

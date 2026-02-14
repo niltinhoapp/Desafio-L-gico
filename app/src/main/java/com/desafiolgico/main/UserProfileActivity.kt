@@ -13,22 +13,32 @@ import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.UserManager
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.PremiumUi
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityUserProfileBinding
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
-        binding = ActivityUserProfileBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
 
-        GameDataManager.init(this)
+            // ✅ Edge-to-edge (ajuste o parâmetro conforme o fundo da tela)
+            applyEdgeToEdge(lightSystemBarIcons = false)
 
-        setupButtons()
-        loadUserData()
-    }
+            binding = ActivityUserProfileBinding.inflate(layoutInflater)
+
+            // ✅ Insets: empurra conteúdo pra fora de status/nav bar
+            // Se você tiver um container (ex.: contentContainer) no XML, prefira aplicar nele.
+            binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
+            setContentView(binding.root)
+
+            GameDataManager.init(this)
+
+            setupButtons()
+            loadUserData()
+        }
+
 
     override fun onResume() {
         super.onResume()

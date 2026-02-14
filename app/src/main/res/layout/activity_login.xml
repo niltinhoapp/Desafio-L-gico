@@ -173,55 +173,21 @@
                             android:textSize="18sp" />
 
                         <!-- Item 1 -->
-                        <LinearLayout
+
+                        <!-- Item 2 -->
+                        <TextView
+                            android:id="@+id/benefit1"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="10dp"
                             android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_marginEnd="10dp"
-                                android:contentDescription="@string/app_name"
-                                android:src="@drawable/ic_check_circle"
-                                app:tint="#A5FFB1" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/roboto_mediu"
-                                android:text="@string/beneficio_1_login"
-                                android:textColor="#EFFFFFFF"
-                                android:textSize="15sp" />
-                        </LinearLayout>
-
-                        <!-- Item 2 -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_marginEnd="10dp"
-                                android:contentDescription="@string/app_name"
-                                android:src="@drawable/ic_check_circle"
-                                app:tint="#A5FFB1" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/roboto_mediu"
-                                android:text="@string/beneficio_2_login"
-                                android:textColor="#EFFFFFFF"
-                                android:textSize="15sp" />
-                        </LinearLayout>
+                            android:text="@string/beneficio_1_login"
+                            android:textColor="#EFFFFFFF"
+                            android:textSize="15sp"
+                            android:fontFamily="@font/roboto_mediu"
+                            android:drawablePadding="10dp"
+                            app:drawableStartCompat="@drawable/ic_check_circle"
+                            app:drawableTint="#A5FFB1" />
 
                     </LinearLayout>
 
@@ -263,7 +229,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="/"
+            android:text="@string/barra"
             android:textColor="#80FFFFFF"
             android:textSize="12sp"
             android:layout_marginHorizontal="2dp" />
@@ -320,7 +286,7 @@
                 android:padding="18dp"
                 android:background="@drawable/bg_glass_card_premium">
 
-                <!-- Top glow -->
+                <!-- glow topo -->
                 <View
                     android:id="@+id/topGlow"
                     android:layout_width="0dp"
@@ -331,14 +297,14 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
-                <!-- Spinner premium (substitui a Lottie) -->
+                <!-- spinner clean -->
                 <com.google.android.material.progressindicator.CircularProgressIndicator
                     android:id="@+id/loginLoadingSpinner"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:layout_marginTop="16dp"
                     android:indeterminate="true"
-                    app:indicatorSize="64dp"
+                    app:indicatorSize="56dp"
                     app:trackThickness="6dp"
                     app:indicatorInset="0dp"
                     app:indicatorColor="@color/theme_neon_accent"
@@ -347,94 +313,18 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
-                <!-- Chip segurança -->
-                <TextView
-                    android:id="@+id/loginLoadingHint"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="6dp"
-                    android:text="🔒 Conexão segura • Login"
-                    android:textColor="#CCFFFFFF"
-                    android:textSize="12sp"
-                    android:fontFamily="@font/roboto_mediu"
-                    android:background="@drawable/bg_chip_glass"
-                    app:layout_constraintTop_toBottomOf="@id/loginLoadingSpinner"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent" />
-
-                <!-- Mini “timeline” real: Google / Firebase / Pronto (opcional, mas fica MUITO top) -->
-                <LinearLayout
-                    android:id="@+id/loginProvidersRow"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center"
-                    android:orientation="horizontal"
-                    app:layout_constraintTop_toBottomOf="@id/loginLoadingHint"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent">
-
-                    <TextView
-                        android:id="@+id/badgeGoogle"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:gravity="center"
-                        android:text="G"
-                        android:textStyle="bold"
-                        android:textSize="12sp"
-                        android:textColor="#FFFFFF"
-                        android:background="@drawable/bg_badge_inactive" />
-
-                    <View
-                        android:layout_width="26dp"
-                        android:layout_height="2dp"
-                        android:layout_marginHorizontal="10dp"
-                        android:background="#26FFFFFF" />
-
-                    <TextView
-                        android:id="@+id/badgeFirebase"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:gravity="center"
-                        android:text="F"
-                        android:textStyle="bold"
-                        android:textSize="12sp"
-                        android:textColor="#FFFFFF"
-                        android:background="@drawable/bg_badge_inactive" />
-
-                    <View
-                        android:layout_width="26dp"
-                        android:layout_height="2dp"
-                        android:layout_marginHorizontal="10dp"
-                        android:background="#26FFFFFF" />
-
-                    <TextView
-                        android:id="@+id/badgeReady"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:gravity="center"
-                        android:text="✓"
-                        android:textStyle="bold"
-                        android:textSize="12sp"
-                        android:textColor="#FFFFFF"
-                        android:background="@drawable/bg_badge_inactive" />
-
-                </LinearLayout>
-
                 <TextView
                     android:id="@+id/loginLoadingTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="Conectando…"
+                    android:text="@string/conectando_sua_conta"
                     android:textColor="#FFFFFF"
                     android:textStyle="bold"
                     android:textSize="16sp"
                     android:fontFamily="@font/roboto_mediu"
                     android:textAlignment="center"
-                    app:layout_constraintTop_toBottomOf="@id/loginProvidersRow"
+                    app:layout_constraintTop_toBottomOf="@id/loginLoadingSpinner"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
@@ -443,132 +333,23 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Aguarde um instante"
+                    android:text="@string/s_um_instante"
                     android:textColor="#CCFFFFFF"
                     android:textSize="13sp"
                     android:fontFamily="@font/roboto_mediu"
                     android:textAlignment="center"
                     app:layout_constraintTop_toBottomOf="@id/loginLoadingTitle"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent" />
-
-                <com.google.android.material.progressindicator.LinearProgressIndicator
-                    android:id="@+id/loginLoadingBar"
-                    android:layout_width="0dp"
-                    android:layout_height="6dp"
-                    android:layout_marginTop="14dp"
-                    android:indeterminate="true"
-                    app:trackCornerRadius="999dp"
-                    app:indicatorColor="@color/theme_neon_accent"
-                    app:trackColor="#22FFFFFF"
-                    app:layout_constraintTop_toBottomOf="@id/loginLoadingText"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent" />
-
-                <!-- ✅ Steps (seu bloco atual pode ficar igual) -->
-                <LinearLayout
-                    android:id="@+id/loginSteps"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:orientation="vertical"
-                    app:layout_constraintTop_toBottomOf="@id/loginLoadingBar"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent">
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="2dp"
-                        android:layout_marginBottom="10dp"
-                        android:background="@drawable/bg_steps_track"
-                        android:alpha="0.75" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
-
-                            <View
-                                android:id="@+id/stepGoogleDot"
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
-                                android:background="@drawable/bg_step_dot_inactive" />
-
-                            <TextView
-                                android:id="@+id/stepGoogleText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="Google"
-                                android:textSize="11sp"
-                                android:textColor="#B3FFFFFF"
-                                android:fontFamily="@font/roboto_mediu" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
-
-                            <View
-                                android:id="@+id/stepFirebaseDot"
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
-                                android:background="@drawable/bg_step_dot_inactive" />
-
-                            <TextView
-                                android:id="@+id/stepFirebaseText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="Firebase"
-                                android:textSize="11sp"
-                                android:textColor="#B3FFFFFF"
-                                android:fontFamily="@font/roboto_mediu" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
-
-                            <View
-                                android:id="@+id/stepReadyDot"
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
-                                android:background="@drawable/bg_step_dot_inactive" />
-
-                            <TextView
-                                android:id="@+id/stepReadyText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="Pronto"
-                                android:textSize="11sp"
-                                android:textColor="#B3FFFFFF"
-                                android:fontFamily="@font/roboto_mediu" />
-                        </LinearLayout>
-
-                    </LinearLayout>
-                </LinearLayout>
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_marginBottom="8dp"/>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
-
         </com.google.android.material.card.MaterialCardView>
 
     </FrameLayout>
+
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

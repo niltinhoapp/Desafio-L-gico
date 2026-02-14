@@ -9,17 +9,16 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.desafiolgico.R
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.PremiumCatalog
 import com.desafiolgico.utils.PremiumManager
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
@@ -28,6 +27,8 @@ class PremiumShopActivity : AppCompatActivity() {
     private lateinit var coinsText: TextView
     private lateinit var recycler: RecyclerView
     private lateinit var adapter: PremiumShopAdapter
+    private lateinit var headerCard: MaterialCardView
+
 
     // Paleta (mantive seu estilo)
     private val cBgMid = Color.parseColor("#0F172A")
@@ -42,17 +43,17 @@ class PremiumShopActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+
+        applyEdgeToEdge(lightSystemBarIcons = false)
 
         GameDataManager.init(applicationContext)
 
-        setContentView(buildContentView())
+        val root = buildContentView()
+        setContentView(root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
-            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(top = sys.top, bottom = sys.bottom)
-            insets
-        }
+        headerCard.applySystemBarsPadding(applyTop = true, applyBottom = false)
+        recycler.applySystemBarsPadding(applyTop = false, applyBottom = true)
 
         adapter = PremiumShopAdapter(
             onPurchase = { item ->
@@ -110,13 +111,30 @@ class PremiumShopActivity : AppCompatActivity() {
     }
 
     private fun buildContentView(): View {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        // Root externo ocupa a tela toda
+        val root = android.widget.FrameLayout(this).apply {
             setBackgroundColor(cBgMid)
         }
 
+        // Container central com largura máxima (tablet-friendly)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+
+            // largura = min(tela, 720dp) e centraliza
+            val maxW = dp(720)
+            val screenW = resources.displayMetrics.widthPixels
+            val w = minOf(screenW, maxW)
+
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                w,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+
         // Header (glass)
-        val headerCard = MaterialCardView(this).apply {
+        headerCard = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = dp(2).toFloat()
             useCompatPadding = true
@@ -171,7 +189,7 @@ class PremiumShopActivity : AppCompatActivity() {
         header.addView(coinsText)
         headerCard.addView(header)
 
-        root.addView(
+        container.addView(
             headerCard,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -189,13 +207,16 @@ class PremiumShopActivity : AppCompatActivity() {
             clipToPadding = false
         }
 
-        root.addView(
+        container.addView(
             recycler,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0
             ).apply { weight = 1f }
         )
+
+        // adiciona container no root
+        root.addView(container)
 
         return root
     }

@@ -25,6 +25,7 @@ import com.desafiolgico.model.QuestionManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.button.MaterialButton
 import kotlin.math.roundToInt
 
@@ -66,9 +67,15 @@ class DailyChallengeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge primeiro (antes de inflar layout)
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityDailyChallengeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // ✅ Insets no container de conteúdo (padding + system bars)
+        binding.contentDaily.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
         initSfx()

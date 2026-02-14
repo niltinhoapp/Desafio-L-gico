@@ -6,6 +6,8 @@ import com.desafiolgico.databinding.ActivityLocalRecordsBinding
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.ShareUtils
+import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 
 class LocalRecordsActivity : AppCompatActivity() {
 
@@ -14,7 +16,14 @@ class LocalRecordsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // ✅ Edge-to-edge (tela escura -> ícones claros)
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityLocalRecordsBinding.inflate(layoutInflater)
+
+        // ✅ padding de status/nav bar (no root da tela)
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
+
         setContentView(binding.root)
 
         GameDataManager.init(this)

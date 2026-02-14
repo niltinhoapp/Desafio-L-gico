@@ -6,7 +6,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Android 13+ (API 33): precisa pedir em runtime se for usar notificações -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- AdMob / Advertising ID -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application
@@ -19,7 +23,8 @@
         android:roundIcon="@mipmap/icone_ap_foreve_foreground"
         android:supportsRtl="true"
         android:theme="@style/Theme.DesafioLógico"
-        tools:targetApi="34">
+        android:resizeableActivity="true"
+        tools:targetApi="35">
 
         <!-- 📦 FileProvider -->
         <provider
@@ -48,8 +53,8 @@
                 tools:node="remove" />
         </provider>
 
-        <!-- ✅ Firebase: NÃO remova no release (evita quebra de Auth/Crashlytics/Analytics) -->
-        <!-- Se quiser remover só no debug, faça isso em src/debug/AndroidManifest.xml -->
+        <!-- ✅ Firebase: NÃO remova no release.
+             Se quiser remover só no debug, faça em src/debug/AndroidManifest.xml -->
         <!--
         <provider
             android:name="com.google.firebase.provider.FirebaseInitProvider"
@@ -68,10 +73,11 @@
             </intent-filter>
         </activity>
 
+        <!-- ✅ REMOVIDO screenOrientation="portrait"
+             (resolve alerta de telas grandes / redimensionamento) -->
         <activity
             android:name=".premium.PremiumShopActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".main.SecretOfferActivity"
@@ -79,8 +85,7 @@
 
         <activity
             android:name=".main.MapActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".main.EnigmaPortalActivity"
@@ -92,13 +97,11 @@
 
         <activity
             android:name=".main.LocalRecordsActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".main.SecretTransitionActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".settings.LanguageSelectionActivity"
@@ -123,18 +126,23 @@
         <activity
             android:name=".main.MainActivity"
             android:exported="false" />
+
         <activity
             android:name=".main.TestActivity"
             android:exported="false" />
+
         <activity
             android:name=".main.ResultOrGameOverActivity"
             android:exported="false" />
+
         <activity
             android:name=".main.RewardsActivity"
             android:exported="false" />
+
         <activity
             android:name=".main.NextPhaseActivity"
             android:exported="false" />
+
         <activity
             android:name=".settings.DeleteAccountActivity"
             android:exported="false" />
@@ -155,7 +163,7 @@
             android:name=".auth.WebViewActivity"
             android:exported="false" />
 
-        <!-- 🔔 Firebase Notifications -->
+        <!-- 🔔 Notificações (se usar FCM) -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification" />

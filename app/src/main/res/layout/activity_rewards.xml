@@ -7,112 +7,139 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_rewards_gradient"
-    android:paddingStart="20dp"
-    android:paddingEnd="20dp"
+    android:clipToPadding="false"
     tools:context=".main.RewardsActivity">
 
-    <!-- 🪙 Card do saldo -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/coinsCard"
+    <!-- ✅ Conteúdo (recebe padding via applySystemBarsPadding no Kotlin) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contentRewards"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="36dp"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="8dp"
-        app:cardUseCompatPadding="true"
-        app:cardBackgroundColor="#1E243A"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- 🪙 Card do saldo -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/coinsCard"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:padding="18dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_marginTop="20dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="8dp"
+            app:cardUseCompatPadding="true"
+            app:cardBackgroundColor="#1E243A"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_coin_small"
-                app:tint="@color/gold_color" />
-
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/coinsTextView"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:text="@string/moedas_0"
-                android:textColor="@android:color/white"
-                android:textSize="22sp"
-                android:fontFamily="@font/roboto_mediu" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                android:padding="18dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-    <!-- Texto de apoio (opcional, ajuda o jogador entender) -->
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/rewardsSubtitle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:text="Assista um anúncio rápido e ganhe moedas para desbloquear avatares."
-        android:textColor="#F44336"
-        android:textSize="18sp"
-        android:fontFamily="@font/roboto_mediu"
-        android:lineSpacingExtra="2dp"
-        android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@id/coinsCard"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:ignore="HardcodedText" />
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_coin_small"
+                    app:tint="@color/gold_color"
+                    android:contentDescription="@string/app_name"/>
 
-    <!-- 🎁 Botão principal -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/earnCoinsButton"
-        style="@style/Widget.MaterialComponents.Button"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
-        android:minHeight="54dp"
-        android:paddingVertical="14dp"
-        android:text="@string/assistir_e_ganhar_moedas"
-        android:textSize="17sp"
-        android:textAllCaps="false"
-        android:fontFamily="@font/roboto_mediu"
-        app:cornerRadius="18dp"
-        app:icon="@drawable/ic_play_circle"
-        app:iconPadding="10dp"
-        app:iconTint="@android:color/white"
-        app:backgroundTint="@color/button_default"
-        app:layout_constraintTop_toBottomOf="@id/rewardsSubtitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/coinsTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="@string/moedas_0"
+                    android:textColor="@android:color/white"
+                    android:textSize="22sp"
+                    android:fontFamily="@font/roboto_mediu" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-    <!-- 🔙 Voltar -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/backButton"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="@string/voltar"
-        android:textColor="#F44336"
-        android:textSize="25sp"
-        android:textAllCaps="false"
-        android:fontFamily="@font/roboto_mediu"
-        app:icon="@drawable/ic_arrow_back"
-        app:iconTint="#FF5722"
-        app:layout_constraintTop_toBottomOf="@id/earnCoinsButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <!-- Texto de apoio -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/rewardsSubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Assista um anúncio rápido e ganhe moedas para desbloquear avatares."
+            android:textColor="#F44336"
+            android:textSize="18sp"
+            android:fontFamily="@font/roboto_mediu"
+            android:lineSpacingExtra="2dp"
+            android:gravity="center"
+            app:layout_constraintTop_toBottomOf="@id/coinsCard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:ignore="HardcodedText" />
 
-    <!-- 🎉 Konfetti overlay -->
+        <!-- 🎁 Botão principal -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/earnCoinsButton"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:minHeight="54dp"
+            android:paddingVertical="14dp"
+            android:text="@string/assistir_e_ganhar_moedas"
+            android:textSize="17sp"
+            android:textAllCaps="false"
+            android:fontFamily="@font/roboto_mediu"
+            app:cornerRadius="18dp"
+            app:icon="@drawable/ic_play_circle"
+            app:iconPadding="10dp"
+            app:iconTint="@android:color/white"
+            app:backgroundTint="@color/button_default"
+            app:layout_constraintTop_toBottomOf="@id/rewardsSubtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 🔙 Voltar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/backButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/voltar"
+            android:textColor="#F44336"
+            android:textSize="22sp"
+            android:textAllCaps="false"
+            android:fontFamily="@font/roboto_mediu"
+            app:icon="@drawable/ic_arrow_back"
+            app:iconTint="#FF5722"
+            app:layout_constraintTop_toBottomOf="@id/earnCoinsButton"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- segura o layout em telas altas -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_end="0dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 🎉 Konfetti overlay (no root pra cobrir tudo, sem sofrer padding) -->
     <nl.dionsegijn.konfetti.xml.KonfettiView
         android:id="@+id/konfettiView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:visibility="gone"
+        android:clickable="false"
+        android:focusable="false"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

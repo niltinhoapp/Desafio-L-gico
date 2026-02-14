@@ -6,282 +6,298 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/gradient_portal"
-    android:padding="16dp">
+    android:clipToPadding="false">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbarPortal"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        android:title="Portal dos Enigmas"
-        android:titleTextColor="@color/portal_text"
-        app:navigationIconTint="@color/portal_text"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <LinearLayout
-        android:id="@+id/doorsRow"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@id/toolbarPortal"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/door1"
-            android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="Etapa 1 do portal"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/portal_surface_55"
-            app:strokeColor="@color/portal_stroke"
-            app:strokeWidth="1dp">
-
-            <TextView
-                android:id="@+id/txtDoor1"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="ETAPA I"
-                android:textStyle="bold"
-                android:textColor="@color/portal_text"
-                android:alpha="0.92"/>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/door2"
-            android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="Etapa 2 do portal"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/portal_surface_55"
-            app:strokeColor="@color/portal_stroke"
-            app:strokeWidth="1dp">
-
-            <TextView
-                android:id="@+id/txtDoor2"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="ETAPA II"
-                android:textStyle="bold"
-                android:textColor="@color/portal_text"
-                android:alpha="0.60"/>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/door3"
-            android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
-            android:contentDescription="Etapa 3 do portal"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/portal_surface_55"
-            app:strokeColor="@color/portal_stroke"
-            app:strokeWidth="1dp">
-
-            <TextView
-                android:id="@+id/txtDoor3"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="ETAPA III"
-                android:textStyle="bold"
-                android:textColor="@color/portal_text"
-                android:alpha="0.60"/>
-        </com.google.android.material.card.MaterialCardView>
-    </LinearLayout>
-
-    <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:id="@+id/progStability"
-        android:layout_width="0dp"
-        android:layout_height="10dp"
-        android:layout_marginTop="16dp"
-        android:indeterminate="false"
-        app:trackCornerRadius="8dp"
-        app:indicatorColor="@color/portal_gold"
-        app:trackColor="@color/portal_track"
-        app:layout_constraintTop_toBottomOf="@id/doorsRow"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <TextView
-        android:id="@+id/txtStability"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="Estabilidade do Portal: 100%"
-        android:textColor="@color/portal_text_dim"
-        android:textSize="13sp"
-        android:maxLines="1"
-        android:ellipsize="end"
-        app:layout_constraintTop_toBottomOf="@id/progStability"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/cardAttemptsBadge"/>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardAttemptsBadge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        app:cardCornerRadius="999dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/portal_surface_55"
-        app:strokeColor="@color/portal_stroke"
-        app:strokeWidth="1dp"
-        app:layout_constraintTop_toTopOf="@id/txtStability"
-        app:layout_constraintBottom_toBottomOf="@id/txtStability"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:id="@+id/txtAttemptsBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            android:text="Tentativas: 3/3"
-            android:textColor="@color/portal_gold"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:alpha="0.95"/>
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardEnigma"
+    <!-- ✅ CONTEÚDO (onde você aplica padding de system bars via código) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contentPortal"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="14dp"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/portal_surface_70"
-        app:strokeColor="@color/portal_stroke"
-        app:strokeWidth="1dp"
-        app:layout_constraintTop_toBottomOf="@id/txtStability"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- ✅ Scroll interno: evita “apertar” em telas menores -->
-        <androidx.core.widget.NestedScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true"
-            android:overScrollMode="never">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbarPortal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:title="Portal dos Enigmas"
+            android:titleTextColor="@color/portal_text"
+            app:titleCentered="true"
+            app:navigationIconTint="@color/portal_text"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+        <LinearLayout
+            android:id="@+id/doorsRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            app:layout_constraintTop_toBottomOf="@id/toolbarPortal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/door1"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Etapa 1 do portal"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/portal_surface_55"
+                app:strokeColor="@color/portal_stroke"
+                app:strokeWidth="1dp">
 
                 <TextView
-                    android:id="@+id/txtStage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ENIGMA I"
-                    android:textStyle="bold"
-                    android:textColor="@color/portal_text_dim"
-                    android:textSize="12sp"/>
-
-                <TextView
-                    android:id="@+id/txtQuestion"
+                    android:id="@+id/txtDoor1"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="Pergunta..."
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ETAPA I"
+                    android:textStyle="bold"
                     android:textColor="@color/portal_text"
+                    android:alpha="0.92"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/door2"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Etapa 2 do portal"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/portal_surface_55"
+                app:strokeColor="@color/portal_stroke"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/txtDoor2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ETAPA II"
                     android:textStyle="bold"
-                    android:textSize="18sp"/>
+                    android:textColor="@color/portal_text"
+                    android:alpha="0.60"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/door3"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1"
+                android:contentDescription="Etapa 3 do portal"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/portal_surface_55"
+                app:strokeColor="@color/portal_stroke"
+                app:strokeWidth="1dp">
 
                 <TextView
-                    android:id="@+id/txtHint"
+                    android:id="@+id/txtDoor3"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ETAPA III"
+                    android:textStyle="bold"
+                    android:textColor="@color/portal_text"
+                    android:alpha="0.60"/>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progStability"
+            android:layout_width="0dp"
+            android:layout_height="10dp"
+            android:layout_marginTop="16dp"
+            android:indeterminate="false"
+            app:trackCornerRadius="8dp"
+            app:indicatorColor="@color/portal_gold"
+            app:trackColor="@color/portal_track"
+            app:layout_constraintTop_toBottomOf="@id/doorsRow"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <TextView
+            android:id="@+id/txtStability"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Estabilidade do Portal: 100%"
+            android:textColor="@color/portal_text_dim"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toBottomOf="@id/progStability"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/cardAttemptsBadge"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAttemptsBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:cardCornerRadius="999dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/portal_surface_55"
+            app:strokeColor="@color/portal_stroke"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toTopOf="@id/txtStability"
+            app:layout_constraintBottom_toBottomOf="@id/txtStability"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <TextView
+                android:id="@+id/txtAttemptsBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="Tentativas: 3/3"
+                android:textColor="@color/portal_gold"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:alpha="0.95"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardEnigma"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="14dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/portal_surface_70"
+            app:strokeColor="@color/portal_stroke"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toBottomOf="@id/txtStability"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:overScrollMode="never">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Dica: ..."
-                    android:textColor="@color/portal_text_dim"
-                    android:textSize="13sp"/>
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opt1"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="14dp"
-                    android:text="Opção 1"
-                    app:cornerRadius="16dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/portal_stroke"/>
+                    <TextView
+                        android:id="@+id/txtStage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ENIGMA I"
+                        android:textStyle="bold"
+                        android:textColor="@color/portal_text_dim"
+                        android:textSize="12sp"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opt2"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="10dp"
-                    android:text="Opção 2"
-                    app:cornerRadius="16dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/portal_stroke"/>
+                    <TextView
+                        android:id="@+id/txtQuestion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Pergunta..."
+                        android:textColor="@color/portal_text"
+                        android:textStyle="bold"
+                        android:textSize="18sp"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opt3"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="10dp"
-                    android:text="Opção 3"
-                    app:cornerRadius="16dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/portal_stroke"/>
+                    <TextView
+                        android:id="@+id/txtHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Dica: ..."
+                        android:textColor="@color/portal_text_dim"
+                        android:textSize="13sp"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opt4"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="10dp"
-                    android:text="Opção 4"
-                    app:cornerRadius="16dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/portal_stroke"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/opt1"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="14dp"
+                        android:text="Opção 1"
+                        app:cornerRadius="16dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/portal_stroke"/>
 
-                <TextView
-                    android:id="@+id/txtLives"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="Erros restantes: 2"
-                    android:textColor="@color/portal_text_dim"
-                    android:textSize="13sp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/opt2"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Opção 2"
+                        app:cornerRadius="16dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/portal_stroke"/>
 
-                <TextView
-                    android:id="@+id/txtLockInfo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="(3 tentativas por dia)"
-                    android:textColor="@color/portal_text_dim"
-                    android:textSize="12sp"
-                    android:alpha="0.8"/>
-            </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
-    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/opt3"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Opção 3"
+                        app:cornerRadius="16dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/portal_stroke"/>
 
-    <!-- ✅ Vignette acima do conteúdo -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/opt4"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Opção 4"
+                        app:cornerRadius="16dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/portal_stroke"/>
+
+                    <TextView
+                        android:id="@+id/txtLives"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="Erros restantes: 2"
+                        android:textColor="@color/portal_text_dim"
+                        android:textSize="13sp"/>
+
+                    <TextView
+                        android:id="@+id/txtLockInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="(3 tentativas por dia)"
+                        android:textColor="@color/portal_text_dim"
+                        android:textSize="12sp"
+                        android:alpha="0.8"/>
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ✅ Overlays fora do contentPortal (cobre a tela toda, Edge-to-edge real) -->
+
     <View
         android:id="@+id/vignette"
         android:layout_width="0dp"
@@ -295,7 +311,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- ✅ Flash FX acima do vignette -->
     <View
         android:id="@+id/flashOverlay"
         android:layout_width="0dp"
@@ -310,7 +325,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- ✅ Overlay de intro/resultado acima de tudo -->
     <FrameLayout
         android:id="@+id/overlayTop"
         android:layout_width="0dp"

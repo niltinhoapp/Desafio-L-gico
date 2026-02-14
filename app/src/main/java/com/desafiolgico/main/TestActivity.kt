@@ -47,6 +47,7 @@ import com.desafiolgico.utils.SecretRightManager
 import com.desafiolgico.utils.SecurePrefs
 import com.desafiolgico.utils.VictoryFx
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
@@ -249,25 +250,37 @@ class TestActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         binding = ActivityTestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.rootLayoutTest.applySystemBarsPadding(applyTop = true, applyBottom = false)
+
+
+        binding.adContainer.applySystemBarsPadding(applyTop = false, applyBottom = true)
+
+// depois do setContentView e applySystemBarsPadding
+        setupScrollBottomInsetFix()
         GameDataManager.init(this)
 
-        AdMobInitializer.ensureInitialized(applicationContext)
+        binding.root.post {
+            AdMobInitializer.ensureInitialized(applicationContext)
+        }
 
-        overlayContainer = binding.overlayContainer
+      overlayContainer = binding.overlayContainer
         rootLayout = binding.rootLayoutTest
         konfettiView = binding.konfettiView
         overlayContainer.elevation = dp(30).toFloat()
         ensureFxOverlay()
 
+
         questionManager = QuestionManager(LanguageHelper.getLanguage(this))
         scoreManager = ScoreManager(this)
         levelManager = LevelManager(this)
 
-        // reset de flags de run (garante sempre limpo em cada nova Activity)
+        // reset de flags...
         secretOfferTriggeredThisRun = false
         pendingSecretOfferLevel = null
         pendingWasCorrectForAdvance = false
@@ -285,7 +298,11 @@ class TestActivity : AppCompatActivity() {
             startActivity(Intent(this, AvatarSelectionActivity::class.java))
         }
 
-        // =========================================================================================
+
+
+
+
+    // =========================================================================================
         // INTENTS / FLAGS
         // =========================================================================================
         val levelFromIntent = intent.getStringExtra("level") ?: GameDataManager.Levels.INICIANTE
@@ -413,7 +430,7 @@ class TestActivity : AppCompatActivity() {
         } else 0
 
         configurarNivel(levelToLoad)
-        configurarTituloNivel(levelToLoad)
+      //  configurarTituloNivel(levelToLoad)
 
         if (shuffleSeed == 0L) shuffleSeed = newSeed()
 
@@ -537,6 +554,36 @@ class TestActivity : AppCompatActivity() {
         }
         return fresh
     }
+    private fun setupScrollBottomInsetFix() {
+        // Recalcula quando o layout medir (primeiro layout e também quando mudar tamanho)
+        binding.rootLayoutTest.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            applyScrollBottomPadding()
+        }
+
+        // Primeira aplicação
+        binding.root.post { applyScrollBottomPadding() }
+    }
+
+    private fun applyScrollBottomPadding() {
+        // Altura do HUD + banner (já com insets por applySystemBarsPadding no adContainer)
+        val hudH = binding.statusIndicatorsLayout.height
+        val adH = binding.adContainer.height
+
+        // Um extra pra ficar confortável (toque / sombra)
+        val extra = dp(16)
+
+        val bottom = (hudH + adH + extra).coerceAtLeast(dp(120))
+
+        // aplica no Scroll
+        binding.gameElementsScrollView.setPadding(
+            binding.gameElementsScrollView.paddingLeft,
+            binding.gameElementsScrollView.paddingTop,
+            binding.gameElementsScrollView.paddingRight,
+            bottom
+        )
+        binding.gameElementsScrollView.clipToPadding = false
+    }
+
 
     /** PREMIUM RUN (normal): pega novas primeiro, completa com revisão */
     private fun buildPremiumRunQuestions(level: String, seed: Long): List<Question> {
@@ -614,9 +661,9 @@ class TestActivity : AppCompatActivity() {
         }
     }
 
-    private fun configurarTituloNivel(level: String) {
-        binding.levelTextView.text = getString(R.string.nivel_format_string, level)
-    }
+//private fun configurarTituloNivel(level: String) {
+  //      binding.levelTextView.text = getString(R.string.nivel_format_string, level)
+    //}
 
     private fun inflateOptionButtons() {
         optionButtons.clear()
@@ -2081,38 +2128,63 @@ class TestActivity : AppCompatActivity() {
     private fun bannerUnitId(): String = getString(R.string.banner_ad_unit_id)
 
 
+
+    private fun largeAnchoredIfAvailable(context: Context, adWidthDp: Int): AdSize? {
+        return try {
+            val m = AdSize::class.java.getMethod(
+                "getLargeAnchoredAdaptiveBannerAdSize",
+                Context::class.java,
+                Int::class.javaPrimitiveType
+            )
+            m.invoke(null, context, adWidthDp) as AdSize
+        } catch (_: Throwable) {
+            null // método ainda não existe na sua versão do SDK
+        }
+    }
+
+    private fun getLargeAnchoredAdSizeOrNull(adWidthDp: Int): AdSize? {
+        return try {
+            val method = AdSize::class.java.getMethod(
+                "getLargeAnchoredAdaptiveBannerAdSize",
+                Context::class.java,
+                Int::class.javaPrimitiveType
+            )
+            method.invoke(null, this, adWidthDp) as AdSize
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     private fun setupBannerAdaptive() {
         if (bannerLoaded) return
         bannerLoaded = true
 
         val container = binding.adContainer
-        container.removeAllViews() // ✅ garante que não duplica
+        container.removeAllViews()
 
         container.post {
             if (isFinishing || isDestroyed) return@post
 
-            val widthPx = container.width.takeIf { it > 0 }
-                ?: resources.displayMetrics.widthPixels
+            val widthPx = container.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
             val adWidthDp = (widthPx / resources.displayMetrics.density).toInt()
 
             val banner = AdView(this).apply {
-                adUnitId = bannerUnitId() // ✅ aqui pode (vai setar 1x só)
-                setAdSize(
-                    AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
-                        this@TestActivity,
-                        adWidthDp
-                    )
-                )
-                adListener = object : AdListener() {
-                    override fun onAdLoaded() {
-                        visibility = View.VISIBLE
-                    }
+                adUnitId = bannerUnitId()
 
+                val adSize =
+                    getLargeAnchoredAdSizeOrNull(adWidthDp)
+                        ?: AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this@TestActivity, adWidthDp)
+
+                setAdSize(adSize)
+
+                adListener = object : AdListener() {
+                    override fun onAdLoaded() { visibility = View.VISIBLE }
                     override fun onAdFailedToLoad(error: LoadAdError) {
                         visibility = View.GONE
                         android.util.Log.e("ADS", "Banner failed: ${error.code} - ${error.message}")
                     }
                 }
+
                 visibility = View.GONE
             }
 
@@ -2125,11 +2197,10 @@ class TestActivity : AppCompatActivity() {
             )
 
             banner.loadAd(AdRequest.Builder().build())
-
-            // ✅ guarda referência pra pausar/resumir/destroy
             adView = banner
         }
     }
+
 
     private fun loadRewardedAd() {
         RewardedAd.load(
@@ -2185,18 +2256,28 @@ class TestActivity : AppCompatActivity() {
         val lastVisible = optionButtons.lastOrNull { it.visibility == View.VISIBLE } ?: return
 
         scroll.post {
+            // garante que o paddingBottom já está certo (HUD + banner)
+            applyScrollBottomPadding()
+
+            val rect = android.graphics.Rect()
+            rect.set(0, 0, lastVisible.width, lastVisible.height)
+            scroll.offsetDescendantRectToMyCoords(lastVisible, rect)
+
             val viewportTop = scroll.scrollY + scroll.paddingTop
             val viewportBottom = scroll.scrollY + scroll.height - scroll.paddingBottom
 
-            val childTop = lastVisible.top
-            val childBottom = lastVisible.bottom
+            val childTop = rect.top
+            val childBottom = rect.bottom
 
+            // se a última opção ficou escondida embaixo, desce até aparecer com "respiro"
             if (childBottom > viewportBottom - dp(6)) {
                 val viewportHeight = scroll.height - scroll.paddingTop - scroll.paddingBottom
                 val targetY = (childBottom - viewportHeight + dp(extraBottomDp)).coerceAtLeast(0)
                 scroll.smoothScrollTo(0, targetY)
+                return@post
             }
 
+            // se ficou escondida em cima (raro), sobe um pouco
             if (childTop < viewportTop) {
                 scroll.smoothScrollTo(0, (childTop - dp(8)).coerceAtLeast(0))
             }

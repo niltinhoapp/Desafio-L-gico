@@ -30,13 +30,12 @@ import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.PremiumThemes
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.button.MaterialButton
-import kotlin.math.max
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-
     private lateinit var levelManager: LevelManager
 
     private lateinit var startForResult: ActivityResultLauncher<Intent>
@@ -52,10 +51,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge primeiro (barra clara/escura)
+        applyEdgeToEdge(lightSystemBarIcons = false)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // ✅ aplica padding de status/nav bar no ROOT desta tela
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
 
@@ -151,15 +155,8 @@ class MainActivity : AppCompatActivity() {
 
         val score = GameDataManager.getOverallTotalScore(this).coerceAtLeast(0)
         if (EnigmaPortalGate.consumeUnlockNotificationIfNeeded(this, score)) {
-            Toast.makeText(
-                this,
-                "🌀 Portal desbloqueado! Vá no Mapa para entrar.",
-                Toast.LENGTH_LONG
-            ).show()
-
-
+            Toast.makeText(this, "🌀 Portal desbloqueado! Vá no Mapa para entrar.", Toast.LENGTH_LONG).show()
         }
-
     }
 
     override fun onPause() {
@@ -301,7 +298,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onLevelLocked(level: String) {
-        // opcional
         Log.d("MainActivity", "Level locked: $level")
     }
 

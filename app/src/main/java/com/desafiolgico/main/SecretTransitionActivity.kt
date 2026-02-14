@@ -14,6 +14,7 @@ import com.desafiolgico.R
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.applyEdgeToEdge
+import com.desafiolgico.utils.applySystemBarsPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -33,8 +34,15 @@ class SecretTransitionActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyEdgeToEdge()
+
+        // ✅ Edge-to-edge (tela escura -> ícones claros)
+        applyEdgeToEdge(lightSystemBarIcons = false)
+
         setContentView(R.layout.activity_secret_transition)
+
+        // ✅ Insets: como aqui não tem binding, aplique no root do conteúdo
+        findViewById<View>(android.R.id.content)
+            .applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
 

@@ -1,73 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/progress_bar_color"
-    android:padding="24dp">
+    android:background="@drawable/progress_bar_color">
 
-    <!-- Logo ou Avatar Selecionado -->
-    <ImageView
-        android:id="@+id/logoImageView"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:layout_marginBottom="32dp"
-        android:contentDescription="Imagem ou Avatar do Usuário"
-        android:src="@drawable/ic_email_foreground"
-        app:layout_constraintEnd_toEndOf="parent"
+    <!-- Container com padding do design (24dp). Insets serão aplicados via código aqui. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contentContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- Texto de Boas-Vindas -->
-    <TextView
-        android:id="@+id/welcomeTextPrefix"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Bem-vindo,"
-        android:textColor="@android:color/white"
-        android:textSize="28sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/logoImageView" />
+        <!-- Logo / Avatar Selecionado -->
+        <ImageView
+            android:id="@+id/logoImageView"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="32dp"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/ic_email_foreground"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-    <TextView
-        android:id="@+id/welcomeUsername"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Nilton Vicente"
-        android:textColor="@color/colorAccent"
-        android:textSize="32sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/welcomeTextPrefix" />
+        <!-- Texto de Boas-Vindas -->
+        <TextView
+            android:id="@+id/welcomeTextPrefix"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/bem_vindo"
+            android:textColor="@android:color/white"
+            android:textSize="28sp"
+            app:layout_constraintTop_toBottomOf="@id/logoImageView"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- RecyclerView para Seleção de Avatares -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/avatarRecyclerView"
-        android:layout_width="365dp"
-        android:layout_height="144dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/welcomeUsername" />
+        <TextView
+            android:id="@+id/welcomeUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Nilton Vicente"
+            android:textColor="@color/colorAccent"
+            android:textSize="32sp"
+            app:layout_constraintTop_toBottomOf="@id/welcomeTextPrefix"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Texto de Pontuação -->
+        <!-- RecyclerView para seleção de avatares -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/avatarRecyclerView"
+            android:layout_width="0dp"
+            android:layout_height="144dp"
+            android:layout_marginTop="16dp"
+            app:layout_constraintTop_toBottomOf="@id/welcomeUsername"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Botão Continuar -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/continueButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="56dp"
-        android:backgroundTint="@color/colorPrimary"
-        android:text="Continuar"
-        android:textColor="@android:color/white"
-        app:cornerRadius="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/avatarRecyclerView" />
+        <!-- Botão Continuar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/continueButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="56dp"
+            android:backgroundTint="@color/colorPrimary"
+            android:text="@string/continuar"
+            android:textColor="@android:color/white"
+            app:cornerRadius="16dp"
+            app:layout_constraintTop_toBottomOf="@id/avatarRecyclerView"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -311,6 +311,16 @@
 
 
 
+        <string name="rewards_loading">Carregando anúncio…</string>
+        <string name="rewards_retry">Tentar novamente</string>
+        <string name="rewards_opening">Abrindo anúncio…</string>
+
+        <!-- opcional (se quiser padronizar o texto do botão READY também) -->
+        <string name="rewards_earn_prefix">🎁 Assistir e ganhar</string>
+        <string name="rewards_earn_suffix">moedas</string>
+
+
+
 
     <string name="admob_app_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
     <string name="banner_ad_unit_id" translatable="false">ca-app-pub-4958622518589705/1887040194</string>
@@ -329,7 +339,9 @@
     <string name="portugues_brasil">Português (Brasil)</string>
 
         <string name="admob_banner_unit_id">ca-app-pub-3940256099942544/6300978111</string>
-
+    <string name="conectando_sua_conta">Conectando sua conta…</string>
+    <string name="barra">/</string>
+    <string name="s_um_instante">Só um instante.</string>
 
 
 </resources>

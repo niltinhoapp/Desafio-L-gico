@@ -13,9 +13,9 @@ import com.google.android.material.button.MaterialButton
 class LevelManager(private val context: Context) {
 
     companion object {
-        const val THRESHOLD_INTERMEDIATE = 3500
-        const val THRESHOLD_ADVANCED = 7000
-        const val THRESHOLD_EXPERT = 10000
+        const val THRESHOLD_INTERMEDIATE = 6000
+        const val THRESHOLD_ADVANCED = 9000
+        const val THRESHOLD_EXPERT = 12000
 
         private const val VIBRATION_MS = 280L
         private const val ALPHA_LOCKED = 0.6f
@@ -119,15 +119,14 @@ class LevelManager(private val context: Context) {
         onLocked: (String) -> Unit
     ) {
         button.setOnClickListener {
-            if (GameDataManager.isLevelUnlocked(context, level)) {
+            val unlocked = GameDataManager.isLevelUnlocked(context, level)
+            if (unlocked) {
                 onClick(button, level)
                 return@setOnClickListener
             }
 
             val threshold = thresholdFor(level)
-            val levelNameResId = nameResFor(level)
-            val levelName = context.getString(levelNameResId)
-
+            val levelName = context.getString(nameResFor(level))
             val msg = context.getString(R.string.level_locked_format, levelName, threshold)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 
@@ -137,6 +136,7 @@ class LevelManager(private val context: Context) {
     }
 
     private fun thresholdFor(level: String): Int = when (level) {
+        GameDataManager.Levels.INICIANTE -> 0
         GameDataManager.Levels.INTERMEDIARIO -> THRESHOLD_INTERMEDIATE
         GameDataManager.Levels.AVANCADO -> THRESHOLD_ADVANCED
         GameDataManager.Levels.EXPERIENTE -> THRESHOLD_EXPERT

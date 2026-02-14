@@ -15,46 +15,50 @@ class QuestionManager(private val languageCode: String) {
      * - Sem seed (seed = 0L) ele embaralha diferente a cada chamada (pode causar repetição ao restaurar).
      */
     fun getQuestionsByLevel(selectedLevel: String, seed: Long = 0L): List<Question> {
-        val (baseList, takeCount) = when (selectedLevel) {
-
+        val baseList = when (selectedLevel) {
             GameDataManager.Levels.INICIANTE ->
-                if (isEnglish) beginnerQuestionsEn to 30 else beginnerQuestionsPt to 30
+                if (isEnglish) beginnerQuestionsEn else beginnerQuestionsPt
 
             GameDataManager.Levels.INTERMEDIARIO ->
-                if (isEnglish) intermediateQuestionsEn to 25 else intermediateQuestionsPt to 25
+                if (isEnglish) intermediateQuestionsEn else intermediateQuestionsPt
 
             GameDataManager.Levels.AVANCADO ->
-                if (isEnglish) advancedQuestionsEn to 20 else advancedQuestionsPt to 20
+                if (isEnglish) advancedQuestionsEn else advancedQuestionsPt
 
             GameDataManager.Levels.EXPERIENTE ->
-                if (isEnglish) expertQuestionsEn to 15 else expertQuestionsPt to 15
+                if (isEnglish) expertQuestionsEn else expertQuestionsPt
 
             // Fases secretas
             GameDataManager.SecretLevels.RELAMPAGO ->
-                if (isEnglish) relampagoBaseQuestionsEn to 5 else relampagoBaseQuestionsPt to 5
+                if (isEnglish) relampagoBaseQuestionsEn else relampagoBaseQuestionsPt
 
             GameDataManager.SecretLevels.PERFEICAO ->
-                if (isEnglish) perfeicaoBaseQuestionsEn to 3 else perfeicaoBaseQuestionsPt to 3
+                if (isEnglish) perfeicaoBaseQuestionsEn else perfeicaoBaseQuestionsPt
 
             GameDataManager.SecretLevels.ENIGMA ->
-                if (isEnglish) enigmaBaseQuestionsEn to 3 else enigmaBaseQuestionsPt to 3
+                if (isEnglish) enigmaBaseQuestionsEn else enigmaBaseQuestionsPt
 
-            else -> emptyList<Question>() to 0
+            else -> emptyList()
         }
 
-        if (baseList.isEmpty() || takeCount <= 0) return emptyList()
+        if (baseList.isEmpty()) return emptyList()
 
-        // 1) remove duplicadas (100% sem repetir)
+        // 1) remove duplicadas
         val unique = dedupeQuestions(baseList)
 
-        // 2) shuffle determinístico com seed (pra não repetir ao restaurar)
+        // 2) shuffle determinístico com seed
         val actualSeed = if (seed != 0L) seed else System.currentTimeMillis()
         val rnd = Random(seedToInt(actualSeed, selectedLevel))
 
-        // 3) não repete dentro do lote: se tiver menos que takeCount, devolve menos (sem repetir)
-        return unique.shuffled(rnd).take(minOf(takeCount, unique.size))
-    }
+        // 3) regra: Iniciante, Intermediário e Avançado retornam TODAS as questões
+        return when (selectedLevel) {
+            GameDataManager.Levels.INICIANTE,
+            GameDataManager.Levels.INTERMEDIARIO,
+            GameDataManager.Levels.AVANCADO -> unique.shuffled(rnd)
 
+            else -> unique.shuffled(rnd).take(minOf(unique.size, baseList.size)) // mantém lógica original
+        }
+    }
     // ---------------------------------------------------------------------------------------------
     // DEDUPE ROBUSTO (não repete nem se as opções vierem em ordem diferente)
     // ---------------------------------------------------------------------------------------------
