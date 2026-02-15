@@ -89,6 +89,9 @@ class TestActivity : AppCompatActivity() {
     private var lastScoreUi: Int = 0
     private var lastStreakUi: Int = 0
 
+
+    private var lastBottomPad = -1
+
     private var streakAnimator: ValueAnimator? = null
 
     private var answeredInLevel = 0
@@ -555,36 +558,41 @@ class TestActivity : AppCompatActivity() {
         return fresh
     }
     private fun setupScrollBottomInsetFix() {
-        // Recalcula quando o layout medir (primeiro layout e também quando mudar tamanho)
-        binding.rootLayoutTest.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            applyScrollBottomPadding()
+        // 1) aplica depois do primeiro layout
+        binding.gameElementsScrollView.post {
+            applyScrollBottomPadding(includeBannerAsComfort = false)
         }
 
-        // Primeira aplicação
-        binding.root.post { applyScrollBottomPadding() }
+        // 2) recalcula apenas quando o banner mudar de tamanho
+        binding.adContainer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            applyScrollBottomPadding(includeBannerAsComfort = false)
+        }
     }
 
-    private fun applyScrollBottomPadding() {
-        // Altura do HUD + banner (já com insets por applySystemBarsPadding no adContainer)
-        val hudH = binding.statusIndicatorsLayout.height
-        val adH = binding.adContainer.height
 
-        // Um extra pra ficar confortável (toque / sombra)
+    private fun applyScrollBottomPadding(includeBannerAsComfort: Boolean = false) {
+        val scroll = binding.gameElementsScrollView
+
+        // conforto mínimo (toque/sombra/última opção respirar)
         val extra = dp(16)
 
-        val bottom = (hudH + adH + extra).coerceAtLeast(dp(120))
+        // seu scroll NÃO fica atrás do HUD nem do banner, então isso é opcional
+        val bannerComfort = if (includeBannerAsComfort) binding.adContainer.height else 0
 
-        // aplica no Scroll
-        binding.gameElementsScrollView.setPadding(
-            binding.gameElementsScrollView.paddingLeft,
-            binding.gameElementsScrollView.paddingTop,
-            binding.gameElementsScrollView.paddingRight,
+        // padding final (mínimo pequeno, sem exagero)
+        val bottom = (extra + bannerComfort).coerceAtLeast(dp(12))
+
+        if (bottom == lastBottomPad) return
+        lastBottomPad = bottom
+
+        scroll.setPadding(
+            scroll.paddingLeft,
+            scroll.paddingTop,
+            scroll.paddingRight,
             bottom
         )
-        binding.gameElementsScrollView.clipToPadding = false
+        scroll.clipToPadding = false
     }
-
-
     /** PREMIUM RUN (normal): pega novas primeiro, completa com revisão */
     private fun buildPremiumRunQuestions(level: String, seed: Long): List<Question> {
         val allUnique = buildUniqueShuffledQuestions(level, seed)
@@ -771,14 +779,21 @@ class TestActivity : AppCompatActivity() {
         }
 
         setOptionsEnabled(true)
-        binding.gameElementsScrollView.post { binding.gameElementsScrollView.smoothScrollTo(0, 0) }
+
+        // ✅ Padding dinâmico (B): garante conforto no final sem mexer no scroll
+        applyScrollBottomPadding()
+
+        // ✅ Sempre começa no topo (pergunta visível)
+        binding.gameElementsScrollView.post {
+            // prefira scrollTo (instantâneo) pra não “brigar” com animações
+            binding.gameElementsScrollView.scrollTo(0, 0)
+        }
 
         if (withEnterAnim) animateQuestionIn()
         staggerOptions()
 
-        binding.gameElementsScrollView.postDelayed({
-            ensureLastOptionVisible(extraBottomDp = 18)
-        }, 90L)
+        // ❌ REMOVIDO: ensureLastOptionVisible aqui derruba a pergunta pra fora da tela
+        // binding.gameElements.post { ensureLastOptionVisible(extraBottomDp = 18) }
 
         markQuestionShownNow()
         startTimer()
@@ -2256,31 +2271,21 @@ class TestActivity : AppCompatActivity() {
         val lastVisible = optionButtons.lastOrNull { it.visibility == View.VISIBLE } ?: return
 
         scroll.post {
-            // garante que o paddingBottom já está certo (HUD + banner)
-            applyScrollBottomPadding()
-
+            // NÃO chama applyScrollBottomPadding aqui toda hora (evita mudar viewport durante cálculo)
             val rect = android.graphics.Rect()
-            rect.set(0, 0, lastVisible.width, lastVisible.height)
             scroll.offsetDescendantRectToMyCoords(lastVisible, rect)
 
-            val viewportTop = scroll.scrollY + scroll.paddingTop
             val viewportBottom = scroll.scrollY + scroll.height - scroll.paddingBottom
-
-            val childTop = rect.top
             val childBottom = rect.bottom
 
-            // se a última opção ficou escondida embaixo, desce até aparecer com "respiro"
-            if (childBottom > viewportBottom - dp(6)) {
-                val viewportHeight = scroll.height - scroll.paddingTop - scroll.paddingBottom
-                val targetY = (childBottom - viewportHeight + dp(extraBottomDp)).coerceAtLeast(0)
-                scroll.smoothScrollTo(0, targetY)
-                return@post
-            }
+            val isCut = childBottom > (viewportBottom - dp(6))
+            if (!isCut) return@post
 
-            // se ficou escondida em cima (raro), sobe um pouco
-            if (childTop < viewportTop) {
-                scroll.smoothScrollTo(0, (childTop - dp(8)).coerceAtLeast(0))
-            }
+            // ✅ Só desce o mínimo necessário
+            val viewportHeight = scroll.height - scroll.paddingTop - scroll.paddingBottom
+            val targetY = (childBottom - viewportHeight + dp(extraBottomDp)).coerceAtLeast(0)
+
+            scroll.smoothScrollTo(0, targetY)
         }
     }
 

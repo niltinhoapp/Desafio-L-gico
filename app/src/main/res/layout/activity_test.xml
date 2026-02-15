@@ -56,7 +56,7 @@
         app:layout_constraintEnd_toStartOf="@id/logoImageView"
         app:layout_constraintBottom_toTopOf="@id/levelTextViewWrapper" />
 
-    <!-- 🏅 Nível (mantive o wrapper que você já usa pra inflar/trocar) -->
+    <!-- 🏅 Nível (wrapper inflado via código) -->
     <FrameLayout
         android:id="@+id/levelTextViewWrapper"
         android:layout_width="wrap_content"
@@ -66,7 +66,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- ✅ CONTAINER do conteúdo (Scroll + Lottie sobreposto) -->
+    <!-- ✅ CONTEÚDO (Scroll + Lottie sobreposto) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contentContainer"
         android:layout_width="0dp"
@@ -78,7 +78,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 📜 Área de Perguntas -->
+        <!-- 📜 Perguntas -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/gameElementsScrollView"
             android:layout_width="0dp"
@@ -86,6 +86,7 @@
             android:clipToPadding="false"
             android:fillViewport="true"
             android:overScrollMode="never"
+            android:descendantFocusability="blocksDescendants"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -97,7 +98,9 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="16dp"
-                android:paddingTop="8dp">
+                android:paddingTop="8dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true">
 
                 <!-- 🧩 Pergunta -->
                 <com.google.android.material.card.MaterialCardView
@@ -127,20 +130,16 @@
                         android:shadowDx="2"
                         android:shadowDy="2"
                         android:shadowRadius="4" />
+
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- ✅ Os botões de resposta entram aqui via inflateOptionButtons() -->
-
-                <!-- ✅ Espaçador (evita que a última resposta fique “atrás” do HUD) -->
-                <View
-                    android:id="@+id/bottomSpacer"
-                    android:layout_width="match_parent"
-                    android:layout_height="140dp" />
+                <!-- ✅ Botões entram via inflateOptionButtons() -->
+                <!-- ✅ Spacer removido (padding dinâmico resolve) -->
 
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
-        <!-- ✈️ Lottie Intro (fica por cima do Scroll quando visível) -->
+        <!-- ✈️ Lottie Intro -->
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottieAnimationView"
             android:layout_width="0dp"
@@ -157,7 +156,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 🧭 Indicadores -->
+    <!-- 🧭 Indicadores (HUD) -->
     <LinearLayout
         android:id="@+id/statusIndicatorsLayout"
         android:layout_width="0dp"
@@ -193,7 +192,7 @@
             android:progress="100"
             android:progressDrawable="@drawable/progress_green" />
 
-        <!-- Pontuação e Streak -->
+        <!-- Pontos + Streak -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -229,7 +228,7 @@
                 android:shadowRadius="3" />
         </LinearLayout>
 
-        <!-- ⭐ Progresso para fase secreta -->
+        <!-- ⭐ Progresso fase secreta -->
         <LinearLayout
             android:id="@+id/secretProgressLayout"
             android:layout_width="match_parent"
@@ -242,7 +241,7 @@
                 android:id="@+id/secretProgressText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Rumo à fase secreta: 0/10"
+                tools:text="Rumo à fase secreta: 0/10"
                 android:textColor="#CCFFFFFF"
                 android:textSize="13sp"
                 android:fontFamily="@font/roboto_mediu" />
@@ -259,7 +258,7 @@
                 android:progressBackgroundTint="#33FFFFFF" />
         </LinearLayout>
 
-        <!-- Moedas e Perguntas Restantes -->
+        <!-- Moedas + Restantes -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -293,7 +292,7 @@
 
     </LinearLayout>
 
-    <!-- ✅ Banner FIXO (não corta) -->
+    <!-- ✅ Banner fixo -->
     <FrameLayout
         android:id="@+id/adContainer"
         android:layout_width="0dp"
@@ -306,14 +305,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Onde o AdView entra (via código) -->
         <FrameLayout
             android:id="@+id/adInner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
     </FrameLayout>
 
-    <!-- 🎉 Efeito Konfetti (overlay) -->
+    <!-- 🎉 Konfetti -->
     <nl.dionsegijn.konfetti.xml.KonfettiView
         android:id="@+id/konfettiView"
         android:layout_width="0dp"
@@ -324,7 +322,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 🧩 Overlay AAA -->
+    <!-- 🧩 Overlay -->
     <FrameLayout
         android:id="@+id/overlayContainer"
         android:layout_width="0dp"
