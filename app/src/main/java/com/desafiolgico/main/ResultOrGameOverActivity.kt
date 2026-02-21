@@ -22,6 +22,8 @@ import com.desafiolgico.utils.VictoryFx
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.applySystemBarsPadding
 import nl.dionsegijn.konfetti.xml.KonfettiView
+import java.util.Locale
+import kotlin.math.roundToInt
 
 class ResultOrGameOverActivity : AppCompatActivity() {
 
@@ -34,12 +36,15 @@ class ResultOrGameOverActivity : AppCompatActivity() {
 
     private var mediaPlayer: MediaPlayer? = null
 
-    // ------------ Extras (compatível com versões antigas e novas) ------------
     companion object {
         const val SCREEN_TYPE_RESULT = "RESULT"
         const val SCREEN_TYPE_GAME_OVER = "GAME_OVER"
 
-        // NOVO (recomendado)
+        // NOVO (WEEKLY / modo)
+        const val EXTRA_MODE = "EXTRA_MODE"
+        const val EXTRA_CORRECT = "EXTRA_CORRECT"
+        const val EXTRA_WRONG = "EXTRA_WRONG"
+        const val EXTRA_TOTAL_TIME_MS = "TOTAL_TIME_MS"
         const val EXTRA_SCREEN_TYPE = "SCREEN_TYPE"
         const val EXTRA_SCORE_TOTAL = "SCORE_TOTAL"
         const val EXTRA_SCORE_LEVEL = "SCORE_LEVEL"
@@ -50,17 +55,11 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         const val EXTRA_TOTAL_QUESTIONS = "TOTAL_QUESTIONS"
         const val EXTRA_RETURN_TO_ACTIVE_GAME = "RETURN_TO_ACTIVE_GAME"
 
-        // LEGACY (tolerância)
+        // LEGACY
         const val EXTRA_SCORE = "SCORE"
         const val EXTRA_LEVEL = "level"
-
-        // compat com TestActivity
         const val EXTRA_RETURN_FROM_SECRET = "RETURN_FROM_SECRET"
     }
-
-    private val wrongAnswers: Int by lazy { intent.getIntExtra(EXTRA_WRONG_ANSWERS, 0) }
-    private val maxWrongAnswers: Int by lazy { intent.getIntExtra(EXTRA_MAX_WRONG_ANSWERS, 3) }
-    private val totalQuestions: Int by lazy { intent.getIntExtra(EXTRA_TOTAL_QUESTIONS, 48) }
 
     private val returnToActiveGame: Boolean by lazy {
         intent.getBooleanExtra(EXTRA_RETURN_TO_ACTIVE_GAME, false)
@@ -76,20 +75,11 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         applyEdgeToEdge(lightSystemBarIcons = false)
 
         binding = ActivityResultOrGameOverBinding.inflate(layoutInflater)
-
-        // aplique padding ANTES do setContentView (ok aplicar antes ou depois, mas assim fica limpo)
         binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
-
         setContentView(binding.root)
 
-
-
-
-    // includes com viewBinding
         resultBinding = binding.resultContainer
         gameOverBinding = binding.gameOverContainer
-
-        // konfetti no layout raiz (mantém compat)
         konfettiView = findViewById(R.id.konfettiView)
 
         levelManager = LevelManager(this)
@@ -107,82 +97,98 @@ class ResultOrGameOverActivity : AppCompatActivity() {
 
         val scoreTotal = intent.getIntExtra(EXTRA_SCORE_TOTAL, intent.getIntExtra(EXTRA_SCORE, 0))
         val scoreLevel = intent.getIntExtra(EXTRA_SCORE_LEVEL, intent.getIntExtra(EXTRA_SCORE, scoreTotal))
-        val averageTime = intent.getDoubleExtra(EXTRA_AVERAGE_TIME, 0.0)
+        val averageTimeSec = intent.getDoubleExtra(EXTRA_AVERAGE_TIME, 0.0)
 
         when (screenType) {
             SCREEN_TYPE_GAME_OVER -> showGameOverScreen(scoreLevel)
-            SCREEN_TYPE_RESULT -> showResultScreen(scoreLevel, averageTime)
-            else -> showResultScreen(scoreLevel, averageTime)
+            SCREEN_TYPE_RESULT -> showResultScreen(scoreLevel, averageTimeSec)
+            else -> showResultScreen(scoreLevel, averageTimeSec)
         }
     }
 
     // ========================= RESULT =========================
 
     @SuppressLint("SetTextI18n")
-    private fun showResultScreen(scoreLevel: Int, averageTime: Double) {
-        resultBinding.root.visibility = View.VISIBLE
-        gameOverBinding.root.visibility = View.GONE
-        konfettiView.visibility = View.GONE
+           private fun showResultScreen(scoreLevel: Int, averageTime: Double) {
+            resultBinding.root.visibility = View.VISIBLE
+            gameOverBinding.root.visibility = View.GONE
+            konfettiView.visibility = View.GONE
 
-        // não spammar toast aqui
-        levelManager.checkAndSaveLevelUnlocks(showToast = false)
+            // ✅ extras (principalmente pro WEEKLY)
+            val correctExtra = intent.getIntExtra(EXTRA_CORRECT, -1)
+            val wrongExtra = intent.getIntExtra(EXTRA_WRONG, intent.getIntExtra(EXTRA_WRONG_ANSWERS, 0))
+            val totalQ = intent.getIntExtra(EXTRA_TOTAL_QUESTIONS, 0).coerceAtLeast(0)
 
-        val performance = calculatePerformance()
-        val (baseFeedbackText, baseSoundResId, medalResId) = getFeedbackResources(performance)
+            val correct = if (correctExtra >= 0) correctExtra else (totalQ - wrongExtra).coerceAtLeast(0)
+            val wrong = wrongExtra.coerceAtLeast(0)
 
-        var finalFeedbackText = baseFeedbackText
-        var finalSoundResId = baseSoundResId
+            val totalTimeMs = intent.getLongExtra(EXTRA_TOTAL_TIME_MS, -1L)
 
-        val levelKey =
-            intent.getStringExtra(EXTRA_LEVEL_KEY)
-                ?: intent.getStringExtra(EXTRA_LEVEL)
-                ?: ""
-
-        if (returnToActiveGame) {
-            if (performance >= 75.0) {
-                finalFeedbackText =
-                    getString(R.string.fase_secreta_sucesso_prefix) + "\n" + baseFeedbackText
+            // ✅ tempo médio correto (se vier totalTimeMs)
+            val avgSec = if (totalTimeMs >= 0L && totalQ > 0) {
+                (totalTimeMs.toDouble() / totalQ.toDouble()) / 1000.0
             } else {
-                finalFeedbackText = getString(R.string.fase_secreta_falha_prefix)
-                finalSoundResId = R.raw.game_over_sound1
+                averageTime
             }
-            if (levelKey.isNotBlank()) {
-                // evita ficar travado em "última pergunta" ao voltar do secreto
-                GameDataManager.clearLastQuestionIndex(this, levelKey)
+
+            // ✅ performance correta
+            val performance = if (totalQ <= 0) 0.0 else (correct.toDouble() / totalQ.toDouble()) * 100.0
+
+            val (baseFeedbackText, baseSoundResId, medalResId) = getFeedbackResources(performance)
+
+            var finalFeedbackText = baseFeedbackText
+            var finalSoundResId = baseSoundResId
+
+            val levelKey =
+                intent.getStringExtra(EXTRA_LEVEL_KEY)
+                    ?: intent.getStringExtra(EXTRA_LEVEL)
+                    ?: ""
+
+            if (returnToActiveGame) {
+                if (performance >= 75.0) {
+                    finalFeedbackText =
+                        getString(R.string.fase_secreta_sucesso_prefix) + "\n" + baseFeedbackText
+                } else {
+                    finalFeedbackText = getString(R.string.fase_secreta_falha_prefix)
+                    finalSoundResId = R.raw.game_over_sound1
+                }
+                if (levelKey.isNotBlank()) {
+                    GameDataManager.clearLastQuestionIndex(this, levelKey)
+                }
             }
+
+            // ✅ PONTOS + TOTAL REAL
+            resultBinding.scoreTextView.text =
+                getString(R.string.result_points_format, scoreLevel.coerceAtLeast(0), totalQ)
+
+            resultBinding.feedbackTextView.text = finalFeedbackText
+
+            val avgText = formatAvgTime(avgSec)
+            val perfText = String.format(Locale("pt", "BR"), "%.1f%%", performance)
+            val totalTimeText = if (totalTimeMs >= 0L) formatMs(totalTimeMs) else "--"
+
+            resultBinding.statsTextView.text =
+                "📊 Desempenho: $perfText • ✅ Acertos: $correct/$totalQ • ❌ Erros: $wrong\n" +
+                    "⏱ Tempo médio: $avgText • ⏱ Tempo total: $totalTimeText • Desempate: menor tempo"
+
+            medalResId?.let { Glide.with(this).load(it).into(resultBinding.medalImageView) }
+
+            animateResultViews()
+            playFeedbackSound(finalSoundResId)
+
+            if (performance >= 75.0 && !returnToActiveGame) {
+                val isEnigma = levelKey == GameDataManager.SecretLevels.ENIGMA
+                val isExperiente = levelKey == GameDataManager.Levels.EXPERIENTE
+
+                if (isEnigma || isExperiente) {
+                    VictoryFx.play(this, konfettiView)
+                } else {
+                    showVictoryCelebration()
+                }
+            }
+
+            resultBinding.retryButton.setOnClickListener { navigateAfterResult() }
         }
-
-        // mantém seu formato existente: pontos da fase + total de perguntas
-        resultBinding.scoreTextView.text =
-            getString(R.string.result_points_format, scoreLevel.coerceAtLeast(0), totalQuestions)
-
-        resultBinding.feedbackTextView.text = finalFeedbackText
-
-        resultBinding.statsTextView.text = getString(
-            R.string.result_stats_format,
-            averageTime,
-            performance
-        )
-
-        medalResId?.let { Glide.with(this).load(it).into(resultBinding.medalImageView) }
-
-        animateResultViews()
-        playFeedbackSound(finalSoundResId)
-
-        if (performance >= 75.0 && !returnToActiveGame) {
-            val isEnigma = levelKey == GameDataManager.SecretLevels.ENIGMA
-            val isExperiente = levelKey == GameDataManager.Levels.EXPERIENTE
-
-            if (isEnigma || isExperiente) {
-                VictoryFx.play(this, konfettiView)
-            } else {
-                showVictoryCelebration()
-            }
-        }
-
-        resultBinding.retryButton.setOnClickListener { navigateAfterResult() }
-    }
-
     private fun animateResultViews() {
         val fadeDuration = 800L
         listOf(
@@ -243,12 +249,15 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         gameOverBinding.totalScoreTextView.text =
             getString(R.string.pontuacao_total_format, totalAcumulado)
 
+        val wrongAnswers = intent.getIntExtra(EXTRA_WRONG_ANSWERS, 0)
+        val maxWrongAnswers = intent.getIntExtra(EXTRA_MAX_WRONG_ANSWERS, 3)
+
         gameOverBinding.gameOverFeedbackTextView.text =
             getFeedbackMessage(safeScore, wrongAnswers, maxWrongAnswers)
 
         levelManager.checkAndSaveLevelUnlocks(showToast = false)
 
-        setupLottieAnimation(safeScore, wrongAnswers)
+        setupLottieAnimation(safeScore, wrongAnswers, maxWrongAnswers)
 
         val soundResId = when {
             wrongAnswers >= maxWrongAnswers && safeScore <= 10 -> R.raw.game_over_sound1
@@ -269,7 +278,7 @@ class ResultOrGameOverActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupLottieAnimation(score: Int, currentWrong: Int) {
+    private fun setupLottieAnimation(score: Int, currentWrong: Int, maxWrongAnswers: Int) {
         val animView = gameOverBinding.lottieAnimationView
         val animRes = when {
             currentWrong >= maxWrongAnswers && score <= 10 -> R.raw.ic_animationcerebro
@@ -288,9 +297,9 @@ class ResultOrGameOverActivity : AppCompatActivity() {
 
     // ========================= PERF / FEEDBACK =========================
 
-    private fun calculatePerformance(): Double {
-        val correct = (totalQuestions - wrongAnswers).coerceAtLeast(0)
-        return if (totalQuestions <= 0) 0.0 else (correct.toDouble() / totalQuestions * 100.0)
+    private fun calculatePerformance(correct: Int, total: Int): Double {
+        if (total <= 0) return 0.0
+        return (correct.toDouble() / total.toDouble()) * 100.0
     }
 
     private fun getFeedbackResources(performancePercent: Double): Triple<String, Int, Int?> {
@@ -316,6 +325,30 @@ class ResultOrGameOverActivity : AppCompatActivity() {
                 null
             )
         }
+    }
+
+    // ✅ formata tempo médio (segundos -> mm:ss)
+    private fun formatAvgTime(avgSec: Double): String {
+        if (avgSec <= 0.0) return "--"
+        val totalMs = (avgSec * 1000.0).roundToInt().coerceAtLeast(0)
+        val totalSeconds = totalMs / 1000
+        val min = totalSeconds / 60
+        val sec = totalSeconds % 60
+
+        return if (min > 0) {
+            String.format(Locale("pt", "BR"), "%02d:%02d", min, sec)
+        } else {
+            // sem minuto: mostra "SS,xxs"
+            val s = avgSec
+            String.format(Locale("pt", "BR"), "%.2fs", s)
+        }
+    }
+    private fun formatMs(ms: Long): String {
+        if (ms < 0) return "--"
+        val totalSec = ms / 1000
+        val min = totalSec / 60
+        val sec = totalSec % 60
+        return String.format(Locale("pt", "BR"), "%02d:%02d", min, sec)
     }
 
     // ========================= AUDIO =========================
@@ -351,7 +384,7 @@ class ResultOrGameOverActivity : AppCompatActivity() {
             if (!levelToReturnTo.isNullOrBlank()) {
                 startActivity(Intent(this, TestActivity::class.java).apply {
                     putExtra(EXTRA_LEVEL, levelToReturnTo)
-                    putExtra(EXTRA_RETURN_FROM_SECRET, true) // ✅ importante pro restore do TestActivity
+                    putExtra(EXTRA_RETURN_FROM_SECRET, true)
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 })
             } else {

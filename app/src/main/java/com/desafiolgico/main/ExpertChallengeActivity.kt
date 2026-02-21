@@ -11,7 +11,6 @@ import android.content.res.ColorStateList
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.text.method.ScrollingMovementMethod
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
@@ -24,7 +23,6 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.desafiolgico.R
-import com.desafiolgico.databinding.ActivityEnigmaPortalBinding
 import com.desafiolgico.databinding.ActivityExpertChallengeBinding
 import com.desafiolgico.model.Question
 import com.desafiolgico.model.QuestionManager
@@ -180,16 +178,15 @@ class ExpertChallengeActivity : AppCompatActivity() {
         }
     }
 
+
     private fun loadQuestions() {
         questions = questionManager.getQuestionsByLevel(GameDataManager.Levels.EXPERIENTE)
-        if (questions.isEmpty()) {
-            finish()
-            return
-        }
+        if (questions.isEmpty()) { finish(); return }
         currentIndex = 0
         wrongAnswersCount = 0
         showCurrentQuestion(first = true)
     }
+
 
     private fun showCurrentQuestion(first: Boolean = false) {
         if (currentIndex >= questions.size) {

@@ -160,6 +160,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".weekly.WeeklyChampionshipActivity"
+            android:exported="false" />
+
+
+        <activity
             android:name=".auth.WebViewActivity"
             android:exported="false" />
 

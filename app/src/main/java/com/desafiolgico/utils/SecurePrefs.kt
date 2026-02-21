@@ -22,6 +22,11 @@ object SecurePrefs {
     private const val SECURE_PREFS_NAME = "DesafioLogicoPrefs_secure"
     private const val FALLBACK_PREFS_NAME = "DesafioLogicoPrefs_fallback"
 
+    private fun inviteStateKey(weekId: String) = "weekly_invite_state_$weekId" // NEW|SAVED|DECLINED|JOINED
+    private fun inviteSnoozeKey(weekId: String) = "weekly_invite_snooze_$weekId" // Long millis
+    private fun inviteShownOnceKey(weekId: String) = "weekly_invite_shown_once_$weekId" // Boolean
+
+
     private val cached = AtomicReference<SharedPreferences?>(null)
 
     private fun buildSecure(appCtx: Context): SharedPreferences {

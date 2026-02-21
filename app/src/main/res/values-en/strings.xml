@@ -17,6 +17,7 @@
 
 
 
+    <string name="perguntas_restantes_format">Perguntas restantes: %1$d/%2$d</string>
 
         <!-- Records -->
         <string name="best_score_label">Best score</string>
@@ -149,7 +150,6 @@
     <string name="moedas_format">Coins: %d</string>
     <string name="pontos_format">Points: %d</string>
     <string name="sequencia_format">Streak: %d</string>
-    <string name="perguntas_restantes_format">Questions remaining: %d</string>
     <string name="tempo_m_dio_por_pergunta_placeholder" translatable="false">average_time_per_question</string>
     <string name="pontuacao_total_format">Total score: %d</string>
 

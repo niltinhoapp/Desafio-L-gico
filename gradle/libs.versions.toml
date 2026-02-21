@@ -27,7 +27,7 @@ konfettiXmlVersion = "2.0.4"
 coil = "2.7.0"
 
 # Google Play Services
-playServicesAuth = "21.1.0"
+playServicesAuth = "21.2.0"
 playServicesAds = "24.9.0"
 
 # Architecture

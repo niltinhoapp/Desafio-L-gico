@@ -329,9 +329,9 @@ class BoasVindasActivity : AppCompatActivity() {
                 txtNivelAtual?.text = "—"
                 txtStreak?.text = "—"
 
-                lblTotalScore?.text = "Pontuação (PRO)"
-                lblNivelAtual?.text = "Nível (PRO)"
-                lblStreak?.text = "Streak (PRO)"
+                lblTotalScore?.text = "Pontuação "
+                lblNivelAtual?.text = "Nível "
+                lblStreak?.text = "Streak "
 
                 statsCard?.alpha = 0.65f
             } else {

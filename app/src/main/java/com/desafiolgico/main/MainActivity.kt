@@ -21,16 +21,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.desafiolgico.BuildConfig
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityMainBinding
 import com.desafiolgico.settings.SettingsActivity
+import com.desafiolgico.utils.AuthGate
 import com.desafiolgico.utils.EnigmaPortalGate
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.PremiumThemes
+import com.desafiolgico.utils.RewardTestRepo
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.applySystemBarsPadding
+import com.desafiolgico.weekly.WeeklyChampionshipActivity
 import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
@@ -52,13 +56,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Edge-to-edge primeiro (barra clara/escura)
         applyEdgeToEdge(lightSystemBarIcons = false)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // ✅ aplica padding de status/nav bar no ROOT desta tela
         binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
@@ -99,6 +101,22 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(Intent(this, DailyChallengeActivity::class.java))
         }
+
+        binding.btnTestePremio.visibility =
+            if (BuildConfig.DEBUG && AuthGate.isAdmin()) View.VISIBLE else View.GONE
+
+        if (BuildConfig.DEBUG && AuthGate.isAdmin()) {
+            binding.btnTestePremio.setOnClickListener {
+                RewardTestRepo.grantTestCoins(10) { ok ->
+                    if (ok) {
+                        RewardTestRepo.readCoins { coins ->
+                            binding.txtCoins.text = "Moedas: $coins"
+                        }
+                    }
+                }
+            }
+        }
+
         binding.dailyChallengeCard.setOnClickListener(dailyClick)
         binding.btnDailyChallenge.setOnClickListener(dailyClick)
 
@@ -127,8 +145,17 @@ class MainActivity : AppCompatActivity() {
         updateDailyUI()
         updateRecordsButtonText()
 
+        setupWeeklyButton()
+
         setupIntro()
         initBackgroundMusic()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        RewardTestRepo.readCoins { coins ->
+            binding.txtCoins.text = "Moedas: $coins"
+        }
     }
 
     override fun onResume() {
@@ -157,6 +184,8 @@ class MainActivity : AppCompatActivity() {
         if (EnigmaPortalGate.consumeUnlockNotificationIfNeeded(this, score)) {
             Toast.makeText(this, "🌀 Portal desbloqueado! Vá no Mapa para entrar.", Toast.LENGTH_LONG).show()
         }
+
+        setupWeeklyButton()
     }
 
     override fun onPause() {
@@ -183,6 +212,36 @@ class MainActivity : AppCompatActivity() {
                 root = findViewById(android.R.id.content),
                 cardViews = listOf(binding.menuCard, binding.dailyChallengeCard)
             )
+        }
+    }
+
+    private fun setupWeeklyButton() {
+        val score = GameDataManager.getOverallTotalScore(this).coerceAtLeast(0)
+
+        // ✅ critério único aqui
+        val unlockScore = 500
+        val unlocked = score >= unlockScore
+
+        binding.btnWeekly.visibility = View.VISIBLE
+        binding.btnWeekly.isEnabled = unlocked
+        binding.btnWeekly.alpha = if (unlocked) 1f else 0.55f
+
+        if (unlocked) {
+            binding.btnWeekly.setOnClickListener {
+                playClickSound()
+                animateTap(it)
+                startActivity(Intent(this, WeeklyChampionshipActivity::class.java))
+            }
+        } else {
+            binding.btnWeekly.setOnClickListener {
+                playClickSound()
+                animateTap(it)
+                Toast.makeText(
+                    this,
+                    "🔒 Libera com $unlockScore pontos (atual: $score)",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
@@ -221,7 +280,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun notifyNewUnlocksIfAny() {
         val p = unlockNotifPrefs()
-        val uid = GameDataManager.currentUserId?.takeIf { it.isNotBlank() } ?: "anon"
+        val uid = GameDataManager.currentUserId.takeIf { it.isNotBlank() } ?: "anon"
         val snapshotKey = "last_unlocked_levels_snapshot_$uid"
 
         val now = GameDataManager.getUnlockedLevels(this).toSet()
@@ -284,6 +343,11 @@ class MainActivity : AppCompatActivity() {
     // Click handlers
     // =============================================================================================
 
+    /**
+     * ✅ AQUI ESTÁ A CORREÇÃO PRINCIPAL:
+     * - sempre manda MODE + LEVEL padronizados por TestNav
+     * - remove "level" solto
+     */
     private fun handleLevelClick(btn: MaterialButton, level: String) {
         playClickSound()
         animateTap(btn)
@@ -294,7 +358,12 @@ class MainActivity : AppCompatActivity() {
             TestActivity::class.java
         }
 
-        startForResult.launch(Intent(this, target).apply { putExtra("level", level) })
+        val i = Intent(this, target).apply {
+            putExtra(TestNav.EXTRA_MODE, "NORMAL")
+            putExtra(TestNav.EXTRA_LEVEL, level)
+        }
+
+        startForResult.launch(i)
     }
 
     private fun onLevelLocked(level: String) {

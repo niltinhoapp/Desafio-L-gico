@@ -11,6 +11,8 @@
 
     <string name="daily_done_label">Concluído hoje ✅</string>
     <string name="daily_available_label">Disponível hoje 🎯</string>
+    <string name="perguntas_restantes_format">Perguntas restantes: %1$d/%2$d</string>
+
 
 
     <string name="continuar">Continuar</string>
@@ -63,7 +65,6 @@
     <string name="moedas_format">Moedas: %d</string>
     <string name="pontos_format">Pontos: %d</string>
     <string name="sequencia_format">Sequência: %d</string>
-    <string name="perguntas_restantes_format">Perguntas restantes: %d</string>
     <string name="tempo_m_dio_por_pergunta_placeholder" translatable="false">tempo_m_dio_por_pergunta</string>
     <string name="pontuacao_total_format">Pontuação total: %d</string>
 

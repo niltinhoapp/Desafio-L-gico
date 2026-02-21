@@ -25,6 +25,7 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.lifecycleScope
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityLoginBinding
+import com.desafiolgico.main.MainActivity
 import com.desafiolgico.utils.AdMobInitializer
 import com.desafiolgico.utils.CrashlyticsHelper
 import com.desafiolgico.utils.GameDataManager
@@ -163,7 +164,18 @@ class LoginActivity : AppCompatActivity() {
                 stopTimeoutUX()
                 setLoading(false)
                 goToNextAfterLogin()
+                logUid()
             }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            Log.d("AUTH", "already logged uid=${user.uid}")
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
         }
     }
 
@@ -331,6 +343,10 @@ class LoginActivity : AppCompatActivity() {
             setLoading(false)
             goToNextAfterLogin()
         }
+    }
+    private fun logUid() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        Log.d("AUTH", "uid=$uid")
     }
 
     // =============================================================================================

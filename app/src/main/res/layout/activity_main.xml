@@ -99,6 +99,37 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <TextView
+        android:id="@+id/txtCoins"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Moedas: 0"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:padding="8dp"
+        android:alpha="0.9"
+        app:layout_constraintTop_toBottomOf="@id/btnRecordsMain"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnTestePremio"
+        android:layout_width="0dp"
+        android:layout_height="46dp"
+        android:text="🧪 Testar Premiação (+10)"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        app:cornerRadius="18dp"
+        app:backgroundTint="#1E233A"
+        app:strokeWidth="1dp"
+        app:strokeColor="#33FFFFFF"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/txtCoins"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+
     <!-- MENU (Scroll) -->
     <ScrollView
         android:id="@+id/menuCard"
@@ -109,7 +140,7 @@
         android:clipToPadding="false"
         android:layout_marginTop="@dimen/spacing_medium"
         android:layout_marginBottom="@dimen/spacing_small"
-        app:layout_constraintTop_toBottomOf="@id/btnRecordsMain"
+        app:layout_constraintTop_toBottomOf="@id/btnTestePremio"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/dailyChallengeCard">
@@ -139,6 +170,11 @@
                 android:id="@+id/expertButton"
                 style="@style/LevelButton"
                 android:text="@string/level_expert" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnWeekly"
+                style="@style/LevelButton"
+                android:text="🏆 Campeonato Semanal" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/mapButton"

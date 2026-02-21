@@ -34,8 +34,8 @@ android {
         applicationId = "com.desafiolgico"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "1.1.7"
+        versionCode = 18
+        versionName = "1.1.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -142,8 +142,8 @@ dependencies {
 
     // ✅ Google Login + Credential Manager
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-    implementation("androidx.credentials:credentials:1.5.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
 
     // ✅ Google Play Services
     implementation(libs.play.services.auth)
@@ -171,6 +171,9 @@ dependencies {
 
     // Room
     implementation(libs.androidx.room.runtime)
+
+
+    implementation ("com.google.firebase:firebase-firestore")
     ksp(libs.androidx.room.compiler)
 
     // Navegação e Browser
