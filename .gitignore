@@ -1,50 +1,9 @@
-# Android Studio / IntelliJ
-.idea/
-gradle/.idea/
-*.iml
+﻿# Crash logs / JVM
+hs_err_pid*.log
+replay_pid*.log
 
-# Gradle
-.gradle/
-**/build/
+# Tools (se for só coisas locais)
+tools/
 
-# Local (não versionar)
-local.properties
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Android/NDK
-/captures
-.externalNativeBuild/
-.cxx/
-
-# Keystore / chaves (NUNCA versionar)
-keystore/
-*.jks
-*.keystore
-
-# Pacotes de build
-*.aab
-*.apk
-
-# Saídas de release locais (opcional, mas bom)
-app/release/
-
-
-
-# Signing
-keystore.properties
-*.jks
-*.keystore
-
-
-#audit
-reports/
-audit.ps1
-
-
-#audit
-reports/
-audit.ps1
-
+# Firebase local cache
+.firebase/
