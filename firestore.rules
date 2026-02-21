@@ -1,0 +1,70 @@
+rules_version = "2";
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+
+    // =========================================================
+    // USERS (coleção raiz) - perfil / prêmio / dados do jogador
+    // =========================================================
+    match /users/{userId} {
+      allow read, create, update: if signedIn()
+        && userId == uid()
+        && (!('uid' in request.resource.data) || request.resource.data.uid == uid());
+      allow delete: if false;
+    }
+
+    // =========================================================
+    // WEEKLY CONFIG (somente leitura no app)
+    // weekly_events/current: weekId, attemptLimit, questionsPerRun, minCorrect, endAt...
+    // =========================================================
+    match /weekly_events/{docId} {
+      allow read: if true;
+      allow write: if false; // só admin/console
+    }
+
+    // =========================================================
+    // POOL DE QUESTÕES (somente leitura no app)
+    // =========================================================
+    match /weekly_question_pool/{qid} {
+      allow read: if true;
+      allow write: if false; // só admin/console
+    }
+
+    // =========================================================
+    // WEEKLY RUNS (schema do app)
+    // weekly_runs/{weekId}/registrations/{uid}   (compat)
+    // weekly_runs/{weekId}/users/{uid}           (controle do user na semana)
+    // weekly_runs/{weekId}/leaderboard/{uid}     (ranking)
+    // =========================================================
+    match /weekly_runs/{weekId} {
+      allow read: if true;
+      allow write: if false;
+
+      // ✅ compat: se o app ainda usa registrations
+      match /registrations/{userId} {
+        allow read, create: if signedIn() && userId == uid();
+        allow update, delete: if false;
+      }
+
+      // Doc do usuário na semana
+      match /users/{userId} {
+        allow read: if signedIn() && userId == uid();
+        allow create, update: if signedIn()
+          && userId == uid()
+          && (!('uid' in request.resource.data) || request.resource.data.uid == uid());
+        allow delete: if false;
+      }
+
+      // Leaderboard (qualquer um lê; só o próprio usuário escreve o doc dele)
+      match /leaderboard/{userId} {
+        allow read: if true;
+        allow create, update: if signedIn()
+          && userId == uid()
+          && (!('uid' in request.resource.data) || request.resource.data.uid == uid());
+        allow delete: if false;
+      }
+    }
+  }
+}
