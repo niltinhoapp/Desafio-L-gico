@@ -68,6 +68,8 @@
     <string name="tempo_m_dio_por_pergunta_placeholder" translatable="false">tempo_m_dio_por_pergunta</string>
     <string name="pontuacao_total_format">Pontuação total: %d</string>
 
+    <string name="perguntas_restantes_format_2">Perguntas restantes: %1$d/%2$d</string>
+    <string name="perguntas_restantes_format_1">Perguntas restantes: %1$d</string>
     <!-- Avatar / Loja -->
     <string name="select_avatar_first">Selecione um avatar primeiro.</string>
 

@@ -153,6 +153,8 @@
     <string name="tempo_m_dio_por_pergunta_placeholder" translatable="false">average_time_per_question</string>
     <string name="pontuacao_total_format">Total score: %d</string>
 
+    <string name="perguntas_restantes_format_2">Perguntas restantes: %1$d/%2$d</string>
+    <string name="perguntas_restantes_format_1">Perguntas restantes: %1$d</string>
     <string name="level_beginner">Beginner</string>
     <string name="level_intermediate">Intermediate</string>
     <string name="level_advanced">Advanced</string>

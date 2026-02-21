@@ -10,7 +10,7 @@ object PremiumCatalog {
     )
 
     val frames = listOf(
-        PremiumItem("frame_none", PremiumType.FRAME, "Sem moldura"),
+        PremiumItem("frame_none", PremiumType.FRAME, "Sem moldura", priceCoins = 0),
         PremiumItem("frame_bronze", PremiumType.FRAME, "Moldura Bronze", priceCoins = 300),
         PremiumItem("frame_silver", PremiumType.FRAME, "Moldura Prata", priceCoins = 600),
         PremiumItem("frame_gold", PremiumType.FRAME, "Moldura Ouro", priceCoins = 900),
@@ -19,7 +19,7 @@ object PremiumCatalog {
     )
 
     val titles = listOf(
-        PremiumItem("title_none", PremiumType.TITLE, "Sem título"),
+        PremiumItem("title_none", PremiumType.TITLE, "Sem título", priceCoins = 0),
         PremiumItem("title_aprendiz", PremiumType.TITLE, "Aprendiz", priceCoins = 150),
         PremiumItem("title_estrategista", PremiumType.TITLE, "Estrategista", priceCoins = 350),
         PremiumItem("title_mestre", PremiumType.TITLE, "Mestre do Desafio", minHighestStreak = 30),
@@ -28,20 +28,26 @@ object PremiumCatalog {
     )
 
     val pets = listOf(
-        PremiumItem("pet_none", PremiumType.PET, "Sem pet"),
+        PremiumItem("pet_none", PremiumType.PET, "Sem pet", priceCoins = 0),
         PremiumItem("pet_owl", PremiumType.PET, "Corujinha Sábia", priceCoins = 700),
         PremiumItem("pet_bot", PremiumType.PET, "Robô Lógico", priceCoins = 900),
         PremiumItem("pet_dragon", PremiumType.PET, "Mini Dragão", minHighestStreak = 50)
     )
 
     val vfx = listOf(
-        PremiumItem("vfx_basic", PremiumType.VFX, "Vitória Básica"),
+        PremiumItem("vfx_basic", PremiumType.VFX, "Vitória Básica", priceCoins = 0),
         PremiumItem("vfx_gold", PremiumType.VFX, "Konfetti Ouro", priceCoins = 400),
         PremiumItem("vfx_neon", PremiumType.VFX, "Neon Burst", priceCoins = 600),
         PremiumItem("vfx_fire", PremiumType.VFX, "Fogo Lendário", minHighestStreak = 70)
     )
 
-    fun all(): List<PremiumItem> = themes + frames + titles + pets + vfx
+    // ✅ lista única (não recria a cada all())
+    private val ALL: List<PremiumItem> by lazy {
+        themes + frames + titles + pets + vfx
+    }
 
-    fun find(id: String): PremiumItem? = all().firstOrNull { it.id == id }
+    fun all(): List<PremiumItem> = ALL
+
+    fun find(id: String): PremiumItem? =
+        ALL.firstOrNull { it.id == id }
 }

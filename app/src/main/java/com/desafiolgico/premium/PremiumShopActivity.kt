@@ -1,42 +1,26 @@
+// PremiumShopActivity.kt
 package com.desafiolgico.premium
 
 import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
-import android.util.TypedValue
-import android.view.Gravity
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.desafiolgico.R
+import com.desafiolgico.databinding.ActivityPremiumShopBinding
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.PremiumCatalog
 import com.desafiolgico.utils.PremiumManager
+import com.desafiolgico.utils.PremiumThemes
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.applySystemBarsPadding
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 
 class PremiumShopActivity : AppCompatActivity() {
 
-    private lateinit var coinsText: TextView
-    private lateinit var recycler: RecyclerView
+    private lateinit var binding: ActivityPremiumShopBinding
     private lateinit var adapter: PremiumShopAdapter
-    private lateinit var headerCard: MaterialCardView
 
-
-    // Paleta (mantive seu estilo)
-    private val cBgMid = Color.parseColor("#0F172A")
-    private val cGlass = Color.parseColor("#14FFFFFF")
-    private val cStrokeSoft = Color.parseColor("#24FFFFFF")
-    private val cWhite = Color.WHITE
-    private val cGold = Color.parseColor("#FBBF24")
-
+    // 🔤 garante idioma salvo nessa tela
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
     }
@@ -44,187 +28,69 @@ class PremiumShopActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         applyEdgeToEdge(lightSystemBarIcons = false)
 
-        GameDataManager.init(applicationContext)
+        binding = ActivityPremiumShopBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val root = buildContentView()
-        setContentView(root)
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
-        headerCard.applySystemBarsPadding(applyTop = true, applyBottom = false)
-        recycler.applySystemBarsPadding(applyTop = false, applyBottom = true)
+        // ✅ init do GameDataManager (se você usa isso no app)
+        GameDataManager.init(this)
+
+        // ✅ aplica tema premium (se existir no seu projeto)
+        runCatching {
+            PremiumThemes.apply(
+                activity = this,
+                root = binding.root,
+                cardViews = listOf(binding.topBar, binding.coinCard)
+            )
+        }
 
         adapter = PremiumShopAdapter(
             onPurchase = { item ->
-                runCatching {
-                    val ok = PremiumManager.purchase(this, item)
-                    if (ok) PremiumManager.applySelected(this, item)
-                }
-                refreshUi()
+                PremiumManager.purchase(this, item)
+                refresh()
             },
             onApply = { item ->
-                runCatching { PremiumManager.applySelected(this, item) }
-                refreshUi()
+                PremiumManager.applySelected(this, item)
+                refresh()
             },
             onUpgradePet = { petId, cost ->
-                runCatching {
-                    val ok = PremiumManager.upgradePet(this, petId, cost)
-                    if (ok) refreshUi()
-                }
+                PremiumManager.upgradePet(this, petId, cost)
+                refresh()
             }
         )
 
-        recycler.layoutManager = LinearLayoutManager(this)
-        recycler.adapter = adapter
-        recycler.itemAnimator = null // menos “flicker” em updates rápidos
-        recycler.setHasFixedSize(false)
+        binding.recyclerPremium.layoutManager = LinearLayoutManager(this)
+        binding.recyclerPremium.adapter = adapter
+        binding.recyclerPremium.itemAnimator = null // ✅ evita “piscadas” quando atualiza
+
+        binding.btnBack.setOnClickListener { finish() }
+
+        refresh()
     }
 
     override fun onResume() {
         super.onResume()
-        refreshUi()
+        // ✅ se o usuário ganha moedas em outra tela e volta, atualiza
+        refresh()
     }
 
-    private fun refreshUi() {
-        // auto-unlock por conquista (não quebra a loja se algo falhar)
-        runCatching {
-            PremiumCatalog.all().forEach {
-                PremiumManager.unlockByAchievementIfPossible(applicationContext, it)
-            }
-        }
+    private fun refresh() {
+        val coins = CoinManager.getCoins(this)
+        binding.txtCoins.text = coins.toString()
 
-        val coins = runCatching { CoinManager.getCoins(this) }.getOrElse { 0 }
-        coinsText.text = "💰 $coins"
-
-        adapter.submitData(
-            context = this,
-            coins = coins,
-            sections = listOf(
-                "🎨 Temas" to PremiumCatalog.themes,
-                "🖼️ Molduras" to PremiumCatalog.frames,
-                "🏷️ Títulos" to PremiumCatalog.titles,
-                "🐾 Pets" to PremiumCatalog.pets,
-                "✨ Efeitos (VFX)" to PremiumCatalog.vfx
-            )
+        val sections = listOf(
+            getStringSafe("Temas") to PremiumCatalog.themes,
+            getStringSafe("Molduras") to PremiumCatalog.frames,
+            getStringSafe("Títulos") to PremiumCatalog.titles,
+            getStringSafe("Pets") to PremiumCatalog.pets,
+            getStringSafe("Efeitos") to PremiumCatalog.vfx
         )
+
+        adapter.submitData(this, coins, sections)
     }
 
-    private fun buildContentView(): View {
-        // Root externo ocupa a tela toda
-        val root = android.widget.FrameLayout(this).apply {
-            setBackgroundColor(cBgMid)
-        }
-
-        // Container central com largura máxima (tablet-friendly)
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-
-            // largura = min(tela, 720dp) e centraliza
-            val maxW = dp(720)
-            val screenW = resources.displayMetrics.widthPixels
-            val w = minOf(screenW, maxW)
-
-            layoutParams = android.widget.FrameLayout.LayoutParams(
-                w,
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
-            ).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-        }
-
-        // Header (glass)
-        headerCard = MaterialCardView(this).apply {
-            radius = dp(18).toFloat()
-            cardElevation = dp(2).toFloat()
-            useCompatPadding = true
-            setCardBackgroundColor(cGlass)
-            strokeWidth = dp(1)
-            strokeColor = cStrokeSoft
-            setContentPadding(dp(14), dp(12), dp(14), dp(12))
-        }
-
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val backBtn = MaterialButton(
-            this,
-            null,
-            com.google.android.material.R.attr.materialButtonOutlinedStyle
-        ).apply {
-            text = "←"
-            minWidth = 0
-            minimumWidth = 0
-            minimumHeight = dp(36)
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            setTextColor(cWhite)
-            strokeWidth = dp(1)
-            backgroundTintList = null
-            setOnClickListener { finish() }
-        }
-
-        val title = TextView(this).apply {
-            text = "Loja Premium"
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(cWhite)
-            setPadding(dp(10), 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        }
-
-        coinsText = TextView(this).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f)
-            setTextColor(cGold)
-            gravity = Gravity.END
-            text = "💰 0"
-        }
-
-        header.addView(backBtn)
-        header.addView(title)
-        header.addView(coinsText)
-        headerCard.addView(header)
-
-        container.addView(
-            headerCard,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                leftMargin = dp(14)
-                rightMargin = dp(14)
-                topMargin = dp(12)
-            }
-        )
-
-        recycler = RecyclerView(this).apply {
-            overScrollMode = View.OVER_SCROLL_NEVER
-            setPadding(dp(14), dp(10), dp(14), dp(18))
-            clipToPadding = false
-        }
-
-        container.addView(
-            recycler,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0
-            ).apply { weight = 1f }
-        )
-
-        // adiciona container no root
-        root.addView(container)
-
-        return root
-    }
-
-    private fun dp(value: Int): Int =
-        TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            value.toFloat(),
-            resources.displayMetrics
-        ).toInt()
+    private fun getStringSafe(fallback: String): String = fallback
 }

@@ -12,12 +12,22 @@ import com.desafiolgico.R
 
 object PremiumFrames {
 
-    // Ajuste fino aqui:
     private const val STROKE_DP = 6
     private const val PADDING_EXTRA_DP = 2
 
     fun applyFrame(context: Context, avatarView: ImageView) {
         val id = GameDataManager.getSelectedFrame(context)
+
+        // Se frame não estiver desbloqueado, ignora (evita bug de “aplicado sem compra”)
+        if (id.isNotBlank() && id != "frame_none") {
+            val fakeItem = PremiumItem(id, PremiumType.FRAME, name = id) // só pra checar unlock
+            if (!PremiumManager.isUnlocked(context, fakeItem)) {
+                avatarView.background = null
+                avatarView.setPadding(0, 0, 0, 0)
+                avatarView.clipToOutline = false
+                return
+            }
+        }
 
         val strokePx = context.dp(STROKE_DP)
         val padPx = strokePx + context.dp(PADDING_EXTRA_DP)
@@ -33,17 +43,18 @@ object PremiumFrames {
 
         avatarView.background = drawable
 
-        // ✅ Se tiver moldura: dá espaço pra aparecer. Se não: zera.
         if (drawable != null) {
             avatarView.setPadding(padPx, padPx, padPx, padPx)
         } else {
             avatarView.setPadding(0, 0, 0, 0)
         }
 
-        // ✅ Recorte pelo background oval (ajuda a ficar redondinho)
+        // ✅ recorte redondo estável
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             avatarView.outlineProvider = ViewOutlineProvider.BACKGROUND
             avatarView.clipToOutline = drawable != null
+        } else {
+            avatarView.clipToOutline = false
         }
     }
 
@@ -56,11 +67,6 @@ object PremiumFrames {
         }
     }
 
-    /**
-     * ✅ Neon com gradiente de verdade usando LayerDrawable:
-     * - Camada 0: oval gradiente preenchido
-     * - Camada 1: oval transparente insetado (abre o "buraco" e vira anel)
-     */
     private fun ringNeon(context: Context, strokePx: Int): Drawable {
         val c1 = ContextCompat.getColor(context, R.color.frame_neon_1)
         val c2 = ContextCompat.getColor(context, R.color.frame_neon_2)
@@ -68,17 +74,14 @@ object PremiumFrames {
         val outer = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(c1, c2)
-        ).apply {
-            shape = GradientDrawable.OVAL
-        }
+        ).apply { shape = GradientDrawable.OVAL }
 
         val inner = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(0x00000000) // transparente
+            setColor(0x00000000)
         }
 
         return LayerDrawable(arrayOf(outer, inner)).apply {
-            // inset da camada de dentro = espessura do anel
             setLayerInset(1, strokePx, strokePx, strokePx, strokePx)
         }
     }

@@ -23,7 +23,6 @@ class AvatarSelectionActivity : AppCompatActivity() {
     private lateinit var avatarAdapter: AvatarAdapter
     private var selectedAvatarResId: Int? = null
 
-    // 🔤 Garante que esta tela use o idioma salvo
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrap(newBase))
     }
@@ -31,27 +30,23 @@ class AvatarSelectionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Edge-to-edge (tela escura -> ícones claros)
         applyEdgeToEdge(lightSystemBarIcons = false)
 
         binding = ActivityAvatarSelectionBinding.inflate(layoutInflater)
-
-       binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
-
         setContentView(binding.root)
+
+        binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         setupRecyclerView()
         setupConfirmButton()
         updateCoinBalance()
-        loadCurrentPreview()          // ✅ Foto > Avatar
-        setupUseEmailPhotoButton()    // ✅ limpa avatar e volta pra foto
+        loadCurrentPreview()
+        setupUseEmailPhotoButton()
     }
 
     /**
      * Botão: usar foto do Google (se existir).
-     * Como a regra é Foto > Avatar, aqui a ideia é:
-     * - limpar o avatar do perfil
-     * - mostrar preview da foto
+     * ✅ Aqui o “real” é: preferAvatar = false (foto vence).
      */
     private fun setupUseEmailPhotoButton() {
         binding.btnUseEmailPhoto.setOnClickListener {
@@ -62,7 +57,11 @@ class AvatarSelectionActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // ✅ limpa avatar do perfil (pra não ter “override” visual)
+            // ✅ regra real: foto vence
+            GameDataManager.setPreferAvatar(this, false)
+            GameDataManager.clearUserAvatar(this)
+
+            // Atualiza perfil local
             UserManager.salvarDadosUsuario(
                 context = this,
                 nome = user.name,
@@ -71,9 +70,8 @@ class AvatarSelectionActivity : AppCompatActivity() {
                 avatarId = null
             )
 
-            // Mantém GameDataManager em sincronia (ele só salva avatar se existir)
+            // Sincroniza com o GameDataManager
             GameDataManager.saveUserData(this, user.name, user.photoUrl, null)
-            GameDataManager.clearUserAvatar(this) // opcional, mas deixa tudo coerente
 
             // preview = foto
             Glide.with(this)
@@ -87,9 +85,6 @@ class AvatarSelectionActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Exibe a lista de avatares disponíveis em grade.
-     */
     private fun setupRecyclerView() {
         val recyclerView = binding.recyclerAvatars
         recyclerView.layoutManager = GridLayoutManager(this, 3)
@@ -115,13 +110,11 @@ class AvatarSelectionActivity : AppCompatActivity() {
     }
 
     /**
-     * Botão "Confirmar Avatar":
+     * Confirmar Avatar:
      * - compra se precisar
-     * - salva avatar no perfil (UserManager)
+     * - ✅ preferAvatar = true (avatar vence mesmo se tiver foto)
+     * - salva no UserManager
      * - sincroniza com GameDataManager
-     *
-     * ⚠️ OBS: Mesmo salvando avatar, a regra geral do app é:
-     * Foto > Avatar. Então se o usuário tem foto, ela continuará sendo usada no app.
      */
     private fun setupConfirmButton() {
         binding.btnConfirm.setOnClickListener {
@@ -135,7 +128,6 @@ class AvatarSelectionActivity : AppCompatActivity() {
             val coins = CoinManager.getCoins(this)
             val alreadyUnlocked = CoinManager.isAvatarUnlocked(this, avatarId)
 
-            // Se ainda não está desbloqueado, tenta comprar
             if (!alreadyUnlocked) {
                 if (coins < cost) {
                     Toast.makeText(
@@ -159,8 +151,11 @@ class AvatarSelectionActivity : AppCompatActivity() {
                 Toast.makeText(this, getString(R.string.avatar_unlocked_coins, cost), Toast.LENGTH_SHORT).show()
             }
 
-            // Salva avatar no perfil
             val user = UserManager.carregarDadosUsuario(this)
+
+            // ✅ regra real: avatar vence
+            GameDataManager.setPreferAvatar(this, true)
+
             UserManager.salvarDadosUsuario(
                 context = this,
                 nome = user.name,
@@ -169,7 +164,6 @@ class AvatarSelectionActivity : AppCompatActivity() {
                 avatarId = avatarId
             )
 
-            // Sincronia com GameDataManager (ele salva avatarId se não for nulo)
             GameDataManager.saveUserData(this, user.name, user.photoUrl, avatarId)
 
             updateCoinBalance()
@@ -204,27 +198,33 @@ class AvatarSelectionActivity : AppCompatActivity() {
     }
 
     /**
-     * Preview seguindo a regra do app:
-     * ✅ Foto > Avatar > fallback avatar1
+     * Preview seguindo regra REAL:
+     * - se preferAvatar = true e avatar válido -> avatar
+     * - senão se tem foto -> foto
+     * - senão fallback
      */
     private fun loadCurrentPreview() {
         val user = UserManager.carregarDadosUsuario(this)
+
+        val preferAvatar = GameDataManager.isPreferAvatar(this)
 
         val hasPhoto = !user.photoUrl.isNullOrBlank()
         val hasAvatar = user.avatarId > 0
         val avatarUnlocked = hasAvatar && CoinManager.isAvatarUnlocked(this, user.avatarId)
 
         when {
+            preferAvatar && avatarUnlocked -> {
+                Glide.with(this).load(user.avatarId).circleCrop().into(binding.previewImage)
+                selectedAvatarResId = user.avatarId
+            }
             hasPhoto -> {
                 Glide.with(this).load(user.photoUrl).circleCrop().into(binding.previewImage)
                 selectedAvatarResId = null
             }
-
             avatarUnlocked -> {
                 Glide.with(this).load(user.avatarId).circleCrop().into(binding.previewImage)
                 selectedAvatarResId = user.avatarId
             }
-
             else -> {
                 Glide.with(this).load(R.drawable.avatar1).circleCrop().into(binding.previewImage)
                 selectedAvatarResId = null

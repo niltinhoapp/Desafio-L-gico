@@ -7,11 +7,11 @@ object PremiumManager {
 
     private const val TAG = "PremiumManager"
 
-    private const val DEFAULT_THEME = "theme_default"
-    private const val DEFAULT_FRAME = "frame_none"
-    private const val DEFAULT_TITLE = "title_none"
-    private const val DEFAULT_PET = "pet_none"
-    private const val DEFAULT_VFX = "vfx_basic"
+    const val DEFAULT_THEME = "theme_default"
+    const val DEFAULT_FRAME = "frame_none"
+    const val DEFAULT_TITLE = "title_none"
+    const val DEFAULT_PET = "pet_none"
+    const val DEFAULT_VFX = "vfx_basic"
 
     fun isUnlocked(ctx: Context, item: PremiumItem): Boolean {
         val id = item.id
@@ -25,27 +25,27 @@ object PremiumManager {
     }
 
     /**
-     * Tenta destravar via conquista (sem gastar moedas).
-     * Retorna true se estiver (ou ficar) desbloqueado.
+     * Conquista (sem moedas). Itens pagos NÃO destravam aqui.
      */
     fun unlockByAchievementIfPossible(ctx: Context, item: PremiumItem): Boolean {
         if (isUnlocked(ctx, item)) return true
-
-        // ✅ FIX CRÍTICO: nunca destrava item pago via conquista (a não ser que você queira híbrido)
-        if (item.isPaid()) return false
+        if (item.isPaid()) return false // ✅ regra: pago só compra
 
         return try {
             if (!item.canUnlockByAchievement(ctx)) return false
             unlock(ctx, item)
             true
         } catch (e: Exception) {
-            Log.w(TAG, "unlockByAchievementIfPossible failed: ${item.type}/${item.id}", e)
+            Log.w(TAG, "unlockByAchievement failed: ${item.type}/${item.id}", e)
             false
         }
     }
 
+    /**
+     * Compra com moedas (apenas se priceCoins > 0)
+     */
     fun purchase(ctx: Context, item: PremiumItem): Boolean {
-        val price = item.priceCoins
+        val price = item.priceCoins.coerceAtLeast(0)
         if (price <= 0) return false
         if (isUnlocked(ctx, item)) return true
 
@@ -61,11 +61,14 @@ object PremiumManager {
         }
     }
 
+    /**
+     * Aplica (seleciona). Se for conquista e estiver apto, destrava e aplica.
+     */
     fun applySelected(ctx: Context, item: PremiumItem) {
-        val unlocked = isUnlocked(ctx, item) || unlockByAchievementIfPossible(ctx, item)
-        if (!unlocked) return
-
         try {
+            val unlocked = isUnlocked(ctx, item) || unlockByAchievementIfPossible(ctx, item)
+            if (!unlocked) return
+
             when (item.type) {
                 PremiumType.THEME -> GameDataManager.setSelectedTheme(ctx, item.id)
                 PremiumType.FRAME -> GameDataManager.setSelectedFrame(ctx, item.id)
@@ -79,13 +82,11 @@ object PremiumManager {
     }
 
     fun upgradePet(ctx: Context, petId: String, cost: Int): Boolean {
-        if (petId.isBlank()) return false
-        if (petId == DEFAULT_PET) return false
+        if (petId.isBlank() || petId == DEFAULT_PET) return false
         if (cost <= 0) return false
 
         return try {
-            val unlocked = GameDataManager.isPetUnlocked(ctx, petId)
-            if (!unlocked) return false
+            if (!GameDataManager.isPetUnlocked(ctx, petId)) return false
 
             val lvl = GameDataManager.getPetLevel(ctx, petId).coerceIn(1, 3)
             if (lvl >= 3) return false
@@ -108,6 +109,22 @@ object PremiumManager {
             PremiumType.TITLE -> GameDataManager.unlockTitle(ctx, item.id)
             PremiumType.PET -> GameDataManager.unlockPet(ctx, item.id)
             PremiumType.VFX -> GameDataManager.unlockVfx(ctx, item.id)
+        }
+    }
+
+    // ✅ opcional: fallback rápido se algum id aplicado não existir mais no catálogo
+    fun ensureDefaultsIfMissing(ctx: Context) {
+        runCatching {
+            if (PremiumCatalog.find(GameDataManager.getSelectedTheme(ctx)) == null)
+                GameDataManager.setSelectedTheme(ctx, DEFAULT_THEME)
+            if (PremiumCatalog.find(GameDataManager.getSelectedFrame(ctx)) == null)
+                GameDataManager.setSelectedFrame(ctx, DEFAULT_FRAME)
+            if (PremiumCatalog.find(GameDataManager.getSelectedTitle(ctx)) == null)
+                GameDataManager.setSelectedTitle(ctx, DEFAULT_TITLE)
+            if (PremiumCatalog.find(GameDataManager.getSelectedPet(ctx)) == null)
+                GameDataManager.setSelectedPet(ctx, DEFAULT_PET)
+            if (PremiumCatalog.find(GameDataManager.getSelectedVfx(ctx)) == null)
+                GameDataManager.setSelectedVfx(ctx, DEFAULT_VFX)
         }
     }
 }

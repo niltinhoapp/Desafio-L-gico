@@ -130,7 +130,33 @@ object GameDataManager {
 
         Log.d(TAG, "✅ Inicializado. activeUser=$currentUserId")
     }
+    // ========================================
+// 🐾 PET: map selected_pet -> drawable res
+// ========================================
 
+    /**
+     * Retorna o drawable do pet selecionado (0 = não mostrar).
+     * Usa o nível do pet (1..3) para escolher pet_xxx_1/2/3.
+     */
+    fun getSelectedPetResId(context: Context): Int {
+        val petId = getSelectedPet(context)
+        return when (petId) {
+            "pet_none" -> 0
+
+            // ✅ Ajuste os IDs exatamente iguais aos do seu catalog (PremiumItem.id)
+            "pet_owl" -> R.drawable.pet_owl_1
+            "pet_owl_1" -> R.drawable.pet_owl_1
+            "pet_owl_2" -> R.drawable.pet_owl_2
+            "pet_owl_3" -> R.drawable.pet_owl_3
+
+        //    "pet_cat" -> R.drawable.pet_cat_1
+          //  "pet_cat_1" -> R.drawable.pet_cat_1
+           // "pet_cat_2" -> R.drawable.pet_cat_2
+            //"pet_cat_3" -> R.drawable.pet_cat_3
+
+            else -> 0
+        }
+    }
     private fun sanitizeUserId(raw: String?): String {
         val id = raw?.trim().takeUnless { it.isNullOrBlank() } ?: "guest"
         return id.replace("\\W+".toRegex(), "_")
