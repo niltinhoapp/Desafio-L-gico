@@ -24,8 +24,7 @@ object WeeklyEventRepo {
                         active = snap.getBoolean("active") ?: false,
                         weekId = snap.getString("weekId") ?: "",
                         attemptLimit = (snap.getLong("attemptLimit") ?: 3L).toInt(),
-                        minCorrect = (snap.getLong("minCorrect") ?: 13L).toInt(),
-                        maxBackgroundSeconds = (snap.getLong("maxBackgroundSeconds") ?: 3L).toInt()
+                        minCorrect = (snap.getLong("minCorrect") ?: 13L).toInt()
                     )
                 )
             }

@@ -20,6 +20,7 @@ class AvatarAdapter(
     inner class AvatarViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val avatarImage: ImageView = itemView.findViewById(R.id.avatarImageView)
         val lockIcon: ImageView = itemView.findViewById(R.id.lockIcon)
+        val lockDim: View = itemView.findViewById(R.id.lockDim)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AvatarViewHolder {
@@ -33,10 +34,14 @@ class AvatarAdapter(
         holder.avatarImage.setImageResource(avatarResId)
 
         val isFreeAvatar = avatarResId == R.drawable.avatar1
-        val isUnlocked = isFreeAvatar ||
-            CoinManager.isAvatarUnlocked(holder.itemView.context, avatarResId)
+        val isUnlocked = isFreeAvatar || CoinManager.isAvatarUnlocked(holder.itemView.context, avatarResId)
 
+        // ✅ ativa ring neon do selector (stroke)
+        holder.itemView.isSelected = (position == selectedPosition)
+
+        holder.lockDim.visibility = if (isUnlocked) View.GONE else View.VISIBLE
         holder.lockIcon.visibility = if (isUnlocked) View.GONE else View.VISIBLE
+
         holder.avatarImage.alpha = when {
             !isUnlocked -> 0.35f
             position == selectedPosition -> 1.0f
@@ -44,7 +49,6 @@ class AvatarAdapter(
         }
 
         holder.itemView.setOnClickListener {
-            // ✅ pega a posição REAL no momento do clique
             val clickedPos = holder.bindingAdapterPosition
             if (clickedPos == RecyclerView.NO_POSITION) return@setOnClickListener
 

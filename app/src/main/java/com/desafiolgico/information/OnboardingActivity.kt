@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.media.MediaPlayer
 import android.os.Bundle
-import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
@@ -17,12 +16,17 @@ import com.desafiolgico.main.BoasVindasActivity
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.applySystemBarsPadding
 import com.google.android.material.tabs.TabLayoutMediator
+import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class OnboardingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityOnboardingBinding
     private lateinit var onboardingAdapter: OnboardingAdapter
     private var introSound: MediaPlayer? = null
+
+    private var weeklyStatusLine: String = "Carregando status do campeonato..."
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,88 +42,174 @@ class OnboardingActivity : AppCompatActivity() {
         // 🔹 Fundo animado
         animateGradientBackground()
 
-        // 🔹 Música ambiente suave (segura)
+        // 🔹 Música ambiente suave
         introSound = MediaPlayer.create(this, R.raw.intro_soft_music)?.apply {
             isLooping = true
-            setVolume(0.5f, 0.5f)
+            setVolume(0.45f, 0.45f)
             start()
         }
 
-        // 🔹 Recupera nível selecionado
+        // ✅ Recupera nível selecionado (ANTES de usar)
         val level = intent.getStringExtra("LEVEL") ?: "Iniciante"
 
-        // 🔹 Adapter
-        onboardingAdapter = OnboardingAdapter(getOnboardingItems(level))
-        binding.viewPager.adapter = onboardingAdapter
+        // ✅ Carrega status do campeonato e só então monta as páginas
+        fetchWeeklyStatusLight {
+            onboardingAdapter = OnboardingAdapter(getOnboardingItemsPremium(level))
+            binding.viewPager.adapter = onboardingAdapter
 
-        // 🔹 Tabs
-        TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
-            tab.text = when (position) {
-                0 -> "Introdução"
-                1 -> "Funcionalidades"
-                2 -> "Regras"
-                else -> "Motivação"
-            }
-        }.attach()
-
-        setupNavigationButtons()
+            setupTabsPremium()
+            setupNavigationButtons()
+        }
     }
 
-    private fun getOnboardingItems(level: String): List<OnboardingItem> {
-        val levelDesc = when (level) {
-            "Iniciante" -> "🌱 Ideal para começar sua jornada lógica com tranquilidade."
-            "Intermediário" -> "💡 Prepare-se para pensar com mais estratégia e raciocínio."
-            "Avançado" -> "🔥 Desafie seus limites e mostre sua maestria."
-            "Experiente" -> "🏆 Você já domina, mas sempre pode evoluir ainda mais."
-            else -> "🧠 Escolha um nível e comece sua evolução intelectual!"
+    private fun setupTabsPremium() {
+        TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
+            tab.text = when (position) {
+                0 -> "Começo"
+                1 -> "Pontuação"
+                2 -> "Campeonato"
+                3 -> "Regras"
+                4 -> "Dicas"
+                else -> "Vamos!"
+            }
+        }.attach()
+    }
+
+    /**
+     * ✅ Firestore leve: lê só weekly_events/current
+     * - Sem login obrigatório
+     * - Sem travar o onboarding
+     */
+    private fun fetchWeeklyStatusLight(onDone: () -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("weekly_events").document("current").get()
+            .addOnSuccessListener { snap ->
+                val weekId = snap.getString("weekId").orEmpty()
+                val endAt = snap.getTimestamp("endAt")
+
+                weeklyStatusLine =
+                    if (weekId.isBlank() || endAt == null) {
+                        "📌 Campeonato: indisponível no momento."
+                    } else {
+                        val sdf = SimpleDateFormat("dd/MM 'às' HH:mm", Locale("pt", "BR"))
+                        "🏆 Campeonato ativo • Semana $weekId • Encerra em ${sdf.format(endAt.toDate())}"
+                    }
+
+                onDone()
+            }
+            .addOnFailureListener {
+                weeklyStatusLine = "📌 Campeonato: verifique mais tarde (sem conexão)."
+                onDone()
+            }
+    }
+
+    private fun getOnboardingItemsPremium(level: String): List<OnboardingItem> {
+        val levelKey = level.trim().replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+        }
+
+        val levelDesc = when (levelKey) {
+            "Iniciante" -> "🌱 Comece leve: foque em consistência e tempo."
+            "Intermediário" -> "💡 Aqui começa a estratégia: pense e elimine opções."
+            "Avançado" -> "🔥 Pressão real: precisão + velocidade."
+            "Experiente" -> "🏆 Elite: controle de tempo e nervos."
+            else -> "🧠 Escolha um nível e evolua a cada rodada."
         }
 
         return listOf(
             OnboardingItem(
                 R.drawable.onboarding_image5,
-                "Bem-vindo ao Desafio Lógico!",
+                "Bem-vindo ao Desafio Lógico",
                 """
-                🧠 Teste seu raciocínio com perguntas divertidas e educativas!
+                🎮 Um jogo de raciocínio com ritmo, ranking e evolução.
                 $levelDesc
 
-                🎯 Como jogar:
-                - Escolha seu nível de dificuldade.
-                - Responda perguntas desafiadoras.
-                - Cada acerto aumenta seu streak e sua pontuação!
+                ✅ Você vai:
+                • Resolver perguntas rápidas
+                • Subir seu streak
+                • Bater recordes
+                • Competir no Campeonato Semanal
                 """.trimIndent()
             ),
+
             OnboardingItem(
                 R.drawable.capajogo,
-                "Funcionalidades Principais",
+                "Pontuação & Streak",
                 """
-                ✅ Responda Rápido: O tempo é limitado — pense e aja!
-                🎵 Efeitos e Sons: Feedback imersivo para cada acerto ou erro.
-                💎 Streaks: Acertos seguidos valem multiplicadores de pontos.
-                🌟 Bônus Dourado: A cada 20 acertos consecutivos, uma celebração épica!
+                ⚡ Quanto mais rápido e consistente, mais você ganha.
+
+                • Acertou → pontos + streak
+                • Errou → perde ritmo (e pode custar o jogo)
+                • Sequência alta → bônus/efeitos especiais
+
+                🎵 Feedback imersivo:
+                • Som de acerto/erro
+                • Vibração no erro
                 """.trimIndent()
             ),
+
             OnboardingItem(
                 R.drawable.onboarding_image3,
-                "Níveis e Regras",
+                "Campeonato Semanal 🏆",
                 """
-                📊 Níveis de dificuldade:
-                - Iniciante → 5 erros permitidos.
-                - Intermediário → 3 erros.
-                - Avançado → apenas 2 erros.
-                - Experiente → apenas 3 erros.
+                $weeklyStatusLine
 
-                ⏱️ Tempo por pergunta:
-                - Iniciante: 30s | Intermediário: 25s | Avançado: 15s
+                Toda semana rola um campeonato com ranking.
+
+                ✅ Como funciona:
+                • Você tem tentativas limitadas
+                • Cada tentativa tem $${15} perguntas
+                • Vale acerto + tempo final
+
+                🚫 Anti-fraude:
+                • Tempo limite
+                • Limite de erros
+                • Controle de saídas do app (background)
                 """.trimIndent()
             ),
+
+            OnboardingItem(
+                R.drawable.onboarding_image3,
+                "Regras por Nível",
+                """
+                📊 Erros permitidos:
+                • Iniciante → 5
+                • Intermediário → 3
+                • Avançado → 2
+                • Experiente → 3
+
+                ⏱️ Tempo por pergunta (exemplo):
+                • Iniciante: 30s
+                • Intermediário: 25s
+                • Avançado: 15s
+
+                (O app pode ajustar regras em eventos especiais.)
+                """.trimIndent()
+            ),
+
             OnboardingItem(
                 R.drawable.capajogo,
-                "Pronto para Começar?",
+                "Dicas pra subir no ranking",
                 """
-                🌟 Agora é com você!
-                Continue aprendendo e evoluindo a cada rodada.
+                🔥 3 dicas rápidas:
 
-                🚀 Toque em Vamos lá! e comece o Desafio Lógico agora mesmo!
+                1) Leia a pergunta inteira antes de clicar.
+                2) Se travar, elimine 2 opções primeiro.
+                3) Jogue no seu melhor horário (foco total).
+
+                🎯 Meta: consistência > sorte.
+                """.trimIndent()
+            ),
+
+            OnboardingItem(
+                R.drawable.capajogo,
+                "Pronto pra começar?",
+                """
+                🚀 Agora é com você.
+
+                Toque em “Vamos lá!” e comece a evoluir
+                a cada rodada. Boa sorte no ranking!
                 """.trimIndent()
             )
         )
@@ -151,14 +241,14 @@ class OnboardingActivity : AppCompatActivity() {
         binding.viewPager.animate()
             .translationX(-100f)
             .alpha(0f)
-            .setDuration(200)
+            .setDuration(190)
             .withEndAction {
                 binding.viewPager.currentItem = currentItem + 1
                 binding.viewPager.translationX = 100f
                 binding.viewPager.animate()
                     .translationX(0f)
                     .alpha(1f)
-                    .setDuration(300)
+                    .setDuration(280)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
             }
@@ -178,18 +268,10 @@ class OnboardingActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         prefs.edit {
             putBoolean("onboarding_completed", true)
-            putBoolean("always_show_onboarding", binding.checkBoxAlwaysShow.isChecked)
             putString("last_level_seen", intent.getStringExtra("LEVEL") ?: "Iniciante")
         }
 
-        // ✅ encerra o som com segurança
-        runCatching {
-            introSound?.let { mp ->
-                if (mp.isPlaying) mp.stop()
-                mp.release()
-            }
-        }
-        introSound = null
+        stopIntroSoundSafely()
 
         val fromSettings = intent.getBooleanExtra("FROM_SETTINGS", false)
         if (fromSettings) {
@@ -200,14 +282,24 @@ class OnboardingActivity : AppCompatActivity() {
         }
     }
 
+    private fun stopIntroSoundSafely() {
+        runCatching {
+            introSound?.let { mp ->
+                if (mp.isPlaying) mp.stop()
+                mp.release()
+            }
+        }
+        introSound = null
+    }
+
     override fun onPause() {
         super.onPause()
-        introSound?.pause()
+        runCatching { introSound?.pause() }
     }
 
     override fun onResume() {
         super.onResume()
-        introSound?.start()
+        runCatching { introSound?.start() }
     }
 
     override fun onDestroy() {

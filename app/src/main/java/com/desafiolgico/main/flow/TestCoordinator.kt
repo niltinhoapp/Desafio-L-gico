@@ -21,10 +21,25 @@ class TestCoordinator(
     private val weekly: WeeklyController,
 ) : CoroutineScope by MainScope() {
 
-    fun start(intent: Intent) {
-        val mode = intent.getStringExtra(TestActivity.EXTRA_MODE) ?: "NORMAL"
+    private var isWeeklyMode: Boolean = false
+    private var started: Boolean = false
 
-        if (mode.equals("WEEKLY", ignoreCase = true)) {
+    fun start(intent: Intent) {
+        if (started) return
+        started = true
+
+        val mode = intent.getStringExtra(TestActivity.EXTRA_MODE) ?: "NORMAL"
+        isWeeklyMode = mode.equals("WEEKLY", ignoreCase = true)
+
+        if (isWeeklyMode) {
+            // valida rápido
+            val weekId = intent.getStringExtra("WEEK_ID").orEmpty()
+            if (weekId.isBlank()) {
+                ui.showToast("Semana inválida.")
+                activity.finish()
+                return
+            }
+
             weekly.beginFromIntent(intent)
             weekly.startWeeklyMode(
                 onFail = { msg ->
@@ -47,20 +62,23 @@ class TestCoordinator(
 
     // lifecycle
     fun onStart() {
-        weekly.onStart() // ✅ importante pro weekly (background timing)
+        if (isWeeklyMode) weekly.onStart() // background timing só no weekly
     }
 
     fun onStop() {
-        weekly.onStop()  // ✅ importante pro weekly (background timing)
+        if (isWeeklyMode) weekly.onStop()  // background timing só no weekly
     }
 
     fun onResume() {
         ads.onResume()
-        timer.resume()
+        // ⚠️ não forçar timer.resume() aqui.
+        // O engine/timer controller devem decidir quando o timer está rodando.
+        // Isso evita “reviver” timer após resposta/pausa intencional.
     }
 
     fun onPause() {
         ads.onPause()
+        // se o app sair da tela, pausa o timer por segurança
         timer.pause()
     }
 

@@ -13,9 +13,9 @@ import com.google.android.material.button.MaterialButton
 class LevelManager(private val context: Context) {
 
     companion object {
-        const val THRESHOLD_INTERMEDIATE = 6000
-        const val THRESHOLD_ADVANCED = 9000
-        const val THRESHOLD_EXPERT = 12000
+        const val THRESHOLD_INTERMEDIATE = 4100
+        const val THRESHOLD_ADVANCED = 6100
+        const val THRESHOLD_EXPERT = 8100
 
         private const val VIBRATION_MS = 280L
         private const val ALPHA_LOCKED = 0.6f

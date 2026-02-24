@@ -51,7 +51,8 @@
     <string name="enter_username">Insira seu Nome de Usuário</string>
     <string name="entrar_como_convidado" translatable="false">Entrar como Convidado</string>
     <string name="use_o_bot_o_acima_para_entrar_com_sua_conta_google" translatable="false">Use o botão acima para entrar com sua conta Google</string>
-    <string name="junte_se_a_n_s_e_aproveite" translatable="false">Junte-se a nós e aproveite:</string>
+    <string name="junte_se_a_n_s_e_aproveite" translatable="false">Junte-se à nossa comunidade, aproveite cada desafio e dispute o Campeonato Semanal.
+    Mostre suas habilidades, conquiste vitórias e alcance o topo do ranking!:</string>
 
     <string name="onboarding_title">Título do Onboarding</string>
     <string name="onboarding_description">Descrição do Onboarding</string>

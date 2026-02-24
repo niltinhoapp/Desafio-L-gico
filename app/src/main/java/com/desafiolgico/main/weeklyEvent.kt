@@ -19,7 +19,7 @@ object WeeklyEvent {
     var maxBackgroundSeconds: Int = 3
         private set
 
-    var attemptLimit: Int = 3
+    var attemptLimit: Int = 30
         private set
 
     private fun applyDefaults() {
@@ -28,7 +28,7 @@ object WeeklyEvent {
         minCorrect = 13
         questionsPerRun = 15
         maxBackgroundSeconds = 3
-        attemptLimit = 3
+        attemptLimit = 30
     }
 
     private fun applyFromDoc(

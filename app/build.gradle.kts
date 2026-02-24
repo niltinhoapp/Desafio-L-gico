@@ -34,8 +34,8 @@ android {
         applicationId = "com.desafiolgico"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.1.8"
+        versionCode = 19
+        versionName = "1.1.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -126,6 +126,10 @@ android {
 }
 
 dependencies {
+
+        implementation("com.google.android.play:app-update:2.1.0")
+        implementation("com.google.android.play:app-update-ktx:2.1.0")
+
     // Base Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

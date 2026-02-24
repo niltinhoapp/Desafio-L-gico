@@ -1,25 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="88dp"
-    android:layout_height="88dp"
-    android:padding="6dp">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/avatarItemRoot"
+    android:layout_width="92dp"
+    android:layout_height="92dp"
+    android:padding="6dp"
+    android:clipToPadding="false"
+    android:clipChildren="false"
+    android:foreground="?attr/selectableItemBackgroundBorderless"
+    android:clickable="true"
+    android:focusable="true">
 
-    <ImageView
-        android:id="@+id/avatarImageView"
+    <!-- Card base (glass) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/avatarCard"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:contentDescription="Avatar"
-        android:background="@android:color/transparent" />
+        app:cardCornerRadius="22dp"
+        app:cardUseCompatPadding="false"
+        app:cardElevation="0dp"
+        app:strokeWidth="2dp"
+        app:strokeColor="@color/avatar_stroke_selector"
+        app:cardBackgroundColor="@android:color/transparent">
 
-    <ImageView
-        android:id="@+id/lockIcon"
-        android:layout_width="26dp"
-        android:layout_height="26dp"
-        android:layout_gravity="end|top"
-        android:src="@drawable/ic_lock"
-        android:padding="2dp"
-        android:contentDescription="Bloqueado"
-        android:visibility="gone" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_avatar_glass"
+            android:clipToPadding="false">
+
+            <!-- Avatar -->
+            <ImageView
+                android:id="@+id/avatarImageView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/app_name" />
+
+            <!-- Sombra/escurecer quando bloqueado -->
+            <View
+                android:id="@+id/lockDim"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_avatar_lock_dim"
+                android:visibility="gone" />
+
+            <!-- Cadeado -->
+            <ImageView
+                android:id="@+id/lockIcon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_gravity="end|top"
+                android:layout_margin="8dp"
+                android:src="@drawable/ic_lock"
+                android:padding="2dp"
+                android:contentDescription="@string/app_name"
+                android:visibility="gone"
+                app:tint="#EBFFFFFF" />
+
+            <!-- Glow topo (sutil) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:layout_gravity="top"
+                android:alpha="0.65"
+                android:background="@drawable/bg_glow_top" />
+
+        </FrameLayout>
+    </com.google.android.material.card.MaterialCardView>
 
 </FrameLayout>

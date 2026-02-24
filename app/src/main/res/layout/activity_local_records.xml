@@ -102,6 +102,48 @@
                         android:fontFamily="@font/roboto_mediu"
                         android:text="Iniciante: 0 pts • 00:00&#10;Intermediário: 0 pts • 00:00&#10;Avançado: 0 pts • 00:00&#10;Experiente: 0 pts • 00:00"
                         tools:ignore="HardcodedText"/>
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="14dp"
+                        android:alpha="0.2"
+                        android:background="#FFFFFF"/>
+
+                    <TextView
+                        android:id="@+id/weeklySubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="🏆 Campeonato Semanal"
+                        android:textColor="#CCFFFFFF"
+                        android:textSize="13sp"
+                        android:fontFamily="@font/roboto_mediu"/>
+
+                    <TextView
+                        android:id="@+id/weeklySummaryText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:textColor="#E6FFFFFF"
+                        android:textSize="15sp"
+                        android:lineSpacingExtra="3dp"
+                        android:fontFamily="@font/roboto_mediu"
+                        android:text="Carregando..." />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnWeeklyDetails"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Ver detalhes do campeonato"
+                        android:textAllCaps="false"
+                        android:textColor="#FFFFFF"
+                        app:strokeColor="#33FFFFFF"
+                        app:strokeWidth="1dp"
+                        app:cornerRadius="18dp"
+                        app:backgroundTint="@android:color/transparent" />
                 </LinearLayout>
             </ScrollView>
         </com.google.android.material.card.MaterialCardView>

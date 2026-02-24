@@ -23,8 +23,11 @@ class FxController(
 ) {
 
     private var fxOverlay: View? = null
+
     private var defaultQuestionStrokeColor: Int? = null
     private var defaultQuestionStrokeWidth: Int? = null
+
+    private var glowAnimator: ValueAnimator? = null
 
     /** chame 1x no onCreate (depois do setContentView) */
     fun init() {
@@ -42,11 +45,14 @@ class FxController(
             )
             alpha = 0f
             visibility = View.GONE
+
             isClickable = false
             isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
 
         rootLayout.addView(fxOverlay)
+        fxOverlay?.bringToFront()
     }
 
     fun cacheQuestionCardDefaults() {
@@ -57,10 +63,30 @@ class FxController(
 
     fun flashFx(success: Boolean) {
         val v = fxOverlay ?: return
-        v.setBackgroundColor(if (success) 0x224CAF50 else 0x22F44336)
-        v.visibility = View.VISIBLE
+        v.bringToFront()
+
+        val baseColor = if (success) {
+            // verde do seu theme (ou fallback)
+            runCatching { ContextCompat.getColor(activity, R.color.correctAnswerColor) }
+                .getOrElse { 0xFF4CAF50.toInt() }
+        } else {
+            runCatching { ContextCompat.getColor(activity, R.color.wrongAnswerColor) }
+                .getOrElse { 0xFFF44336.toInt() }
+        }
+
+        // aplica alpha suave por argb (0x22 ~ 13%)
+        val overlayColor = Color.argb(
+            0x22,
+            Color.red(baseColor),
+            Color.green(baseColor),
+            Color.blue(baseColor)
+        )
+
+        v.setBackgroundColor(overlayColor)
         v.animate().cancel()
+        v.visibility = View.VISIBLE
         v.alpha = 0f
+
         v.animate()
             .alpha(1f)
             .setDuration(70)
@@ -75,8 +101,10 @@ class FxController(
     }
 
     fun animateQuestionIn() {
+        binding.questionCard.animate().cancel()
         binding.questionCard.alpha = 0f
         binding.questionCard.translationY = 10f
+
         binding.questionCard.animate()
             .alpha(1f)
             .translationY(0f)
@@ -87,6 +115,7 @@ class FxController(
 
     fun animateQuestionSwap(newText: String) {
         binding.questionCard.animate().cancel()
+
         binding.questionCard.animate()
             .alpha(0f)
             .translationY(-8f)
@@ -94,6 +123,7 @@ class FxController(
             .withEndAction {
                 binding.questionTextView.text = newText
                 binding.questionCard.translationY = 10f
+
                 binding.questionCard.animate()
                     .alpha(1f)
                     .translationY(0f)
@@ -110,6 +140,7 @@ class FxController(
             b.animate().cancel()
             b.alpha = 0f
             b.translationY = 10f
+
             b.animate()
                 .alpha(1f)
                 .translationY(0f)
@@ -124,6 +155,7 @@ class FxController(
         v.animate().cancel()
         v.scaleX = 1f
         v.scaleY = 1f
+
         v.animate()
             .scaleX(0.97f).scaleY(0.97f)
             .setDuration(70)
@@ -137,6 +169,7 @@ class FxController(
         v.animate().cancel()
         val d = 8f
         v.translationX = 0f
+
         v.animate().translationX(d).setDuration(35).withEndAction {
             v.animate().translationX(-d).setDuration(35).withEndAction {
                 v.animate().translationX(d * 0.6f).setDuration(35).withEndAction {
@@ -149,16 +182,21 @@ class FxController(
     fun glowQuestionCard(success: Boolean) {
         val card: MaterialCardView = binding.questionCard
 
-        val ok = ContextCompat.getColor(activity, R.color.correctAnswerColor)
-        val no = ContextCompat.getColor(activity, R.color.wrongAnswerColor)
+        val ok = runCatching { ContextCompat.getColor(activity, R.color.correctAnswerColor) }
+            .getOrElse { 0xFF4CAF50.toInt() }
+        val no = runCatching { ContextCompat.getColor(activity, R.color.wrongAnswerColor) }
+            .getOrElse { 0xFFF44336.toInt() }
+
         val target = if (success) ok else no
 
         val baseColor = defaultQuestionStrokeColor ?: card.strokeColor
         val baseWidth = defaultQuestionStrokeWidth ?: card.strokeWidth
 
+        // evita empilhar anim
+        glowAnimator?.cancel()
         card.strokeWidth = dp(2)
 
-        val anim = ValueAnimator.ofInt(40, 200, 40).apply {
+        glowAnimator = ValueAnimator.ofInt(40, 200, 40).apply {
             duration = 320
             interpolator = AccelerateDecelerateInterpolator()
             addUpdateListener { va ->
@@ -182,7 +220,8 @@ class FxController(
                 }
             })
         }
-        anim.start()
+
+        glowAnimator?.start()
     }
 
     fun tinyTickUi(onVibrate: (Long) -> Unit) {
@@ -193,7 +232,8 @@ class FxController(
             .setDuration(80)
             .withEndAction {
                 binding.timerProgressBar.animate().scaleX(1f).setDuration(110).start()
-            }.start()
+            }
+            .start()
 
         binding.timerTextView.animate().cancel()
         binding.timerTextView.alpha = 1f
@@ -208,11 +248,19 @@ class FxController(
         onVibrate(35)
     }
 
-    fun release() {
+    fun release(removeOverlay: Boolean = false) {
+        glowAnimator?.cancel()
+        glowAnimator = null
+
         fxOverlay?.animate()?.cancel()
         binding.questionCard.animate().cancel()
         binding.timerProgressBar.animate().cancel()
         binding.timerTextView.animate().cancel()
+
+        if (removeOverlay) {
+            fxOverlay?.let { rootLayout.removeView(it) }
+            fxOverlay = null
+        }
     }
 
     /** util (se quiser ignorar o dp injetado) */

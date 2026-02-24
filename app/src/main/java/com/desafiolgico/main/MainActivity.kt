@@ -23,11 +23,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.desafiolgico.BuildConfig
 import com.desafiolgico.R
+import com.desafiolgico.auth.LoginActivity
 import com.desafiolgico.databinding.ActivityMainBinding
 import com.desafiolgico.settings.SettingsActivity
 import com.desafiolgico.utils.AuthGate
 import com.desafiolgico.utils.EnigmaPortalGate
 import com.desafiolgico.utils.GameDataManager
+import com.desafiolgico.utils.InAppUpdateHelper
 import com.desafiolgico.utils.LanguageHelper
 import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.PremiumThemes
@@ -36,11 +38,17 @@ import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.applySystemBarsPadding
 import com.desafiolgico.weekly.WeeklyChampionshipActivity
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var levelManager: LevelManager
+
+    // ✅ In-App Updates (Opção A = FLEXIBLE + aviso + botão Reiniciar)
+    private lateinit var inAppUpdate: InAppUpdateHelper
+    private var updateSnack: Snackbar? = null
 
     private lateinit var startForResult: ActivityResultLauncher<Intent>
     private lateinit var requestNotifLauncher: ActivityResultLauncher<String>
@@ -60,7 +68,6 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         binding.root.applySystemBarsPadding(applyTop = true, applyBottom = true)
 
         GameDataManager.init(this)
@@ -69,8 +76,18 @@ class MainActivity : AppCompatActivity() {
         setupNotificationLauncher()
 
         levelManager = LevelManager(this)
-
         applyPremiumTheme()
+
+        // ✅ In-App Update helper
+        inAppUpdate = InAppUpdateHelper(this)
+
+        // ✅ checa e inicia update FLEXIBLE (baixa em background)
+        // Quando baixar: avisa e dá botão "Reiniciar"
+        inAppUpdate.checkAndStartFlexible(
+            onDownloaded = {
+                showUpdateReadySnack()
+            }
+        )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermissionIfNeeded()
@@ -126,6 +143,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, MapActivity::class.java))
         }
 
+        // ✅ setup dos botões de nível + sair (logout real)
         levelManager.setupButtons(
             binding.beginnerButton,
             binding.intermediateButton,
@@ -139,7 +157,11 @@ class MainActivity : AppCompatActivity() {
 
         // estado inicial
         levelManager.checkAndSaveLevelUnlocks(showToast = true)
-        levelManager.updateButtonStates(binding.intermediateButton, binding.advancedButton, binding.expertButton)
+        levelManager.updateButtonStates(
+            binding.intermediateButton,
+            binding.advancedButton,
+            binding.expertButton
+        )
 
         updateDailyLabelState()
         updateDailyUI()
@@ -161,6 +183,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        // ✅ se o update estava em andamento, tenta retomar
+        inAppUpdate.resumeIfInProgress()
+
         applyPremiumTheme()
 
         levelManager.checkAndSaveLevelUnlocks(showToast = true)
@@ -175,8 +200,6 @@ class MainActivity : AppCompatActivity() {
         updateDailyLabelState()
         updateDailyUI()
         updateRecordsButtonText()
-
-        if (binding.btnSettingsMain.visibility == View.VISIBLE) startGlow(binding.btnSettingsMain)
 
         bgMusic?.let { if (!it.isPlaying) it.start() }
 
@@ -199,6 +222,27 @@ class MainActivity : AppCompatActivity() {
         hideDailyLabelRunnable?.let { binding.txtDailyLabel.removeCallbacks(it) }
         hideDailyLabelRunnable = null
         releaseBgMusic()
+
+        // ✅ evita leak
+        updateSnack?.dismiss()
+        updateSnack = null
+        inAppUpdate.unregister()
+    }
+
+    // =============================================================================================
+    // In-App Update UI (Opção A)
+    // =============================================================================================
+
+    private fun showUpdateReadySnack() {
+        // evita duplicar snackbar
+        updateSnack?.dismiss()
+
+        updateSnack = Snackbar.make(binding.root, "Atualização pronta ✅", Snackbar.LENGTH_INDEFINITE)
+            .setAction("Reiniciar") {
+                // ✅ aplica e reinicia o app
+                inAppUpdate.completeFlexibleUpdate()
+            }
+            .also { it.show() }
     }
 
     // =============================================================================================
@@ -215,10 +259,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // =============================================================================================
+    // WEEKLY
+    // =============================================================================================
+
     private fun setupWeeklyButton() {
         val score = GameDataManager.getOverallTotalScore(this).coerceAtLeast(0)
 
-        // ✅ critério único aqui
         val unlockScore = 500
         val unlocked = score >= unlockScore
 
@@ -259,7 +306,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupNotificationLauncher() {
         requestNotifLauncher =
             registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
-                // opcional: feedback
+                // opcional
             }
     }
 
@@ -343,11 +390,6 @@ class MainActivity : AppCompatActivity() {
     // Click handlers
     // =============================================================================================
 
-    /**
-     * ✅ AQUI ESTÁ A CORREÇÃO PRINCIPAL:
-     * - sempre manda MODE + LEVEL padronizados por TestNav
-     * - remove "level" solto
-     */
     private fun handleLevelClick(btn: MaterialButton, level: String) {
         playClickSound()
         animateTap(btn)
@@ -372,11 +414,33 @@ class MainActivity : AppCompatActivity() {
 
     private fun showExitConfirmationDialog() {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.exit_confirm_title))
-            .setMessage(getString(R.string.exit_confirm_message))
-            .setPositiveButton(getString(R.string.exit_confirm_yes)) { _, _ -> finish() }
-            .setNegativeButton(getString(R.string.exit_confirm_no), null)
+            .setTitle("Sair da conta")
+            .setMessage("Você quer sair da sua conta agora?")
+            .setPositiveButton("Sair") { _, _ ->
+                playClickSound()
+                doLogoutAndGoToLogin()
+            }
+            .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    private fun doLogoutAndGoToLogin() {
+        runCatching { FirebaseAuth.getInstance().signOut() }
+
+        runCatching {
+            getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
+                .putBoolean("is_guest_mode", false)
+                .apply()
+        }
+
+        runCatching { GameDataManager.setActiveUserId(this, null) }
+
+        val i = Intent(this, LoginActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(LoginActivity.EXTRA_FROM_LOGOUT, true)
+        }
+        startActivity(i)
+        finish()
     }
 
     // =============================================================================================
@@ -444,6 +508,8 @@ class MainActivity : AppCompatActivity() {
         binding.dailyChallengeCard.visibility = if (visible) View.VISIBLE else View.GONE
         binding.btnRecordsMain.visibility = if (visible) View.VISIBLE else View.GONE
         binding.btnSettingsMain.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.btnWeekly.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.mapButton.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     private fun initBackgroundMusic() {

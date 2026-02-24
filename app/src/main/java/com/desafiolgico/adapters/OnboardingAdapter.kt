@@ -30,6 +30,9 @@ class OnboardingAdapter(
         private val descriptionView: TextView = view.findViewById(R.id.onboardingDescription)
 
         fun bind(item: OnboardingItem) {
+            itemView.findViewById<androidx.core.widget.NestedScrollView>(R.id.onboardingScroll)
+                ?.scrollTo(0, 0)
+
             imageView.setImageResource(item.imageRes)
             titleView.text = item.title
             descriptionView.text = item.description

@@ -3,7 +3,11 @@ package com.desafiolgico.main
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.Toast
@@ -28,6 +32,7 @@ import com.desafiolgico.model.QuestionManager
 import com.desafiolgico.utils.CoinManager
 import com.desafiolgico.utils.GameDataManager
 import com.desafiolgico.utils.LanguageHelper
+import com.desafiolgico.utils.LocalRecordsManager
 import com.desafiolgico.utils.ScoreManager
 import com.desafiolgico.utils.applyEdgeToEdge
 import com.desafiolgico.utils.applySystemBarsPadding
@@ -47,6 +52,7 @@ class TestActivity : AppCompatActivity(), TestUi {
     }
 
     private lateinit var binding: ActivityTestBinding
+    private lateinit var sfx: com.desafiolgico.main.ui.SfxPlayer
     private val optionButtons = mutableListOf<MaterialButton>()
 
     private val game = GameState()
@@ -56,7 +62,7 @@ class TestActivity : AppCompatActivity(), TestUi {
     private var runSeed: Long = 0L
     private var isWeeklyMode: Boolean = false
 
-    // ===== WEEKLY anti-consulta =====
+    // ===== WEEKLY anti-consulta (FONTE ÚNICA AQUI) =====
     private var bgStartedAtMs: Long? = null
     private var bgCountLocal: Int = 0
     private var bgTotalLocalMs: Long = 0L
@@ -96,11 +102,10 @@ class TestActivity : AppCompatActivity(), TestUi {
         val mode = (intent.getStringExtra(EXTRA_MODE) ?: "NORMAL").uppercase(Locale.getDefault())
         isWeeklyMode = (mode == "WEEKLY")
 
+        sfx = com.desafiolgico.main.ui.SfxPlayer(this)
         scoreManager = ScoreManager(this)
 
-        // ✅ header fiel (nome + foto/google + avatar + pet)
         bindHeaderUserAndPet()
-
         inflateOptionButtons()
 
         fx = FxController(
@@ -123,7 +128,7 @@ class TestActivity : AppCompatActivity(), TestUi {
         scoreUi = ScoreUiController(
             activity = this,
             binding = binding
-        ).also { it.init(score = game.score, streak = game.streak) }
+        ).also { it.init(score = 0, streak = 0) }
 
         scroll = ScrollController(
             activity1 = binding.gameElementsScrollView,
@@ -166,7 +171,9 @@ class TestActivity : AppCompatActivity(), TestUi {
             state = weeklyState,
             onQuestionsLoaded = { loaded ->
                 questions = loaded
-                resetRunState(keepHud = false)
+
+                // ✅ WEEKLY reset separado (não encosta no ScoreManager)
+                resetRunStateWeekly()
 
                 if (questions.isEmpty()) {
                     showToast("WEEKLY sem perguntas (Firestore retornou vazio).")
@@ -176,8 +183,8 @@ class TestActivity : AppCompatActivity(), TestUi {
 
                 binding.root.post { engine.displayQuestion(withEnterAnim = true) }
             },
-            onRankingOpen = { /* TODO */ },
-            onHudUpdate = { _, _ -> /* TODO */ }
+            onRankingOpen = { /* não usado aqui */ },
+            onHudUpdate = { _, _ -> /* se você tiver HUD weekly, atualiza aqui */ }
         )
 
         coordinator = TestCoordinator(
@@ -190,14 +197,13 @@ class TestActivity : AppCompatActivity(), TestUi {
         )
 
         bindOptionClicks()
-
         coordinator?.start(intent)
 
         if (!isWeeklyMode) {
             val levelKey = readLevelFromIntent()
             questions = loadNormalQuestions(levelKey, seed = runSeed)
 
-            resetRunState(keepHud = false)
+            resetRunStateNormal()
 
             if (questions.isEmpty()) {
                 showToast("NORMAL sem perguntas para o nível: $levelKey")
@@ -227,35 +233,55 @@ class TestActivity : AppCompatActivity(), TestUi {
         return qm.getQuestionsByLevel(level, seed)
     }
 
-    private fun resetRunState(keepHud: Boolean) {
+    // =========================
+    // Resets separados (NORMAL x WEEKLY)
+    // =========================
+
+    private fun resetRunStateCommon() {
         game.currentIndex = 0
-        game.wrongAnswers = 0
         game.answerLocked = false
+
         game.timerPaused = false
         game.remainingMs = 0L
         game.lastCriticalSecond = -1
+
         game.questionsAnswered = 0
         game.totalTimeAccumulatedMs = 0L
 
-        // weekly local anti-consulta
+        updateQuestionsRemaining()
+    }
+
+    private fun resetRunStateNormal() {
+        resetRunStateCommon()
+
+        game.wrongAnswers = 0
+        game.score = 0
+        game.streak = 0
+
+        scoreManager.reset()
+        scoreUi.init(game.score, game.streak)
+    }
+
+    private fun resetRunStateWeekly() {
+        resetRunStateCommon()
+
+        // WEEKLY: score/streak do HUD normal não deve “mandar”
+        game.wrongAnswers = 0
+        game.score = 0
+        game.streak = 0
+        scoreUi.init(0, 0)
+
+        // anti-consulta local (FONTE ÚNICA AQUI)
         bgStartedAtMs = null
         bgCountLocal = 0
         bgTotalLocalMs = 0L
-
-        if (!keepHud) {
-            game.score = 0
-            game.streak = 0
-            scoreManager.reset()
-            scoreUi.init(game.score, game.streak)
-        }
-
-        updateQuestionsRemaining()
     }
 
     private fun createEngine(): QuizEngine {
         return QuizEngine(
             activity = this,
             binding = binding,
+
             fx = fx,
             overlay = overlay,
             scroll = scroll,
@@ -293,7 +319,6 @@ class TestActivity : AppCompatActivity(), TestUi {
 
             shouldLaunchSecretOfferIfPending = { false },
             maybeOfferReviveIfGameOver = { false },
-
             showEndOfGameDialog = {
                 navigateToResult(
                     ResultOrGameOverActivity.SCREEN_TYPE_GAME_OVER,
@@ -301,26 +326,27 @@ class TestActivity : AppCompatActivity(), TestUi {
                 )
             },
 
+            // ✅ vibra só no erro
+            vibrateWrong = { vibrateWrong() },
+
             navigateToResult = { screenType, returnToActiveGame ->
                 navigateToResult(screenType, returnToActiveGame)
             },
 
-            // ✅ WEEKLY submit com regras
-            submitWeeklyResult = { weekId, correct, wrong, timeMs, bgCount, bgTotalMs ->
-
-                val maxTimeMs = intent.getLongExtra("MAX_TIME_MS", 15 * 30_000L) // 450s
+            // ✅ WEEKLY submit
+            submitWeeklyResult = { weekId, correct, wrong, timeMs, _, _ ->
+                val maxTimeMs = intent.getLongExtra("MAX_TIME_MS", 15 * 30_000L)
                 val timeToleranceMs = 2_000L
-                val maxWrongAllowed = 2
+                val maxWrongAllowedInclusive = 2
 
-                val finalBgCount = maxOf(bgCount, bgCountLocal)
-                val finalBgTotal = maxOf(bgTotalMs, bgTotalLocalMs)
+                val finalBgCount = bgCountLocal
+                val finalBgTotal = bgTotalLocalMs
 
                 val disqByTime = timeMs > (maxTimeMs + timeToleranceMs)
-                val disqByWrong = wrong >= maxWrongAllowed
-                val disqByBackground = (finalBgTotal > 15_000L) || (finalBgCount >= 2)
+                val disqByWrong = wrong > maxWrongAllowedInclusive
+                val disqByBackground = (finalBgTotal > 15_000L) || (finalBgCount >= 3)
 
                 val disqualified = disqByTime || disqByWrong || disqByBackground
-
                 val reason = when {
                     disqByWrong -> "WRONG_LIMIT"
                     disqByTime -> "TIME_LIMIT"
@@ -337,7 +363,13 @@ class TestActivity : AppCompatActivity(), TestUi {
                     bgTotalMs = finalBgTotal,
                     disqualified = disqualified,
                     disqualifyReason = reason,
-                    onDone = { /* ok */ },
+                    onDone = {
+                        startActivity(
+                            Intent(this, com.desafiolgico.weekly.WeeklyResultActivity::class.java)
+                                .putExtra("WEEK_ID", weekId)
+                        )
+                        finish()
+                    },
                     onFail = { msg -> showToast(msg) }
                 )
             },
@@ -347,7 +379,11 @@ class TestActivity : AppCompatActivity(), TestUi {
             },
 
             shouldShowCuriosityNow = { false },
-            onCuriosityConsumed = { }
+            onCuriosityConsumed = { },
+
+            // ✅ SFX
+            playSfxCorrect = { sfx.playCorrect() },
+            playSfxWrong = { sfx.playWrong() }
         )
     }
 
@@ -362,8 +398,24 @@ class TestActivity : AppCompatActivity(), TestUi {
 
         val totalQ = questions.size.coerceAtLeast(0)
 
-        val wrong = if (isWeekly) weeklyState.wrong.coerceAtLeast(0) else game.wrongAnswers.coerceAtLeast(0)
-        val correct = if (isWeekly) weeklyState.correct.coerceAtLeast(0) else (totalQ - wrong).coerceAtLeast(0)
+        val wrong = if (isWeekly) {
+            weeklyState.wrong.coerceAtLeast(0)
+        } else {
+            game.wrongAnswers.coerceAtLeast(0)
+        }
+
+        // ✅ answered real (se você não atualiza ainda, cai no totalQ)
+        val answered = if (isWeekly) {
+            (weeklyState.correct + weeklyState.wrong).coerceAtLeast(0).takeIf { it > 0 } ?: totalQ.coerceAtLeast(1)
+        } else {
+            game.questionsAnswered.takeIf { it > 0 } ?: totalQ.coerceAtLeast(1)
+        }
+
+        val correct = if (isWeekly) {
+            weeklyState.correct.coerceAtLeast(0)
+        } else {
+            (answered - wrong).coerceAtLeast(0)
+        }
 
         val totalTimeMs = if (isWeekly) {
             val s = weeklyState.startedAtMs
@@ -373,8 +425,18 @@ class TestActivity : AppCompatActivity(), TestUi {
             game.totalTimeAccumulatedMs.coerceAtLeast(0L)
         }
 
-        val avgTimeSec = if (totalQ > 0) (totalTimeMs.toDouble() / totalQ.toDouble()) / 1000.0 else 0.0
+        val avgTimeSec = if (answered > 0) (totalTimeMs.toDouble() / answered.toDouble()) / 1000.0 else 0.0
         val maxWrong = game.maxWrong.coerceAtLeast(1)
+
+        // ✅ salva records locais SOMENTE no NORMAL
+        if (!isWeekly) {
+            val timeMsForAvg = totalTimeMs.takeIf { it > 0L } ?: 1L
+            val avgMs = (timeMsForAvg / answered.toLong()).coerceAtLeast(1L)
+
+            LocalRecordsManager.updateBestScoreForLevel(this, levelKey, scoreLevel)
+            LocalRecordsManager.updateBestAvgTimeForLevel(this, levelKey, avgMs)
+            LocalRecordsManager.updateBestStreakOfDay(this, game.streak.coerceAtLeast(0))
+        }
 
         startActivity(
             Intent(this, ResultOrGameOverActivity::class.java).apply {
@@ -396,18 +458,14 @@ class TestActivity : AppCompatActivity(), TestUi {
         )
         finish()
     }
-
     private fun updateQuestionsRemaining() {
         val total = questions.size
         val idx = game.currentIndex.coerceAtLeast(0)
         val remaining = (total - idx).coerceAtLeast(0)
 
         binding.questionsRemainingTextView.text =
-            if (total > 0) {
-                getString(R.string.perguntas_restantes_format_2, remaining, total)
-            } else {
-                getString(R.string.perguntas_restantes_format_1, remaining)
-            }
+            if (total > 0) getString(R.string.perguntas_restantes_format_2, remaining, total)
+            else getString(R.string.perguntas_restantes_format_1, remaining)
     }
 
     private fun resetOptionButtonsStyle() {
@@ -463,21 +521,12 @@ class TestActivity : AppCompatActivity(), TestUi {
         }
     }
 
-    // =============================================================================================
-    // ✅ HEADER: nome + foto google/ avatar + pet
-    // =============================================================================================
-
     private fun bindHeaderUserAndPet() {
-        // garante dados do usuário carregados
         val (username, photoUrl, avatarResId) = GameDataManager.loadUserData(this)
 
-        val displayName = when {
-            !username.isNullOrBlank() -> username.trim()
-            else -> "Jogador"
-        }
+        val displayName = if (!username.isNullOrBlank()) username.trim() else "Jogador"
         binding.welcomeUsername.text = displayName
 
-        // Avatar
         when {
             !photoUrl.isNullOrBlank() -> {
                 Glide.with(this)
@@ -503,7 +552,6 @@ class TestActivity : AppCompatActivity(), TestUi {
             }
         }
 
-        // Pet
         val petResId = runCatching { GameDataManager.getSelectedPetResId(this) }.getOrDefault(0)
         if (petResId != 0) {
             binding.petView.visibility = View.VISIBLE
@@ -513,16 +561,32 @@ class TestActivity : AppCompatActivity(), TestUi {
         }
     }
 
+    private fun vibrateMs(ms: Long) {
+        val effect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE)
+        } else null
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vm = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val v = vm.defaultVibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) v.vibrate(effect) else v.vibrate(ms)
+        } else {
+            @Suppress("DEPRECATION")
+            val v = getSystemService(VIBRATOR_SERVICE) as Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) v.vibrate(effect) else v.vibrate(ms)
+        }
+    }
+
+    private fun vibrateCorrect() = vibrateMs(18) // leve
+    private fun vibrateWrong() = vibrateMs(70)   // mais forte
+
     override fun onResume() {
         super.onResume()
         coordinator?.onResume()
-
-        // ✅ se trocar pet/avatar em outra tela, refaz header aqui
         bindHeaderUserAndPet()
 
         if (isWeeklyMode) {
-            val started = bgStartedAtMs
-            if (started != null) {
+            bgStartedAtMs?.let { started ->
                 val delta = (System.currentTimeMillis() - started).coerceAtLeast(0L)
                 bgStartedAtMs = null
                 bgCountLocal += 1
@@ -532,9 +596,7 @@ class TestActivity : AppCompatActivity(), TestUi {
     }
 
     override fun onPause() {
-        if (isWeeklyMode) {
-            bgStartedAtMs = System.currentTimeMillis()
-        }
+        if (isWeeklyMode) bgStartedAtMs = System.currentTimeMillis()
         coordinator?.onPause()
         super.onPause()
     }
@@ -542,6 +604,7 @@ class TestActivity : AppCompatActivity(), TestUi {
     override fun onDestroy() {
         coordinator?.onDestroy()
         scoreUi.release()
+        sfx.release()
         super.onDestroy()
     }
 

@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import com.desafiolgico.weekly.WeeklyResultActivity
 import android.view.animation.AnimationUtils
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -14,11 +15,11 @@ import androidx.core.view.doOnPreDraw
 import com.desafiolgico.R
 import com.desafiolgico.databinding.ActivityWeeklyChampionshipBinding
 import com.desafiolgico.main.TestActivity
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.max
@@ -36,7 +37,11 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
     // Config da semana (weekly_events/current)
     // =========================
     private var weekId: String? = null
-    private var attemptLimit: Int = 3
+
+    // ✅ TESTE: força 20 tentativas no app (mesmo que Firestore esteja 3)
+    // Depois você remove isso e volta a usar o valor do servidor.
+    private var attemptLimit: Int = 20
+
     private var questionsPerRun: Int = 15
     private var minCorrect: Int = 13
     private var endAt: Timestamp? = null
@@ -55,13 +60,12 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
     private var bestScore = -1
     private var bestTimeMs = -1L
 
-    // Auth listener
     private var authListener: FirebaseAuth.AuthStateListener? = null
 
     // UI State
     private var lastPrimaryText: String = "Carregando..."
     private var lastPrimaryEnabled: Boolean = false
-    private var lastPrimaryLoading: Boolean = false
+    private var isLoading: Boolean = false
 
     // Anti double-click / anti race
     private var clickLocked = false
@@ -85,7 +89,8 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
 
             if (u == null) {
                 binding.txtMyStatus.text = "Status: faça login para participar"
-                updatePrimaryButton(enabled = false, text = "Fazer login", loading = false)
+                updatePrimaryButton(enabled = false, text = "Faça login", loading = false)
+                setLoading(false)
             } else {
                 updatePrimaryButton(enabled = true, text = "Carregando...", loading = true)
                 loadAll()
@@ -93,6 +98,12 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
         }
         auth.addAuthStateListener(authListener!!)
     }
+
+    override fun onDestroy() {
+        authListener?.let { auth.removeAuthStateListener(it) }
+        super.onDestroy()
+    }
+
     private fun onPrimaryClick() {
         if (clickLocked) return
         clickLocked = true
@@ -100,7 +111,7 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
         val uid = auth.currentUser?.uid
         if (uid.isNullOrBlank()) {
             binding.txtMyStatus.text = "Status: faça login para participar"
-            updatePrimaryButton(enabled = false, text = "Fazer login", loading = false)
+            updatePrimaryButton(enabled = false, text = "Faça login", loading = false)
             clickLocked = false
             return
         }
@@ -112,16 +123,21 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
             return
         }
 
-        // não inscrito -> inscreve e consome 1 tentativa oficial
+        // se fechou, vai pro resultado
+        if (isWeekClosedNow()) {
+            openWeeklyResult(wid)
+            clickLocked = false
+            return
+        }
+
+        // não inscrito -> inscreve -> inicia tentativa
         if (!isRegistered) {
             registerTransaction(wid, uid) {
                 startWeeklyAttemptAndOpen(wid)
-                // clickLocked será liberado nos callbacks do startWeeklyAttemptAndOpen
             }
             return
         }
 
-        // inscrito -> acabou? abre resultado
         val remaining = max(0, attemptLimit - attemptsUsed)
         if (remaining <= 0) {
             openWeeklyResult(wid)
@@ -129,13 +145,7 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
             return
         }
 
-        // inscrito -> inicia tentativa oficial
         startWeeklyAttemptAndOpen(wid)
-    }
-
-    override fun onDestroy() {
-        authListener?.let { auth.removeAuthStateListener(it) }
-        super.onDestroy()
     }
 
     private fun startWeeklyAttemptAndOpen(wid: String) {
@@ -144,10 +154,18 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
             return
         }
 
+        if (isWeekClosedNow()) {
+            setLoading(false)
+            clickLocked = false
+            openWeeklyResult(wid)
+            return
+        }
+
         setLoading(true)
 
         startWeeklyAttemptTransaction(
-            wid, uid,
+            wid = wid,
+            uid = uid,
             onOk = { attemptNo ->
                 setLoading(false)
                 clickLocked = false
@@ -156,7 +174,7 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
             onNoAttempts = {
                 setLoading(false)
                 clickLocked = false
-                openWeeklyResult(wid) // ✅ melhor do que toast
+                openWeeklyResult(wid)
                 loadAll()
             },
             onFail = { msg ->
@@ -167,6 +185,7 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
             }
         )
     }
+
     private fun openWeeklyResult(wid: String) {
         startActivity(
             Intent(this, WeeklyResultActivity::class.java)
@@ -174,14 +193,32 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
         )
     }
 
+    private fun openWeeklyTest(wid: String, attemptNo: Int) {
+        startActivity(
+            Intent(this, TestActivity::class.java)
+                .putExtra(TestActivity.EXTRA_MODE, "WEEKLY")
+                .putExtra("WEEK_ID", wid)
+                .putExtra("ROUND_ID", "R1")
+                .putExtra("ATTEMPT_NO", attemptNo)
+                .putExtra("QUESTIONS_PER_RUN", questionsPerRun)
+                .putExtra("MAX_TIME_MS", questionsPerRun * 30_000L)
+                .putExtra("MIN_CORRECT", minCorrect)
+        )
+    }
+
+    private fun isWeekClosedNow(): Boolean {
+        val ts = endAt ?: return false
+        return runCatching { System.currentTimeMillis() >= ts.toDate().time }.getOrDefault(false)
+    }
 
     /**
-     * Transaction à prova de falhas:
-     * - cria doc se não existir
-     * - respeita attemptLimit
+     * Transaction de tentativa:
+     * - exige que users/{uid} exista (inscrição)
+     * - respeita attemptLimit do doc do usuário (ou fallback local)
      * - incrementa attemptsUsed
-     * - grava lastRun.startedAt / attemptNo
+     * - salva lastRun.startedAt / attemptNo
      */
+
     private fun startWeeklyAttemptTransaction(
         wid: String,
         uid: String,
@@ -194,78 +231,48 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
 
         db.runTransaction { tx ->
             val snap = tx.get(userRef)
+            if (!snap.exists()) return@runTransaction mapOf("status" to "NOT_REGISTERED")
 
-            // se não existe (user antigo), cria base mínima
-            if (!snap.exists()) {
-                tx.set(
-                    userRef,
-                    mapOf(
-                        "uid" to uid,
-                        "weekId" to wid,
-                        "attemptLimit" to attemptLimit.toLong(),
-                        "attemptsUsed" to 0L,
-                        "bannedThisWeek" to false,
-                        "lastRun" to mapOf(
-                            "backgroundCount" to 0L,
-                            "backgroundTotalMs" to 0L,
-                            "disqualified" to false,
-                            "disqualifyReason" to ""
-                        ),
-                        "createdAt" to FieldValue.serverTimestamp(),
-                        "updatedAt" to FieldValue.serverTimestamp()
-                    ),
-                    SetOptions.merge()
-                )
-            }
-
-            val fresh = if (snap.exists()) snap else tx.get(userRef)
-
-            val lim = (fresh.getLong("attemptLimit") ?: attemptLimit.toLong()).toInt()
-            val used = (fresh.getLong("attemptsUsed") ?: 0L).toInt()
-            val banned = fresh.getBoolean("bannedThisWeek") == true
+            val lim = (snap.getLong("attemptLimit") ?: attemptLimit.toLong()).toInt()
+            val used = (snap.getLong("attemptsUsed") ?: 0L).toInt()
+            val banned = snap.getBoolean("bannedThisWeek") == true
 
             if (banned) return@runTransaction mapOf("status" to "BANNED")
             if (used >= lim) return@runTransaction mapOf("status" to "NO_ATTEMPTS")
 
             val nextAttempt = used + 1
 
-            tx.set(
-                userRef,
-                mapOf(
-                    "attemptsUsed" to FieldValue.increment(1),
-                    "lastRun" to mapOf(
-                        "attemptNo" to nextAttempt.toLong(),
-                        "startedAt" to FieldValue.serverTimestamp(),
-                        "finishedAt" to null,
-                        "correct" to 0L,
-                        "wrong" to 0L,
-                        "timeMs" to 0L,
-                        "backgroundCount" to 0L,
-                        "backgroundTotalMs" to 0L,
-                        "disqualified" to false,
-                        "disqualifyReason" to ""
-                    ),
-                    "updatedAt" to FieldValue.serverTimestamp()
-                ),
-                SetOptions.merge()
-            )
+            // ✅ atualiza “campo a campo” (não substitui lastRun inteiro)
+            tx.update(userRef, mapOf(
+                "attemptsUsed" to FieldValue.increment(1),
+                "updatedAt" to FieldValue.serverTimestamp(),
+
+                "lastRun.attemptNo" to nextAttempt.toLong(),
+                "lastRun.startedAt" to FieldValue.serverTimestamp(), // pode sobrescrever aqui (ok)
+                "lastRun.finishedAt" to null,
+
+                // limpa IDs antigos (o WeeklyController vai gravar os 15 IDs do attempt)
+                "lastRun.questionIds" to FieldValue.delete(),
+
+                "lastRun.correct" to 0L,
+                "lastRun.wrong" to 0L,
+                "lastRun.timeMs" to 0L,
+                "lastRun.backgroundCount" to 0L,
+                "lastRun.backgroundTotalMs" to 0L,
+                "lastRun.disqualified" to false,
+                "lastRun.disqualifyReason" to ""
+            ))
 
             mapOf("status" to "OK", "attemptNo" to nextAttempt.toLong())
         }.addOnSuccessListener { result ->
             val status = result["status"] as? String ?: "FAIL"
-            val attemptAny = result["attemptNo"]
-
-            val attemptNo = when (attemptAny) {
-                is Int -> attemptAny
-                is Long -> attemptAny.toInt()
-                is Double -> attemptAny.toInt()
-                else -> -1
-            }
+            val attemptNo = (result["attemptNo"] as? Long)?.toInt() ?: -1
 
             when (status) {
                 "OK" -> if (attemptNo > 0) onOk(attemptNo) else onFail("attemptNo inválido")
                 "NO_ATTEMPTS" -> onNoAttempts()
                 "BANNED" -> onFail("Conta bloqueada nesta semana.")
+                "NOT_REGISTERED" -> onFail("Você ainda não está inscrito.")
                 else -> onFail("Falha desconhecida.")
             }
         }.addOnFailureListener { e ->
@@ -273,26 +280,24 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
         }
     }
 
-    private fun openWeeklyTest(wid: String, attemptNo: Int) {
-        startActivity(
-            Intent(this, TestActivity::class.java)
-                .putExtra("MODE", "WEEKLY")
-                .putExtra("WEEK_ID", wid)
-                .putExtra("ROUND_ID", "R1")
-                .putExtra("ATTEMPT_NO", attemptNo)
-                .putExtra("QUESTIONS_PER_RUN", questionsPerRun)
-                .putExtra("MAX_TIME_MS", questionsPerRun * 30_000L) // 15*30s = 450s
-                .putExtra("MIN_CORRECT", minCorrect)
-        )
-    }
-
+    /**
+     * ✅ loadAll sem bug:
+     * - lê weekly_events/current
+     * - lê weekly_runs/{weekId}
+     * - lê registrations/{uid} e users/{uid} em paralelo
+     * - considera inscrito se QUALQUER UM existir
+     *
+     * ✅ TESTE 20 tentativas:
+     * - mantém attemptLimit = 20 local sempre (não sobrescreve com servidor)
+     */
     private fun loadAll() {
         val uid = auth.currentUser?.uid
         Log.d("WEEKLY", "loadAll uid=$uid")
 
         if (uid.isNullOrBlank()) {
             binding.txtMyStatus.text = "Status: faça login para participar"
-            updatePrimaryButton(enabled = false, text = "Fazer login", loading = false)
+            updatePrimaryButton(enabled = false, text = "Faça login", loading = false)
+            setLoading(false)
             return
         }
 
@@ -301,7 +306,11 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
         db.collection("weekly_events").document("current").get()
             .addOnSuccessListener { snap ->
                 weekId = snap.getString("weekId")
-                attemptLimit = (snap.getLong("attemptLimit") ?: 3L).toInt()
+
+                // ⚠️ NÃO sobrescreve attemptLimit com o servidor durante o teste
+                // val fromServer = (snap.getLong("attemptLimit") ?: 3L).toInt()
+                // attemptLimit = fromServer
+
                 questionsPerRun = (snap.getLong("questionsPerRun") ?: 15L).toInt()
                 minCorrect = (snap.getLong("minCorrect") ?: 13L).toInt()
                 endAt = snap.getTimestamp("endAt")
@@ -320,29 +329,35 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
                         registeredCount = runDoc.getLong("registeredCount") ?: 0L
                         limit = runDoc.getLong("limit") ?: 150L
 
-                        db.collection("weekly_runs").document(wid)
-                            .collection("registrations").document(uid).get()
-                            .addOnSuccessListener { regDoc ->
-                                isRegistered = regDoc.exists()
+                        val runRef = db.collection("weekly_runs").document(wid)
+                        val regTask = runRef.collection("registrations").document(uid).get()
+                        val userTask = runRef.collection("users").document(uid).get()
 
-                                db.collection("weekly_runs").document(wid)
-                                    .collection("users").document(uid).get()
-                                    .addOnSuccessListener { udoc ->
-                                        attemptsUsed = (udoc.getLong("attemptsUsed") ?: 0L).toInt()
-                                        bestScore = (udoc.getLong("best.correct") ?: -1L).toInt()
-                                        bestTimeMs = (udoc.getLong("best.timeMs") ?: -1L)
+                        Tasks.whenAllSuccess<com.google.firebase.firestore.DocumentSnapshot>(regTask, userTask)
+                            .addOnSuccessListener { snaps ->
+                                val regSnap = snaps[0]
+                                val userSnap = snaps[1]
 
-                                        setLoading(false)
-                                        render()
-                                    }
-                                    .addOnFailureListener { e ->
-                                        Log.e("WEEKLY", "users/{uid} read fail: ${e.message}", e)
-                                        setLoading(false)
-                                        render()
-                                    }
+                                val regExists = regSnap.exists()
+                                val userExists = userSnap.exists()
+                                isRegistered = regExists || userExists
+
+                                if (userExists) {
+                                    attemptsUsed = (userSnap.getLong("attemptsUsed") ?: 0L).toInt()
+                                    bestScore = (userSnap.getLong("best.correct") ?: -1L).toInt()
+                                    bestTimeMs = (userSnap.getLong("best.timeMs") ?: -1L)
+                                    minCorrect = (userSnap.getLong("rules.minCorrect") ?: minCorrect.toLong()).toInt()
+                                } else {
+                                    attemptsUsed = 0
+                                    bestScore = -1
+                                    bestTimeMs = -1L
+                                }
+
+                                setLoading(false)
+                                render()
                             }
                             .addOnFailureListener { e ->
-                                Log.e("WEEKLY", "registrations/{uid} read fail: ${e.message}", e)
+                                Log.e("WEEKLY", "reg/users parallel read fail: ${e.message}", e)
                                 setLoading(false)
                                 render()
                             }
@@ -378,15 +393,21 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
         val remaining = max(0, attemptLimit - attemptsUsed)
         binding.txtAttempts.text = "Tentativas restantes: $remaining/$attemptLimit"
 
-        binding.txtBest.text = if (bestScore >= 0 && bestTimeMs >= 0) {
+        val bestIsSet = bestScore > 0 && bestTimeMs in 1..99_999_998L
+        binding.txtBest.text = if (bestIsSet) {
             "Melhor: $bestScore/$questionsPerRun • ${formatMs(bestTimeMs)}"
         } else {
             "Melhor: --"
         }
 
         val full = registeredCount >= limit
+        val closed = isWeekClosedNow()
 
         when {
+            closed -> {
+                binding.txtMyStatus.text = "Status: campeonato encerrado"
+                updatePrimaryButton(enabled = true, text = "Ver resultado", loading = false)
+            }
             full && !isRegistered -> {
                 binding.txtMyStatus.text = "Status: inscrições encerradas"
                 updatePrimaryButton(enabled = false, text = "Lotado", loading = false)
@@ -410,9 +431,12 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
     }
 
     /**
-     * Transaction de inscrição:
-     * - cria registrations/{uid}
-     * - cria users/{uid}
+     * ✅ Inscrição idempotente:
+     * - se reg OU user já existir => ALREADY (não tenta mexer em registrations)
+     * - cria registrations/{uid} com tx.set (create permitido pelas rules)
+     * - cria users/{uid} com tx.set (create permitido pelas rules)
+     *
+     * ⚠️ NÃO atualiza weekly_runs/{weekId} root (suas rules bloqueiam write).
      */
     private fun registerTransaction(wid: String, uid: String, onOk: () -> Unit) {
         setLoading(true)
@@ -425,21 +449,28 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
             val runSnap = tx.get(runRef)
             val current = runSnap.getLong("registeredCount") ?: 0L
             val lim = runSnap.getLong("limit") ?: 150L
-
-            val regSnap = tx.get(regRef)
-            if (regSnap.exists()) return@runTransaction "ALREADY"
             if (current >= lim) return@runTransaction "FULL"
 
+            val regSnap = tx.get(regRef)
+            val userSnap = tx.get(userRef)
+
+            // ✅ já inscrito se existir qualquer um dos 2
+            if (regSnap.exists() || userSnap.exists()) {
+                // não encosta em registrations (evita rules chatas)
+                return@runTransaction "ALREADY"
+            }
+
+            // ✅ cria registration
             tx.set(
                 regRef,
                 mapOf(
                     "uid" to uid,
                     "active" to true,
                     "registeredAt" to FieldValue.serverTimestamp()
-                ),
-                SetOptions.merge()
+                )
             )
 
+            // ✅ cria userDoc com attemptLimit do teste (20)
             tx.set(
                 userRef,
                 mapOf(
@@ -469,12 +500,8 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
                     ),
                     "createdAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
-                ),
-                SetOptions.merge()
+                )
             )
-
-            // opcional (recomendado):
-            // tx.update(runRef, "registeredCount", FieldValue.increment(1))
 
             "OK"
         }.addOnSuccessListener { result ->
@@ -486,8 +513,8 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
                     onOk()
                 }
                 "FULL" -> {
-                    loadAll()
                     clickLocked = false
+                    loadAll()
                     Toast.makeText(this, "Inscrições encerradas (lotado).", Toast.LENGTH_SHORT).show()
                 }
                 else -> {
@@ -496,21 +523,24 @@ class WeeklyChampionshipActivity : AppCompatActivity() {
                 }
             }
         }.addOnFailureListener { e ->
-            Log.e("WEEKLY", "registerTransaction fail: ${e.message}", e)
             setLoading(false)
             clickLocked = false
             loadAll()
+
+            // ✅ se falhar por permissão mas você "já estava inscrito", tenta seguir pras tentativas
+            // (útil quando registrations existe mas o app tentou regravar algo)
+            if (e.message?.contains("PERMISSION_DENIED", true) == true) {
+                startWeeklyAttemptAndOpen(wid)
+                return@addOnFailureListener
+            }
+
             Toast.makeText(this, "Erro ao inscrever: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun setLoading(loading: Boolean) {
-        lastPrimaryLoading = loading
-        updatePrimaryButton(
-            enabled = !loading && lastPrimaryEnabled,
-            text = lastPrimaryText,
-            loading = loading
-        )
+        isLoading = loading
+        updatePrimaryButton(enabled = lastPrimaryEnabled, text = lastPrimaryText, loading = loading)
     }
 
     // =========================
